@@ -12,16 +12,20 @@ export class MinimaxProvider implements AIProvider {
     async analyze(request: AIAnalysisRequest): Promise<AIAnalysisResponse> {
         const { babyProfile, recentRecords, query } = request;
 
+        const babyInfo = babyProfile ? `
+宝宝档案：
+名字：${babyProfile.name}
+性别：${babyProfile.gender === 'male' ? '男' : '女'}
+月龄：${babyProfile.month || '未知'}个月
+` : '宝宝档案：目前暂无具体宝宝信息，请提供通用的育儿建议。';
+
         const systemPrompt = `你是一位资深的育儿专家。请根据提供的宝宝档案和最近的记录（喂养、睡眠、生长），给出一份简洁明了的分析报告。
 报告必须包含：
 1. 洞察（insight）：对当前状态的总体评价。
 2. 建议（recommendations）：3-5条具体的改进或维持建议。
 3. 情感（sentiment）：positive, neutral, 或 concern。
 
-宝宝档案：
-名字：${babyProfile.name}
-性别：${babyProfile.gender === 'male' ? '男' : '女'}
-月龄：${babyProfile.month}个月
+${babyInfo}
 
 最近记录：
 - 喂养：${JSON.stringify(recentRecords.feeding)}

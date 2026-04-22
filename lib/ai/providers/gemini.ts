@@ -13,8 +13,9 @@ export class GeminiProvider implements AIProvider {
         // we'll simulate a structured response based on the input data.
 
         const { babyProfile, recentRecords } = request;
+        const babyName = babyProfile?.name || '宝宝';
 
-        console.log('Gemini Analysis Request:', { babyName: babyProfile.name, records: recentRecords });
+        console.log('Gemini Analysis Request:', { babyName, records: recentRecords });
 
         // Simulate processing delay
         await new Promise(resolve => setTimeout(resolve, 1500));
@@ -24,10 +25,10 @@ export class GeminiProvider implements AIProvider {
         const sleepCount = recentRecords.sleep.length;
 
         // This would be the prompt sent to the LLM
-        // const prompt = `Analyze health for ${babyProfile.name}, ${babyProfile.month} months old...`;
+        // const prompt = `Analyze health for ${babyName}, ${babyProfile?.month} months old...`;
 
         return {
-            insight: `Based on the recent data, ${babyProfile.name} has had ${feedingCount} feeding sessions and ${sleepCount} sleep records recorded. The growth trend appears stable.`,
+            insight: `Based on the recent data, ${babyName} has had ${feedingCount} feeding sessions and ${sleepCount} sleep records recorded. The growth trend appears stable.`,
             recommendations: [
                 "Maintain the current feeding schedule.",
                 "Ensure sufficient tummy time during wake windows.",

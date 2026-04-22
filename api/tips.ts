@@ -16,15 +16,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         let babyAgeMonth = -1;
         let prompt = '';
 
-        if (babyId) {
-            const bId = BigInt(babyId as string);
-            if (!(await hasBabyPermission(user.userId, bId))) return res.status(403).json({ message: 'Forbidden' });
+        if (babyId && babyId !== 'null' && babyId !== 'undefined') {
+            const bId = BigInt(babyId.toString());
+            const hasPermission = await hasBabyPermission(user.userId, bId);
             
-            baby = await prisma.baby.findUnique({ where: { id: bId } });
-            if (baby) {
-                babyAgeMonth = Math.floor((new Date().getTime() - new Date(baby.birthDate).getTime()) / (30 * 24 * 60 * 60 * 1000));
-                prompt = `你是一位专业的育儿专家。请针对一位 ${babyAgeMonth} 个月大的宝宝（性别：${baby.gender === 'male' ? '男' : '女'}），提供3条科学、具体的每日育儿建议。
-                格式要求为JSON数组：[{"title": "...", "content": "...", "category": "feeding|sleep|development|safety"}]`;
+            if (hasPermission) {
+                baby = await prisma.baby.findUnique({ where: { id: bId } });
+                if (baby) {
+                    babyAgeMonth = Math.floor((new Date().getTime() - new Date(baby.birthDate).getTime()) / (30 * 24 * 60 * 60 * 1000));
+                    prompt = `你是一位专业的育儿专家。请针对一位 ${babyAgeMonth} 个月大的宝宝（性别：${baby.gender === 'male' ? '男' : '女'}），提供3条科学、具体的每日育儿建议。
+                    格式要求为JSON数组：[{"title": "...", "content": "...", "category": "feeding|sleep|development|safety"}]`;
+                }
             }
         }
 
@@ -51,7 +53,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             try {
                 const ai = AIFactory.createProvider();
                 const aiResponse = await ai.analyze({
-                    babyProfile: baby ? { name: baby.name, birthDate: baby.birthDate, gender: baby.gender } : undefined,
+                    babyProfile: baby ? { 
+                        name: baby.name, 
+                        birthDate: baby.birthDate, 
+                        gender: baby.gender,
+                        month: babyAgeMonth
+                    } : undefined,
                     recentRecords: { feeding: [], sleep: [], growth: [] },
                     query: prompt
                 });
@@ -74,15 +81,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
         }
 
-        return res.status(200).json(tips.map((t, idx) => ({
+        // Final serialization check
+        const safeTips = tips.map((t: any, idx) => ({
             id: t.id?.toString() || `ai-${idx}`,
             title: t.title,
-            description: t.content,
+            description: t.content || t.description,
             type: t.category,
             priority: baby ? 'high' : 'medium'
-        })));
-    } catch (error) {
+        }));
+
+        return res.status(200).json(safeTips);
+    } catch (error: any) {
         console.error('Tips API Error:', error);
-        return res.status(500).json({ message: 'Internal Server Error' });
+        return res.status(500).json({ message: 'Internal Server Error', error: error.message });
     }
 }

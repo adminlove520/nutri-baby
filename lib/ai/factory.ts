@@ -6,8 +6,8 @@ export type ProviderType = 'gemini' | 'openai' | 'doubao' | 'minimax';
 
 export class AIFactory {
     static createProvider(type?: ProviderType): AIProvider {
-        const providerType = type || (process.env.AI_PROVIDER as ProviderType) || 'minimax';
-        const apiKey = process.env.AI_API_KEY || 'mock-key';
+        const providerType = (type || process.env.AI_PROVIDER || 'minimax') as ProviderType;
+        const apiKey = process.env.AI_API_KEY || process.env.MINIMAX_API_KEY || 'mock-key';
         const model = process.env.AI_MODEL || 'MiniMax-M2.7';
 
         switch (providerType) {
