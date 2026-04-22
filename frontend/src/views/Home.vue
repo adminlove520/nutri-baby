@@ -265,10 +265,6 @@ const fetchData = async () => {
         todayStats.value = statsRes.today
         joinDays.value = (userStats as any).joinDays
 
-        // Fetch real tips
-        const tipsRes: any = await client.get('/tips', { params: { babyId } })
-        todayTips.value = tipsRes
-
         const pending = vaccineRes
             .filter((v: any) => v.vaccinationStatus === 'pending')
             .sort((a: any, b: any) => new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime())
