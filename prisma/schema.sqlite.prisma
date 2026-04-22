@@ -1,0 +1,237 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("SQLITE_DATABASE_URL")
+}
+
+model User {
+  id                Int                   @id @default(autoincrement())
+  openid            String?               @unique
+  phone             String?               @unique
+  email             String?               @unique
+  password          String?
+  nickname          String?
+  avatarUrl         String?
+  defaultBabyId     Int?
+  lastLoginTime     DateTime?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  deletedAt         DateTime?
+  babies            Baby[]
+  collaborations    BabyCollaborator[]
+  completedVaccines BabyVaccineSchedule[] @relation("CompletedBy")
+  createdVaccines   BabyVaccineSchedule[] @relation("CreatedBy")
+  diaperRecords     DiaperRecord[]
+  expertTips        ExpertTip[]
+  feedingRecords    FeedingRecord[]
+  growthRecords     GrowthRecord[]
+  notifications     Notification[]
+  sleepRecords      SleepRecord[]
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  title     String
+  content   String
+  type      String   @default("system")
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model ExpertTip {
+  id          Int      @id @default(autoincrement())
+  title       String
+  content     String
+  category    String
+  minAgeMonth Int
+  maxAgeMonth Int
+  source      String?  @default("AI")
+  createdAt   DateTime @default(now())
+  createdBy   Int?
+  creator     User?    @relation(fields: [createdBy], references: [id])
+}
+
+model Baby {
+  id             Int                   @id @default(autoincrement())
+  name           String
+  nickname       String?
+  birthDate      DateTime
+  gender         String
+  avatarUrl      String?
+  height         Float?
+  weight         Float?
+  userId         Int
+  familyGroup    String?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  deletedAt      DateTime?
+  user           User                  @relation(fields: [userId], references: [id])
+  collaborators  BabyCollaborator[]
+  vaccines       BabyVaccineSchedule[]
+  diaperRecords  DiaperRecord[]
+  feedingRecords FeedingRecord[]
+  growthRecords  GrowthRecord[]
+  sleepRecords   SleepRecord[]
+
+  @@index([userId])
+}
+
+model BabyCollaborator {
+  id           Int       @id @default(autoincrement())
+  babyId       Int
+  userId       Int
+  role         String
+  relationship String
+  accessType   String    @default("permanent")
+  expiresAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+  baby         Baby      @relation(fields: [babyId], references: [id])
+  user         User      @relation(fields: [userId], references: [id])
+
+  @@unique([babyId, userId])
+  @@index([userId, role])
+}
+
+model FeedingRecord {
+  id                 Int       @id @default(autoincrement())
+  babyId             Int
+  time               DateTime
+  feedingType        String
+  amount             Int?
+  duration           Int?
+  detail             String?
+  createdBy          Int
+  createdByName      String?
+  createdByAvatar    String?
+  actualCompleteTime DateTime?
+  reminderInterval   Int?
+  nextReminderTime   DateTime?
+  reminderSent       Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  deletedAt          DateTime?
+  baby               Baby      @relation(fields: [babyId], references: [id])
+  creator            User      @relation(fields: [createdBy], references: [id])
+
+  @@index([babyId, time])
+}
+
+model SleepRecord {
+  id              Int       @id @default(autoincrement())
+  babyId          Int
+  startTime       DateTime
+  endTime         DateTime?
+  duration        Int?
+  type            String?
+  createdBy       Int
+  createdByName   String?
+  createdByAvatar String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+  baby            Baby      @relation(fields: [babyId], references: [id])
+  creator         User      @relation(fields: [createdBy], references: [id])
+
+  @@index([babyId, startTime])
+}
+
+model DiaperRecord {
+  id              Int       @id @default(autoincrement())
+  babyId          Int
+  time            DateTime
+  type            String
+  poopColor       String?
+  poopTexture     String?
+  note            String?
+  createdBy       Int
+  createdByName   String?
+  createdByAvatar String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+  baby            Baby      @relation(fields: [babyId], references: [id])
+  creator         User      @relation(fields: [createdBy], references: [id])
+
+  @@index([babyId, time])
+}
+
+model GrowthRecord {
+  id                Int       @id @default(autoincrement())
+  babyId            Int
+  time              DateTime
+  height            Float?
+  weight            Float?
+  headCircumference Float?
+  note              String?
+  createdBy         Int
+  createdByName     String?
+  createdByAvatar   String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  deletedAt         DateTime?
+  baby              Baby      @relation(fields: [babyId], references: [id])
+  creator           User      @relation(fields: [createdBy], references: [id])
+
+  @@index([babyId, time])
+}
+
+model VaccinePlanTemplate {
+  id           Int                   @id @default(autoincrement())
+  vaccineType  String
+  vaccineName  String
+  description  String?
+  ageInMonths  Int
+  doseNumber   Int
+  isRequired   Boolean
+  reminderDays Int                  @default(7)
+  sortOrder    Int                  @default(0)
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  deletedAt    DateTime?
+  schedules    BabyVaccineSchedule[]
+}
+
+model BabyVaccineSchedule {
+  id                Int                  @id @default(autoincrement())
+  babyId            Int
+  templateId        Int?
+  vaccineType       String
+  vaccineName       String
+  description       String?
+  ageInMonths       Int
+  doseNumber        Int
+  isRequired        Boolean              @default(true)
+  reminderDays      Int                  @default(7)
+  isCustom          Boolean              @default(false)
+  vaccinationStatus String              @default("pending")
+  vaccineDate       DateTime?
+  hospital          String?
+  batchNumber       String?
+  doctor            String?
+  reaction          String?
+  note              String?
+  completedBy       Int?
+  completedByName   String?
+  completedByAvatar String?
+  completedTime     DateTime?
+  scheduledDate     DateTime
+  reminderSent      Boolean              @default(false)
+  reminderSentAt    DateTime?
+  createdBy         Int
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  deletedAt         DateTime?
+  baby              Baby                  @relation(fields: [babyId], references: [id])
+  completer         User?               @relation("CompletedBy", fields: [completedBy], references: [id])
+  creator           User                 @relation("CreatedBy", fields: [createdBy], references: [id])
+  template          VaccinePlanTemplate? @relation(fields: [templateId], references: [id])
+
+  @@index([babyId, scheduledDate])
+}

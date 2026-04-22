@@ -7,14 +7,16 @@
     ],
     "scripts": {
         "dev": "vercel dev",
-        "build": "prisma generate && prisma db push --skip-generate && npm run build --workspace=frontend",
+        "build": "prisma generate && npm run build --workspace=frontend",
+        "build:sqlite": "prisma --schema=prisma/schema.sqlite.prisma generate && npm run build --workspace=frontend",
         "db:push": "prisma db push",
+        "db:push:sqlite": "prisma --schema=prisma/schema.sqlite.prisma db push",
         "db:seed": "prisma db seed",
+        "db:seed:sqlite": "prisma --schema=prisma/schema.sqlite.prisma db seed",
         "postinstall": "prisma generate --no-engine"
     },
     "dependencies": {
         "@prisma/client": "^5.22.0",
-        "@prisma/extension-accelerate": "^3.0.1",
         "@vercel/blob": "^2.3.3",
         "bcryptjs": "^3.0.3",
         "jsonwebtoken": "^9.0.3",
