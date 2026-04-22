@@ -94,16 +94,18 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, computed, reactive } from 'vue'
 import { Mug, Moon, TrendCharts } from '@element-plus/icons-vue'
-import { use } from 'echarts/core'
-import { CanvasRenderer } from 'echarts/renderers'
-import { BarChart, LineChart } from 'echarts/charts'
-import { GridComponent, TooltipComponent, LegendComponent, MarkLineComponent } from 'echarts/components'
 import VChart from 'vue-echarts'
 import axios from 'axios'
 import { useBabyStore } from '@/stores/baby'
 import { ElMessage } from 'element-plus'
 
-use([CanvasRenderer, BarChart, LineChart, GridComponent, TooltipComponent, LegendComponent, MarkLineComponent])
+// 按需导入echarts组件
+import { use } from 'echarts/core'
+import { CanvasRenderer } from 'echarts/renderers'
+import { BarChart, LineChart } from 'echarts/charts'
+import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
+
+use([CanvasRenderer, BarChart, LineChart, GridComponent, TooltipComponent, LegendComponent])
 
 const babyStore = useBabyStore()
 const loading = ref(false)

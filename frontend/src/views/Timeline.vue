@@ -91,11 +91,12 @@ import {
 import { useBabyStore } from '@/stores/baby'
 import { formatTime, formatRelative } from '@/utils/date'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import type { TimelineEntry } from '@/types'
 
 const router = useRouter()
 const babyStore = useBabyStore()
 const loading = ref(false)
-const entries = ref<any[]>([])
+const entries = ref<TimelineEntry[]>([])
 const hasMore = ref(true)
 const offset = ref(0)
 const limit = 20

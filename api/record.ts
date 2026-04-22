@@ -126,7 +126,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return success(res, { message: '记录已删除' });
         }
     } catch (err) {
-        console.error(`Record API Error (${type}):`, err);
         return error(res, '服务器开小差了，请稍后再试', 500);
     }
 }

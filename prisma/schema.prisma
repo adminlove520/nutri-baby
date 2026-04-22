@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
@@ -10,87 +10,81 @@ datasource db {
 }
 
 model User {
-  id              BigInt    @id @default(autoincrement()) 
-  openid          String?   @unique 
-  phone           String?   @unique 
-  email           String?   @unique 
-  password        String?   
-  nickname        String?
-  avatarUrl       String?   @map("avatar_url")
-  defaultBabyId   BigInt?   @map("default_baby_id")
-  lastLoginTime   DateTime? @map("last_login_time")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-  deletedAt       DateTime? @map("deleted_at")
-
-  // Relations
-  babies          Baby[]    @relation("UserBabies")
-  collaborations  BabyCollaborator[]
-  feedingRecords  FeedingRecord[]
-  sleepRecords    SleepRecord[]
-  diaperRecords   DiaperRecord[]
-  growthRecords   GrowthRecord[]
-  vaccineSchedules BabyVaccineSchedule[] @relation("CompletedBy")
+  id                      BigInt                @id @default(autoincrement())
+  openid                  String?               @unique
+  phone                   String?               @unique
+  email                   String?               @unique
+  password                String?
+  nickname                String?
+  avatarUrl               String?               @map("avatar_url")
+  defaultBabyId           BigInt?               @map("default_baby_id")
+  lastLoginTime           DateTime?             @map("last_login_time")
+  createdAt               DateTime              @default(now()) @map("created_at")
+  updatedAt               DateTime              @updatedAt @map("updated_at")
+  deletedAt               DateTime?             @map("deleted_at")
+  babies                  Baby[]                @relation("UserBabies")
+  collaborations          BabyCollaborator[]
+  vaccineSchedules        BabyVaccineSchedule[] @relation("CompletedBy")
   createdVaccineSchedules BabyVaccineSchedule[] @relation("CreatedBy")
-  notifications  Notification[]
-  expertTips     ExpertTip[]
+  diaperRecords           DiaperRecord[]
+  expertTips              ExpertTip[]
+  feedingRecords          FeedingRecord[]
+  growthRecords           GrowthRecord[]
+  notifications           Notification[]
+  sleepRecords            SleepRecord[]
 
   @@map("users")
 }
 
 model Notification {
-  id        BigInt    @id @default(autoincrement())
-  userId    BigInt    @map("user_id")
+  id        BigInt   @id @default(autoincrement())
+  userId    BigInt   @map("user_id")
   title     String
   content   String
-  type      String    @default("system") // system, vaccine, tips
-  isRead    Boolean   @default(false) @map("is_read")
-  createdAt DateTime  @default(now()) @map("created_at")
-
-  user      User      @relation(fields: [userId], references: [id])
+  type      String   @default("system")
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id])
 
   @@map("notifications")
 }
 
 model ExpertTip {
-  id          BigInt    @id @default(autoincrement())
+  id          BigInt   @id @default(autoincrement())
   title       String
   content     String
-  category    String    // feeding, sleep, development, safety
-  minAgeMonth Int       @map("min_age_month")
-  maxAgeMonth Int       @map("max_age_month")
-  source      String?   @default("AI") // AI, Expert, Manual
-  createdAt   DateTime  @default(now()) @map("created_at")
-  createdBy   BigInt?   @map("created_by")
-
-  creator     User?     @relation(fields: [createdBy], references: [id])
+  category    String
+  minAgeMonth Int      @map("min_age_month")
+  maxAgeMonth Int      @map("max_age_month")
+  source      String?  @default("AI")
+  createdAt   DateTime @default(now()) @map("created_at")
+  createdBy   BigInt?  @map("created_by")
+  creator     User?    @relation(fields: [createdBy], references: [id])
 
   @@map("expert_tips")
 }
 
 model Baby {
-  id          BigInt    @id @default(autoincrement())
-  name        String
-  nickname    String?
-  birthDate   String    @map("birth_date") // YYYY-MM-DD
-  gender      String
-  avatarUrl   String?   @map("avatar_url")
-  height      Decimal?  @db.Decimal(10, 2)
-  weight      Decimal?  @db.Decimal(10, 2)
-  userId      BigInt    @map("user_id")
-  familyGroup String?   @map("family_group")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
-  deletedAt   DateTime? @map("deleted_at")
-
-  // Relations
-  user            User               @relation("UserBabies", fields: [userId], references: [id])
-  collaborators   BabyCollaborator[]
-  feedingRecords  FeedingRecord[]
-  sleepRecords    SleepRecord[]
-  diaperRecords   DiaperRecord[]
-  growthRecords   GrowthRecord[]
-  vaccines        BabyVaccineSchedule[]
+  id             BigInt                @id @default(autoincrement())
+  name           String
+  nickname       String?
+  birthDate      String                @map("birth_date")
+  gender         String
+  avatarUrl      String?               @map("avatar_url")
+  height         Decimal?              @db.Decimal(10, 2)
+  weight         Decimal?              @db.Decimal(10, 2)
+  userId         BigInt                @map("user_id")
+  familyGroup    String?               @map("family_group")
+  createdAt      DateTime              @default(now()) @map("created_at")
+  updatedAt      DateTime              @updatedAt @map("updated_at")
+  deletedAt      DateTime?             @map("deleted_at")
+  user           User                  @relation("UserBabies", fields: [userId], references: [id])
+  collaborators  BabyCollaborator[]
+  vaccines       BabyVaccineSchedule[]
+  diaperRecords  DiaperRecord[]
+  feedingRecords FeedingRecord[]
+  growthRecords  GrowthRecord[]
+  sleepRecords   SleepRecord[]
 
   @@index([userId])
   @@map("babies")
@@ -100,44 +94,39 @@ model BabyCollaborator {
   id           BigInt    @id @default(autoincrement())
   babyId       BigInt    @map("baby_id")
   userId       BigInt    @map("user_id")
-  role         String    // admin, editor, viewer
+  role         String
   relationship String
-  accessType   String    @default("permanent") @map("access_type") // permanent, temporary
+  accessType   String    @default("permanent") @map("access_type")
   expiresAt    DateTime? @map("expires_at")
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
   deletedAt    DateTime? @map("deleted_at")
-
   baby         Baby      @relation(fields: [babyId], references: [id])
   user         User      @relation(fields: [userId], references: [id])
 
   @@unique([babyId, userId])
+  @@index([userId, role])
   @@map("baby_collaborators")
 }
 
-// Records
 model FeedingRecord {
   id                 BigInt    @id @default(autoincrement())
   babyId             BigInt    @map("baby_id")
   time               DateTime
-  feedingType        String    @map("feeding_type") // breast, bottle, food
-  amount             Int?      // ml
-  duration           Int?      // seconds
+  feedingType        String    @map("feeding_type")
+  amount             Int?
+  duration           Int?
   detail             Json?
   createdBy          BigInt    @map("created_by")
   createdByName      String?   @map("created_by_name")
   createdByAvatar    String?   @map("created_by_avatar")
-  
-  // Reminders
   actualCompleteTime DateTime? @map("actual_complete_time")
   reminderInterval   Int?      @map("reminder_interval")
   nextReminderTime   DateTime? @map("next_reminder_time")
   reminderSent       Boolean   @default(false) @map("reminder_sent")
-
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
   deletedAt          DateTime? @map("deleted_at")
-
   baby               Baby      @relation(fields: [babyId], references: [id])
   creator            User      @relation(fields: [createdBy], references: [id])
 
@@ -151,14 +140,13 @@ model SleepRecord {
   startTime       DateTime  @map("start_time")
   endTime         DateTime? @map("end_time")
   duration        Int?
-  type            String?   // nap, night
+  type            String?
   createdBy       BigInt    @map("created_by")
   createdByName   String?   @map("created_by_name")
   createdByAvatar String?   @map("created_by_avatar")
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
   deletedAt       DateTime? @map("deleted_at")
-
   baby            Baby      @relation(fields: [babyId], references: [id])
   creator         User      @relation(fields: [createdBy], references: [id])
 
@@ -170,7 +158,7 @@ model DiaperRecord {
   id              BigInt    @id @default(autoincrement())
   babyId          BigInt    @map("baby_id")
   time            DateTime
-  type            String    // pee, poop, both
+  type            String
   poopColor       String?   @map("poop_color")
   poopTexture     String?   @map("poop_texture")
   note            String?
@@ -180,7 +168,6 @@ model DiaperRecord {
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
   deletedAt       DateTime? @map("deleted_at")
-
   baby            Baby      @relation(fields: [babyId], references: [id])
   creator         User      @relation(fields: [createdBy], references: [id])
 
@@ -199,10 +186,9 @@ model GrowthRecord {
   createdBy         BigInt    @map("created_by")
   createdByName     String?   @map("created_by_name")
   createdByAvatar   String?   @map("created_by_avatar")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-  deletedAt       DateTime? @map("deleted_at")
-
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  deletedAt         DateTime? @map("deleted_at")
   baby              Baby      @relation(fields: [babyId], references: [id])
   creator           User      @relation(fields: [createdBy], references: [id])
 
@@ -211,83 +197,73 @@ model GrowthRecord {
 }
 
 model VaccinePlanTemplate {
-  id           BigInt    @id @default(autoincrement())
-  vaccineType  String    @map("vaccine_type")
-  vaccineName  String    @map("vaccine_name")
+  id           BigInt                @id @default(autoincrement())
+  vaccineType  String                @map("vaccine_type")
+  vaccineName  String                @map("vaccine_name")
   description  String?
-  ageInMonths  Int       @map("age_in_months")
-  doseNumber   Int       @map("dose_number")
-  isRequired   Boolean   @map("is_required")
-  reminderDays Int       @default(7) @map("reminder_days")
-  sortOrder    Int       @default(0) @map("sort_order")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
-  deletedAt    DateTime? @map("deleted_at")
-
+  ageInMonths  Int                   @map("age_in_months")
+  doseNumber   Int                   @map("dose_number")
+  isRequired   Boolean               @map("is_required")
+  reminderDays Int                   @default(7) @map("reminder_days")
+  sortOrder    Int                   @default(0) @map("sort_order")
+  createdAt    DateTime              @default(now()) @map("created_at")
+  updatedAt    DateTime              @updatedAt @map("updated_at")
+  deletedAt    DateTime?             @map("deleted_at")
   schedules    BabyVaccineSchedule[]
 
   @@map("vaccine_plan_templates")
 }
 
 model BabyVaccineSchedule {
-  id                BigInt    @id @default(autoincrement())
-  babyId            BigInt    @map("baby_id")
-  templateId        BigInt?   @map("template_id")
-  
-  vaccineType       String    @map("vaccine_type")
-  vaccineName       String    @map("vaccine_name")
+  id                BigInt               @id @default(autoincrement())
+  babyId            BigInt               @map("baby_id")
+  templateId        BigInt?              @map("template_id")
+  vaccineType       String               @map("vaccine_type")
+  vaccineName       String               @map("vaccine_name")
   description       String?
-  ageInMonths       Int       @map("age_in_months")
-  doseNumber        Int       @map("dose_number")
-  isRequired        Boolean   @default(true) @map("is_required")
-  reminderDays      Int       @default(7) @map("reminder_days")
-  isCustom          Boolean   @default(false) @map("is_custom")
-  
-  vaccinationStatus String    @default("pending") @map("vaccination_status") // pending, completed, skipped
-  
-  // Completed info
-  vaccineDate       DateTime? @map("vaccine_date")
+  ageInMonths       Int                  @map("age_in_months")
+  doseNumber        Int                  @map("dose_number")
+  isRequired        Boolean              @default(true) @map("is_required")
+  reminderDays      Int                  @default(7) @map("reminder_days")
+  isCustom          Boolean              @default(false) @map("is_custom")
+  vaccinationStatus String               @default("pending") @map("vaccination_status")
+  vaccineDate       DateTime?            @map("vaccine_date")
   hospital          String?
-  batchNumber       String?   @map("batch_number")
+  batchNumber       String?              @map("batch_number")
   doctor            String?
   reaction          String?
   note              String?
-  completedBy       BigInt?   @map("completed_by")
-  completedByName   String?   @map("completed_by_name")
-  completedByAvatar String?   @map("completed_by_avatar")
-  completedTime     DateTime? @map("completed_time")
-
-  // Reminder info
-  scheduledDate     DateTime  @map("scheduled_date")
-  reminderSent      Boolean   @default(false) @map("reminder_sent")
-  reminderSentAt    DateTime? @map("reminder_sent_at")
-
-  createdBy         BigInt    @map("created_by")
-  createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
-  deletedAt         DateTime? @map("deleted_at")
-
-  baby              Baby      @relation(fields: [babyId], references: [id])
+  completedBy       BigInt?              @map("completed_by")
+  completedByName   String?              @map("completed_by_name")
+  completedByAvatar String?              @map("completed_by_avatar")
+  completedTime     DateTime?            @map("completed_time")
+  scheduledDate     DateTime             @map("scheduled_date")
+  reminderSent      Boolean              @default(false) @map("reminder_sent")
+  reminderSentAt    DateTime?            @map("reminder_sent_at")
+  createdBy         BigInt               @map("created_by")
+  createdAt         DateTime             @default(now()) @map("created_at")
+  updatedAt         DateTime             @updatedAt @map("updated_at")
+  deletedAt         DateTime?            @map("deleted_at")
+  baby              Baby                 @relation(fields: [babyId], references: [id])
+  completer         User?                @relation("CompletedBy", fields: [completedBy], references: [id])
+  creator           User                 @relation("CreatedBy", fields: [createdBy], references: [id])
   template          VaccinePlanTemplate? @relation(fields: [templateId], references: [id])
-  completer         User?     @relation("CompletedBy", fields: [completedBy], references: [id])
-  creator           User      @relation("CreatedBy", fields: [createdBy], references: [id])
 
   @@index([babyId, scheduledDate])
   @@map("baby_vaccine_schedules")
 }
 
 model GrowthStandard {
-  id        BigInt   @id @default(autoincrement())
-  source    String   @default("WHO") // WHO, NHC
-  type      String   // height, weight, head_circumference
-  gender    String   // male, female
-  month     Int      // Age in months
-  
-  p3        Decimal  @db.Decimal(5, 2)
-  p15       Decimal  @db.Decimal(5, 2)
-  p50       Decimal  @db.Decimal(5, 2)
-  p85       Decimal  @db.Decimal(5, 2)
-  p97       Decimal  @db.Decimal(5, 2)
+  id     BigInt  @id @default(autoincrement())
+  source String  @default("WHO")
+  type   String
+  gender String
+  month  Int
+  p3     Decimal @db.Decimal(5, 2)
+  p15    Decimal @db.Decimal(5, 2)
+  p50    Decimal @db.Decimal(5, 2)
+  p85    Decimal @db.Decimal(5, 2)
+  p97    Decimal @db.Decimal(5, 2)
 
   @@unique([source, type, gender, month])
   @@map("growth_standards")

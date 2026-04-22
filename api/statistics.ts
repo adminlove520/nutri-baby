@@ -33,11 +33,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const startDate = new Date();
             startDate.setDate(startDate.getDate() - days);
 
-            const [feedingRecords, sleepRecords, growthRecords] = await Promise.all([
+            const [feedingRecords, sleepRecords, growthRecords, baby, standards] = await Promise.all([
                 prisma.feedingRecord.findMany({ where: { babyId: bId, time: { gte: startDate } }, orderBy: { time: 'asc' } }),
                 prisma.sleepRecord.findMany({ where: { babyId: bId, startTime: { gte: startDate } }, orderBy: { startTime: 'asc' } }),
-                prisma.growthRecord.findMany({ where: { babyId: bId, time: { gte: startDate } }, orderBy: { time: 'asc' } })
+                prisma.growthRecord.findMany({ where: { babyId: bId, time: { gte: startDate } }, orderBy: { time: 'asc' } }),
+                prisma.baby.findUnique({ where: { id: bId } }),
+                prisma.growthStandard.findMany({
+                    where: { gender: 'male', source: 'WHO' },
+                    orderBy: { month: 'asc' }
+                })
             ]);
+
+            // Use baby's gender for standards if available
+            let genderedStandards = standards;
+            if (baby?.gender) {
+                genderedStandards = await prisma.growthStandard.findMany({
+                    where: { gender: baby.gender, source: 'WHO' },
+                    orderBy: { month: 'asc' }
+                });
+            }
 
             const dailyFeeding: Record<string, number> = {};
             feedingRecords.forEach(r => {
@@ -52,12 +66,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 dailySleep[date] = (dailySleep[date] || 0) + minutes;
             });
 
-            const baby = await prisma.baby.findUnique({ where: { id: bId } });
-            const standards = await prisma.growthStandard.findMany({
-                where: { gender: baby?.gender || 'male', source: 'WHO' },
-                orderBy: { month: 'asc' }
-            });
-
             return success(res, {
                 feeding: Object.entries(dailyFeeding).map(([date, amount]) => ({ date, amount })),
                 sleep: Object.entries(dailySleep).map(([date, minutes]) => ({ date, hours: parseFloat((minutes / 60).toFixed(1)) })),
@@ -68,7 +76,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     weight: r.weight ? Number(r.weight) : null,
                     head: r.headCircumference ? Number(r.headCircumference) : null
                 })),
-                standards: standards.map(s => ({ month: s.month, type: s.type, p3: Number(s.p3), p15: Number(s.p15), p50: Number(s.p50), p85: Number(s.p85), p97: Number(s.p97) }))
+                standards: genderedStandards.map(s => ({ month: s.month, type: s.type, p3: Number(s.p3), p15: Number(s.p15), p50: Number(s.p50), p85: Number(s.p85), p97: Number(s.p97) }))
             });
         }
 
@@ -96,7 +104,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
         });
     } catch (err) {
-        console.error('Statistics API Error:', err);
         return error(res, '统计数据加载失败', 500);
     }
 }

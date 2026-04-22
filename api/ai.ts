@@ -2,35 +2,41 @@ import { VercelRequest, VercelResponse } from '@vercel/node';
 import prisma from '../lib/prisma';
 import { getUserFromRequest, hasBabyPermission } from '../lib/auth';
 import { AIFactory } from '../lib/ai/factory';
+import { error } from '../lib/utils';
 
 // POST /api/ai/analyze
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') {
-        return res.status(405).json({ message: 'Method Not Allowed' });
+        return error(res, 'Method Not Allowed', 405);
     }
 
     const user = await getUserFromRequest(req);
     if (!user) {
-        return res.status(401).json({ message: 'Unauthorized' });
+        return error(res, 'Unauthorized', 401);
     }
 
     const { babyId, query } = req.body;
 
     if (!babyId) {
-        return res.status(400).json({ message: 'Baby ID is required' });
+        return error(res, 'Baby ID is required', 400);
     }
 
     try {
         const id = BigInt(babyId);
-        if (!(await hasBabyPermission(user.userId, id))) return res.status(403).json({ message: 'Forbidden' });
+        if (!(await hasBabyPermission(user.userId, id))) return error(res, 'Forbidden', 403);
 
         // 1. Gather Context Data
         const baby = await prisma.baby.findFirst({
-            where: { id: id } // Simplified auth check
+            where: { id: id }
         });
 
         if (!baby) {
-            return res.status(404).json({ message: 'Baby not found' });
+            return error(res, 'Baby not found', 404);
+        }
+        
+        // Validate permission again to ensure consistency
+        if (!(await hasBabyPermission(user.userId, id))) {
+            return error(res, 'Forbidden', 403);
         }
 
         // Fetch last 7 days records for context
@@ -79,7 +85,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json(result);
 
     } catch (error) {
-        console.error('AI Analysis failed', error);
-        return res.status(500).json({ message: 'Internal Server Error' });
+        return error(res, 'Internal Server Error', 500);
     }
 }

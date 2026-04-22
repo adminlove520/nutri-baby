@@ -1,16 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import * as babyApi from '@/api/baby'
-
-export interface BabyProfile {
-    id: string
-    name: string
-    nickname?: string
-    gender: 'male' | 'female'
-    birthDate: string
-    avatarUrl?: string
-    isDefault?: boolean
-}
+import type { BabyProfile } from '@/types'
 
 export const useBabyStore = defineStore('baby', () => {
     const babyList = ref<BabyProfile[]>([])

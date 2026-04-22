@@ -7,17 +7,17 @@
     ],
     "scripts": {
         "dev": "vercel dev",
-        "build": "prisma generate && npm run build --workspace=frontend",
+        "build": "prisma generate && prisma db push --skip-generate && npm run build --workspace=frontend",
         "db:push": "prisma db push",
         "db:seed": "prisma db seed",
         "postinstall": "prisma generate"
     },
     "dependencies": {
-        "@prisma/client": "^5.10.2",
-        "@prisma/extension-accelerate": "^1.0.0",
+        "@prisma/client": "^5.22.0",
+        "@prisma/extension-accelerate": "^3.0.1",
         "@types/nodemailer": "^8.0.0",
         "@vercel/blob": "^2.3.3",
-        "bcryptjs": "^2.4.3",
+        "bcryptjs": "^3.0.3",
         "jsonwebtoken": "^9.0.3",
         "nodemailer": "^8.0.5"
     },
@@ -26,10 +26,10 @@
         "@types/jsonwebtoken": "^9.0.10",
         "@types/node": "^20.11.20",
         "@vercel/node": "^5.5.15",
-        "prisma": "^5.10.2",
+        "prisma": "^5.22.0",
         "ts-node": "^10.9.2",
         "typescript": "^5.8.2",
-        "vercel": "^52.0.0"
+        "vercel": "^33.5.1"
     },
     "prisma": {
         "seed": "ts-node prisma/seed.ts"

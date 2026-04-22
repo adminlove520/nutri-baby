@@ -4,7 +4,10 @@ import * as bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { success, error, validate } from '../lib/utils';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required');
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { action } = req.query;
@@ -83,6 +86,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return error(res, '未知的操作类型');
     } catch (err: any) {
         console.error('Auth API Error:', err);
+        if (err.code === 'P2021') {
+            return error(res, '系统初始化中：数据库表结构未就绪，请重新部署或稍后再试', 500);
+        }
         return error(res, '服务器繁忙，请稍后再试', 500);
     }
 }
