@@ -34,12 +34,24 @@
         <el-form-item label="宝宝性别" prop="gender">
           <div class="gender-selector">
              <div class="gender-option male" :class="{ active: formData.gender === 'male' }" @click="formData.gender = 'male'">
-                <div class="icon-circle">♂</div>
-                <span>小王子</span>
+                <div class="gender-icon-wrap">
+                  <div class="icon-circle">♂</div>
+                </div>
+                <div class="gender-label">
+                  <span class="main">小王子</span>
+                  <span class="sub">Prince</span>
+                </div>
+                <div class="check-mark"><el-icon><Check /></el-icon></div>
              </div>
              <div class="gender-option female" :class="{ active: formData.gender === 'female' }" @click="formData.gender = 'female'">
-                <div class="icon-circle">♀</div>
-                <span>小公主</span>
+                <div class="gender-icon-wrap">
+                  <div class="icon-circle">♀</div>
+                </div>
+                <div class="gender-label">
+                  <span class="main">小公主</span>
+                  <span class="sub">Princess</span>
+                </div>
+                <div class="check-mark"><el-icon><Check /></el-icon></div>
              </div>
           </div>
         </el-form-item>
@@ -244,22 +256,77 @@ const handleDelete = () => {
   
   .gender-option {
     flex: 1;
-    height: 64px;
-    border-radius: 16px;
-    background: #f1f2f6;
+    height: 80px;
+    border-radius: 20px;
+    background: #f9fbfc;
     display: flex;
-    flex-direction: column;
     align-items: center;
-    justify-content: center;
+    padding: 0 16px;
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
     border: 2px solid transparent;
+    position: relative;
+    overflow: hidden;
     
-    .icon-circle { font-size: 18px; font-weight: 900; margin-bottom: 2px; }
-    span { font-size: 12px; font-weight: 700; }
+    .gender-icon-wrap {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 12px;
+      font-size: 20px;
+      font-weight: 900;
+      transition: all 0.3s;
+    }
+
+    .gender-label {
+      display: flex;
+      flex-direction: column;
+      .main { font-size: 15px; font-weight: 800; line-height: 1.2; }
+      .sub { font-size: 10px; opacity: 0.6; font-weight: 600; text-transform: uppercase; margin-top: 2px; }
+    }
+
+    .check-mark {
+      position: absolute;
+      top: -10px;
+      right: -10px;
+      background: currentColor;
+      color: white;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      transform: scale(0);
+      transition: transform 0.3s;
+      padding-top: 6px;
+      padding-right: 6px;
+    }
     
-    &.male { color: #409eff; &.active { background: #eaf4ff; border-color: #409eff; transform: scale(1.02); } }
-    &.female { color: #ff8e94; &.active { background: #fff5f5; border-color: #ff8e94; transform: scale(1.02); } }
+    &.male { 
+      color: #409eff; 
+      .gender-icon-wrap { background: #eaf4ff; }
+      &.active { 
+        background: #eaf4ff; 
+        border-color: #409eff; 
+        transform: translateY(-2px);
+        .check-mark { transform: scale(1); }
+      } 
+    }
+    &.female { 
+      color: #ff8e94; 
+      .gender-icon-wrap { background: #fff5f5; }
+      &.active { 
+        background: #fff5f5; 
+        border-color: #ff8e94; 
+        transform: translateY(-2px);
+        .check-mark { transform: scale(1); }
+      } 
+    }
   }
 }
 

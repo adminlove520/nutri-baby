@@ -103,7 +103,7 @@
         <div class="section-header mt-32">
            <div class="section-title">育儿锦囊</div>
         </div>
-        <DailyTipsCard :tips="todayTips" @tip-click="handleTipClick" />
+        <DailyTipsCard :tips="todayTips" :loading="tipsLoading" @tip-click="handleTipClick" @generate="manualGenerateTip" />
       </el-col>
 
       <el-col :xs="24" :sm="9" :md="8" :lg="7">
@@ -205,6 +205,23 @@ const todayStats = ref({
 
 const upcomingVaccines = ref<string[]>([])
 const todayTips = ref<any[]>([])
+const tipsLoading = ref(false)
+
+const manualGenerateTip = async () => {
+    tipsLoading.value = true
+    try {
+        await client.get('/cron?triggerAiTip=true')
+        ElMessage.success('已为您生成最新的育儿锦囊')
+        // Refresh tips
+        const babyId = babyStore.currentBaby?.id
+        const tipsRes: any = await client.get('/tips', { params: { babyId } })
+        todayTips.value = tipsRes
+    } catch (e) {
+        // Handled
+    } finally {
+        tipsLoading.value = false
+    }
+}
 
 const fetchData = async () => {
     if (!babyStore.currentBaby?.id) return

@@ -35,6 +35,22 @@
     <el-tabs v-model="activeTab" class="custom-tabs glass-tabs">
       <el-tab-pane label="接种清单" name="list">
         <div class="vaccine-list">
+           <!-- AI Plan Section -->
+           <div class="ai-plan-section mb-32" v-if="babyStore.currentBaby">
+              <el-card class="ai-plan-card" shadow="hover">
+                 <div class="ai-header">
+                    <div class="title">✨ AI 定制接种计划表</div>
+                    <el-button size="small" round @click="generateAiPlan" :loading="aiPlanLoading">智能生成</el-button>
+                 </div>
+                 <div class="ai-plan-content">
+                    <div v-if="!aiPlan" class="plan-placeholder">
+                       点击“智能生成”，由 AI 根据宝宝月龄定制专属接种路线图
+                    </div>
+                    <div v-else class="plan-text" v-html="aiPlan"></div>
+                 </div>
+              </el-card>
+           </div>
+
            <div class="section-header">
               <div class="section-title">即将接种</div>
               <el-tag round effect="light" type="warning" size="small">{{ upcoming.length }} 个待办</el-tag>
@@ -102,28 +118,33 @@
 
       <el-tab-pane label="百科知识" name="wiki">
           <div class="vaccine-wiki">
-             <div class="wiki-header">
-                <el-icon><Opportunity /></el-icon>
-                <span>专家提醒：接种疫苗是保护宝宝最经济有效的方法</span>
+             <div class="wiki-grid">
+                <el-card v-for="item in wikiItems" :key="item.id" class="wiki-item-card" shadow="hover">
+                   <div class="item-header">
+                      <div class="item-icon">{{ item.icon }}</div>
+                      <span class="item-title">{{ item.title }}</span>
+                   </div>
+                   <div class="item-body">{{ item.content }}</div>
+                </el-card>
              </div>
-             <el-collapse v-model="activeWiki" accordion>
-                <el-collapse-item v-for="item in wikiItems" :key="item.id" :title="item.title" :name="item.id">
-                   <div class="wiki-content">{{ item.content }}</div>
-                </el-collapse-item>
-             </el-collapse>
              
              <div class="ai-wiki-section mt-40">
-                <el-card class="ai-card" shadow="hover">
+                <el-card class="ai-card premium" shadow="hover">
                    <div class="ai-header">
                       <div class="ai-brand">
-                         <div class="ai-icon">✨</div>
-                         <span>AI 接种管家为您生成</span>
+                         <div class="ai-spark">✨</div>
+                         <div class="ai-text">
+                            <span class="main">AI 接种深度百科</span>
+                            <span class="sub">基于最新《国家免疫规划》动态生成</span>
+                         </div>
                       </div>
-                      <el-button size="small" round @click="generateAiKnowledge" :loading="aiLoading">重新优化知识库</el-button>
+                      <el-button type="primary" size="small" round @click="generateAiKnowledge" :loading="aiLoading">智能优化</el-button>
                    </div>
                    <div class="ai-body">
-                      <p v-if="!aiKnowledge">点击上方按钮，由 AI 根据您宝宝的情况生成个性化的疫苗知识百科...</p>
-                      <div v-else class="markdown-body" v-html="aiKnowledge"></div>
+                      <div v-if="!aiKnowledge" class="ai-placeholder">
+                         <el-empty :image-size="80" description="点击“智能优化”开启专属百科" />
+                      </div>
+                      <div v-else class="markdown-body rich-text" v-html="aiKnowledge"></div>
                    </div>
                 </el-card>
              </div>
@@ -162,6 +183,26 @@ const loading = ref(false)
 const aiLoading = ref(false)
 const vaccines = ref<any[]>([])
 const aiKnowledge = ref('')
+const aiPlan = ref('')
+const aiPlanLoading = ref(false)
+
+const generateAiPlan = async () => {
+    aiPlanLoading.value = true
+    try {
+        const res: any = await client.get('/ai/analyze', {
+            params: { 
+                babyId: babyStore.currentBaby?.id,
+                query: '请作为一名专业的儿科专家，根据我宝宝的月龄（如果是新出生则从0月开始），列出一份精简的未来6个月的接种计划清单表。包括：疫苗名称、推荐接种时间、主要预防疾病。请使用Markdown表格格式返回。'
+            }
+        })
+        aiPlan.value = res.insight.replace(/\n/g, '<br/>')
+        ElMessage.success('计划表已生成')
+    } catch (e) {
+        // Handled
+    } finally {
+        aiPlanLoading.value = false
+    }
+}
 
 const wikiVisible = ref(false)
 const currentWiki = reactive({
@@ -257,10 +298,10 @@ const generateAiKnowledge = async () => {
 }
 
 const wikiItems = [
-    { id: '1', title: '什么是国家免疫规划疫苗？', content: '国家免疫规划疫苗（一类疫苗）是政府免费向公民提供，公民应当依照政府规定受种的疫苗。包括乙肝疫苗、卡介苗、脊灰疫苗、百白破疫苗、麻腮风疫苗等。' },
-    { id: '2', title: '接种疫苗后可能有哪些反应？', content: '常见反应包括接种部位红肿、疼痛、硬结，以及全身反应如发热、哭闹、食欲不振等。多数反应较轻，1-3天可自行缓解。' },
-    { id: '3', title: '接种前需要注意什么？', content: '1. 携带预防接种证；2. 告知医生孩子近期的健康状况；3. 确保孩子皮肤清洁，穿着宽松。' },
-    { id: '4', title: '接种后应该如何护理？', content: '接种后应在诊室留观30分钟；接种当天不宜给宝宝洗澡，避免接种部位沾水；让宝宝多休息、多喝水。' }
+    { id: '1', icon: '💉', title: '什么是免费一类疫苗？', content: '国家免疫规划疫苗是政府免费提供的必选接种，包括乙肝、卡介苗、脊灰等。' },
+    { id: '2', icon: '🌡️', title: '发热了还能打吗？', content: '建议推迟。发热、严重过敏、急性传染病等情况需在医生指导下缓种。' },
+    { id: '3', icon: '⏰', title: '接种前要准备什么？', content: '携带证件，告知近期健康状况，确保宝宝皮肤清洁，衣着宽松方便露臂。' },
+    { id: '4', icon: '👶', title: '打完后如何护理？', content: '留观30分钟，接种当天避免洗澡沾水，多喝温开水，保持充足休息。' }
 ]
 
 const isNear = (dateStr: string) => {
@@ -292,167 +333,107 @@ watch(() => babyStore.currentBaby?.id, fetchVaccines)
   .refresh-btn { box-shadow: 0 4px 12px rgba(255, 142, 148, 0.2); }
 }
 
-.stats-row {
-  margin-bottom: 30px;
-}
-
-.mini-stat-card {
-    background: white;
-    padding: 16px;
-    border-radius: 20px;
-    text-align: center;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.02);
-    border: 1px solid var(--el-border-color-lighter);
-    
-    .val { font-size: 20px; font-weight: 900; margin-bottom: 2px; }
-    .lab { font-size: 11px; color: var(--el-text-color-secondary); font-weight: 600; }
-    
-    &.c1 .val { color: var(--el-color-success); }
-    &.c2 .val { color: var(--el-color-warning); }
-    &.c3 .val { color: var(--el-color-primary); }
-}
-
-.custom-tabs {
-  :deep(.el-tabs__header) { margin-bottom: 24px; }
-  :deep(.el-tabs__item) { font-weight: 800; font-size: 15px; }
-  :deep(.el-tabs__nav-wrap::after) { height: 1px; background-color: var(--el-border-color-lighter); }
-}
-
-.section-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 16px;
-    .section-title { font-size: 17px; font-weight: 900; color: var(--el-text-color-primary); }
-}
-
-.upcoming-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-.vaccine-card {
-    border-radius: 24px !important;
-    border: none !important;
-    transition: all 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
-    
-    &:hover { transform: translateY(-3px); }
-
-    .v-card-top {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        margin-bottom: 12px;
-    }
-
-    .v-icon-box {
-        width: 48px;
-        height: 48px;
-        border-radius: 16px;
-        background: var(--el-color-primary-light-9);
-        color: var(--el-color-primary);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 22px;
-    }
-
-    .v-main-info {
-        flex: 1;
-        .v-name { font-size: 16px; font-weight: 800; color: var(--el-text-color-primary); margin-bottom: 4px; }
-        .v-tags { display: flex; align-items: center; gap: 8px; .v-age { font-size: 11px; color: var(--el-text-color-secondary); font-weight: 600; } }
-    }
-
-    .v-date-badge {
-        text-align: center;
-        width: 50px;
-        height: 54px;
-        background: #f1f2f6;
-        border-radius: 12px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        
-        .d-month { font-size: 10px; font-weight: 800; color: var(--el-text-color-secondary); text-transform: uppercase; }
-        .d-day { font-size: 20px; font-weight: 900; color: var(--el-text-color-primary); line-height: 1; }
-        
-        &.is-near { background: var(--el-color-primary); .d-month, .d-day { color: white; } box-shadow: 0 4px 12px rgba(255, 142, 148, 0.3); }
-    }
-
-    .v-card-body {
-        padding: 12px 0;
-        .v-desc { font-size: 13px; color: var(--el-text-color-regular); line-height: 1.6; margin: 0; }
-    }
-
-    .v-card-footer {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding-top: 12px;
-        border-top: 1px solid var(--el-border-color-lighter);
-    }
-}
-
-.completed-table-card {
-    border-radius: 24px !important;
-    overflow: hidden;
-    :deep(.el-card__body) { padding: 0; }
-    
-    .table-v-name { font-weight: 700; color: var(--el-text-color-primary); }
-    .table-date { font-size: 13px; color: var(--el-text-color-secondary); font-weight: 500; }
-}
-
-.wiki-header {
-    background: #fff9f9;
-    padding: 16px;
-    border-radius: 16px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 20px;
-    color: var(--el-color-primary);
-    font-size: 13px;
-    font-weight: 700;
-}
-
-.wiki-content { font-size: 14px; line-height: 1.8; color: var(--el-text-color-regular); }
-
-.ai-card {
-    border-radius: 24px !important;
-    background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
-    border: 1px solid white !important;
+.ai-plan-card {
+    border-radius: 28px !important;
+    background: linear-gradient(135deg, #fffcfc 0%, #fff5f5 100%);
+    border: 1px solid var(--el-color-primary-light-8) !important;
     
     .ai-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
         margin-bottom: 16px;
+        .title { font-weight: 900; color: var(--el-color-primary); font-size: 16px; }
+    }
+    
+    .ai-plan-content {
+        background: rgba(255, 255, 255, 0.6);
+        border-radius: 16px;
+        padding: 16px;
+        min-height: 80px;
+        
+        .plan-placeholder { 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            height: 100%; 
+            color: var(--el-text-color-secondary); 
+            font-size: 13px; 
+            font-style: italic;
+        }
+        
+        .plan-text {
+            font-size: 13px;
+            line-height: 1.8;
+            color: var(--el-text-color-primary);
+            :deep(table) {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 10px;
+                th, td { border: 1px solid var(--el-border-color-light); padding: 8px; text-align: left; }
+                th { background: var(--el-color-primary-light-9); font-weight: 800; }
+            }
+        }
+    }
+}
+
+.wiki-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}
+
+.wiki-item-card {
+    border-radius: 20px !important;
+    :deep(.el-card__body) { padding: 20px; }
+    
+    .item-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+        .item-icon { font-size: 20px; }
+        .item-title { font-weight: 800; font-size: 14px; color: var(--el-text-color-primary); }
+    }
+    
+    .item-body { font-size: 12px; line-height: 1.6; color: var(--el-text-color-regular); }
+}
+
+.ai-card.premium {
+    background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+    border: none !important;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.05) !important;
+    
+    .ai-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding-bottom: 20px;
+        border-bottom: 1px dashed rgba(0,0,0,0.05);
         
         .ai-brand {
             display: flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 800;
-            color: #2c3e50;
-            .ai-icon { font-size: 20px; }
+            gap: 12px;
+            .ai-spark { font-size: 24px; }
+            .ai-text {
+                display: flex;
+                flex-direction: column;
+                .main { font-size: 16px; font-weight: 900; color: #2c3e50; }
+                .sub { font-size: 11px; color: #a4b0be; font-weight: 600; margin-top: 2px; }
+            }
         }
     }
     
     .ai-body {
-        font-size: 14px;
-        line-height: 1.8;
-        color: #57606f;
-        p { text-align: center; color: var(--el-text-color-secondary); font-style: italic; }
+        padding-top: 20px;
+        .rich-text {
+            font-size: 14px;
+            line-height: 2;
+            color: #4b5563;
+        }
     }
 }
 
-.wiki-detail {
-    .wiki-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; font-size: 12px; color: var(--el-text-color-secondary); font-weight: 600; }
-    .wiki-text { line-height: 1.8; color: var(--el-text-color-primary); margin-bottom: 24px; }
-    .wiki-tips { background: #f9fbfc; padding: 16px; border-radius: 16px; border-left: 4px solid var(--el-color-primary); .tips-title { font-weight: 800; font-size: 14px; color: var(--el-color-primary); margin-bottom: 4px; } p { margin: 0; font-size: 13px; color: var(--el-text-color-regular); } }
-}
-
+.mb-32 { margin-bottom: 32px; }
 .mt-40 { margin-top: 40px; }
-.mb-24 { margin-bottom: 24px; }
 </style>

@@ -3,7 +3,10 @@
     <template #header>
       <div class="card-header">
         <div class="title-with-icon">
-          <div class="icon-bulb"><el-icon><Opportunity /></el-icon></div>
+          <div class="icon-bulb clickable" @click="$emit('generate')" :class="{ 'is-loading': loading }">
+            <el-icon v-if="!loading"><Opportunity /></el-icon>
+            <el-icon v-else class="is-loading"><Refresh /></el-icon>
+          </div>
           <span class="card-title">育儿锦囊</span>
         </div>
         <el-button link type="primary" class="more-btn">查看更多</el-button>
@@ -34,7 +37,7 @@
 
 <script setup lang="ts">
 import type { PropType } from 'vue'
-import { Opportunity, ArrowRight } from '@element-plus/icons-vue'
+import { Opportunity, ArrowRight, Refresh } from '@element-plus/icons-vue'
 
 interface DailyTip {
   id: string
@@ -53,10 +56,14 @@ defineProps({
   maxDisplay: {
     type: Number,
     default: 5
+  },
+  loading: {
+    type: Boolean,
+    default: false
   }
 })
 
-defineEmits(['tip-click'])
+defineEmits(['tip-click', 'generate'])
 
 const formatDate = (dateStr: string) => {
   const date = new Date(dateStr)
@@ -96,6 +103,17 @@ const formatDate = (dateStr: string) => {
     align-items: center;
     justify-content: center;
     font-size: 16px;
+    transition: all 0.3s;
+
+    &.clickable {
+      cursor: pointer;
+      &:hover { background: #ff9900; color: white; transform: rotate(15deg); }
+      &:active { transform: scale(0.9); }
+    }
+
+    &.is-loading {
+      .el-icon { animation: rotating 2s linear infinite; }
+    }
   }
   
   .card-title {

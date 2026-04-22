@@ -8,16 +8,22 @@
     <el-card class="form-card" shadow="hover">
        <el-form label-position="top">
           <el-form-item label="尿布状态">
-             <div class="diaper-types">
+             <div class="diaper-selector-new">
                 <div 
                    v-for="item in diaperTypes" 
                    :key="item.value" 
-                   class="diaper-item" 
-                   :class="{ active: form.type === item.value }"
+                   class="diaper-card" 
+                   :class="[item.value, { active: form.type === item.value }]"
                    @click="form.type = item.value"
                 >
-                   <div class="emoji">{{ item.emoji }}</div>
-                   <div class="label">{{ item.label }}</div>
+                   <div class="icon-blob">{{ item.emoji }}</div>
+                   <div class="info">
+                      <span class="name">{{ item.label }}</span>
+                      <span class="desc">{{ item.desc }}</span>
+                   </div>
+                   <div class="selection-indicator">
+                      <el-icon><Check /></el-icon>
+                   </div>
                 </div>
              </div>
           </el-form-item>
@@ -68,7 +74,7 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { Back } from '@element-plus/icons-vue'
+import { Back, Check } from '@element-plus/icons-vue'
 import { useRecordStore } from '@/stores/record'
 import { useBabyStore } from '@/stores/baby'
 import { ElMessage } from 'element-plus'
@@ -87,10 +93,10 @@ const form = reactive({
 })
 
 const diaperTypes = [
-    { value: 'pee', label: '嘘嘘', emoji: '💧' },
-    { value: 'poop', label: '臭臭', emoji: '💩' },
-    { value: 'both', label: '都有', emoji: '🌟' },
-    { value: 'dry', label: '干爽', emoji: '☁️' }
+    { value: 'pee', label: '嘘嘘', desc: '单纯排尿', emoji: '💧' },
+    { value: 'poop', label: '臭臭', desc: '排便记录', emoji: '💩' },
+    { value: 'both', label: '都有', desc: '嘘嘘+臭臭', emoji: '🌟' },
+    { value: 'dry', label: '干爽', desc: '检查/更换', emoji: '☁️' }
 ]
 
 const colors = ['#F4D03F', '#D35400', '#229954', '#7D6608', '#5D6D7E']
@@ -120,28 +126,63 @@ const saveRecord = async () => {
 .diaper-page { max-width: 500px; margin: 0 auto; }
 .page-header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; .title { font-size: 20px; font-weight: 800; color: #2c3e50; } }
 
-.diaper-types {
+.diaper-selector-new {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 12px;
     
-    .diaper-item {
-        background: #fcfcfc;
-        border: 1px solid #f0f0f0;
-        border-radius: 16px;
-        padding: 16px 8px;
-        text-align: center;
+    .diaper-card {
+        background: #f9fbfc;
+        border: 2px solid transparent;
+        border-radius: 20px;
+        padding: 16px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
         cursor: pointer;
-        transition: all 0.2s;
-        
-        &.active {
-            border-color: var(--el-color-primary);
-            background: var(--el-color-primary-light-9);
-            .label { font-weight: bold; color: var(--el-color-primary); }
+        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        position: relative;
+        overflow: hidden;
+
+        .icon-blob {
+            width: 44px;
+            height: 44px;
+            background: white;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+        }
+
+        .info {
+            display: flex;
+            flex-direction: column;
+            .name { font-size: 15px; font-weight: 800; color: var(--el-text-color-primary); }
+            .desc { font-size: 11px; color: var(--el-text-color-secondary); font-weight: 500; }
+        }
+
+        .selection-indicator {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            font-size: 12px;
+            color: var(--el-color-primary);
+            opacity: 0;
+            transform: scale(0.5);
+            transition: all 0.3s;
         }
         
-        .emoji { font-size: 24px; margin-bottom: 8px; }
-        .label { font-size: 13px; color: #606266; }
+        &.active {
+            background: white;
+            border-color: var(--el-color-primary);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(255, 142, 148, 0.1);
+            
+            .selection-indicator { opacity: 1; transform: scale(1); }
+            .icon-blob { background: var(--el-color-primary-light-9); }
+        }
     }
 }
 
