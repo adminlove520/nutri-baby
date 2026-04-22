@@ -49,6 +49,16 @@ const routes: Array<RouteRecordRaw> = [
                 path: 'record/diaper',
                 name: 'DiaperRecord',
                 component: () => import('../views/record/Diaper.vue'),
+            },
+            {
+                path: 'record/growth',
+                name: 'GrowthRecord',
+                component: () => import('../views/record/Growth.vue'),
+            },
+            {
+                path: 'vaccine',
+                name: 'Vaccine',
+                component: () => import('../views/Vaccine.vue'),
             }
         ]
     },

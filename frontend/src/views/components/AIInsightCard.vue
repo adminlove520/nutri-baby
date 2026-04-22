@@ -1,7 +1,6 @@
 <template>
   <el-card class="ai-insight-card" v-loading="loading">
     <template #header>
-    <template #header>
       <div class="card-header">
         <div class="header-left">
              <span class="ai-icon">✨</span>
