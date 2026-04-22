@@ -19,7 +19,7 @@
                 <span class="nickname">{{ userInfo.nickname || '新用户' }}</span>
                 <el-tag size="small" round effect="plain">普通成员</el-tag>
              </div>
-             <div class="phone-text">{{ userInfo.phone || '未绑定手机号' }}</div>
+             <div class="phone-text">{{ userInfo.phone || userInfo.email || '未绑定账号' }}</div>
           </div>
        </div>
        
@@ -65,10 +65,18 @@
        <div class="menu-group">
           <div class="group-title">工具与服务</div>
           <el-card class="menu-card" shadow="never">
-             <div class="menu-item" @click="showComingSoon">
+             <div class="menu-item" @click="router.push('/vaccine')">
                 <div class="item-left">
                    <div class="icon-box s1"><el-icon><Memo /></el-icon></div>
                    <span>疫苗接种计划</span>
+                </div>
+                <el-icon class="arrow"><ArrowRight /></el-icon>
+             </div>
+             <el-divider />
+             <div class="menu-item" @click="sendTestEmail">
+                <div class="item-left">
+                   <div class="icon-box s3"><el-icon><Message /></el-icon></div>
+                   <span>发送测试邮件</span>
                 </div>
                 <el-icon class="arrow"><ArrowRight /></el-icon>
              </div>
@@ -92,7 +100,7 @@
                    <span>关于 Nutri-Baby</span>
                 </div>
                 <div class="item-right">
-                   <span class="version">v1.1.0</span>
+                   <span class="version">v1.2.0</span>
                    <el-icon class="arrow"><ArrowRight /></el-icon>
                 </div>
              </div>
@@ -347,6 +355,7 @@ const handleLogout = () => {
             &.p2 { background-color: #ffc7ca; }
             &.s1 { background-color: #88d498; }
             &.s2 { background-color: #ffd077; }
+            &.s3 { background-color: #409eff; }
             &.a1 { background-color: #909399; }
         }
     }
