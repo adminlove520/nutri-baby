@@ -2,10 +2,12 @@ import { AIProvider, AIAnalysisRequest, AIAnalysisResponse } from '../types';
 
 export class MinimaxProvider implements AIProvider {
     private apiKey: string;
+    private groupId: string;
     private model: string;
 
-    constructor(apiKey: string, model: string = 'MiniMax-M2.7') {
+    constructor(apiKey: string, groupId: string = '', model: string = 'abab6.5s-chat') {
         this.apiKey = apiKey;
+        this.groupId = groupId; // 如果有 groupId 建议填入，有些接口需要
         this.model = model;
     }
 
@@ -34,7 +36,7 @@ ${babyInfo}
 
 用户的问题：${query || '请分析宝宝最近的状况。'}
 
-请以 JSON 格式返回，格式如下：
+请以符合要求的 JSON 格式返回，不要包含任何 markdown 代码块标识。
 {
   "insight": "...",
   "recommendations": ["...", "..."],
@@ -42,7 +44,8 @@ ${babyInfo}
 }`;
 
         try {
-            const response = await fetch('https://api.minimax.chat/v1/text_generation_v2', {
+            // 使用标准 Fetch API 调用 MiniMax V2 接口
+            const response = await fetch('https://api.minimax.chat/v1/text/chatcompletion_v2', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -51,8 +54,14 @@ ${babyInfo}
                 body: JSON.stringify({
                     model: this.model,
                     messages: [
-                        { role: 'system', content: 'You are a helpful parenting expert.' },
-                        { role: 'user', content: systemPrompt }
+                        {
+                            role: 'system',
+                            content: '你是一个专业的育儿助手，始终以 JSON 格式输出分析结果。'
+                        },
+                        {
+                            role: 'user',
+                            content: systemPrompt
+                        }
                     ],
                     response_format: { type: 'json_object' }
                 })
@@ -60,21 +69,34 @@ ${babyInfo}
 
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(`Minimax API error: ${JSON.stringify(errorData)}`);
+                throw new Error(`MiniMax API Error: ${JSON.stringify(errorData)}`);
             }
 
             const data = await response.json();
             const content = data.choices[0].message.content;
-            return JSON.parse(content) as AIAnalysisResponse;
 
-        } catch (error) {
-            console.error('Minimax analysis failed:', error);
-            // Fallback to mock if API fails during dev/migration
-            return {
-                insight: "分析服务暂时不可用，但根据记录显示宝宝状态基本正常。",
-                recommendations: ["请稍后再试", "保持观察"],
-                sentiment: 'neutral'
-            };
+            // 尝试解析 JSON
+            try {
+                // 有些模型即便要求 json_object 也会返回带 ```json 的内容，做一次清洗
+                const cleanedContent = content.replace(/```json\n?|\n?```/g, '').trim();
+                const parsed = JSON.parse(cleanedContent);
+                
+                return {
+                    insight: parsed.insight || '无法获取分析结果',
+                    recommendations: parsed.recommendations || [],
+                    sentiment: parsed.sentiment || 'neutral'
+                };
+            } catch (e) {
+                console.error('JSON Parse Error from MiniMax:', content);
+                return {
+                    insight: content, // 回退：直接显示文本内容
+                    recommendations: ["建议咨询医生获取详细指导"],
+                    sentiment: 'neutral'
+                };
+            }
+        } catch (error: any) {
+            console.error('MiniMax Provider Error:', error);
+            throw error;
         }
     }
 }
