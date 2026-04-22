@@ -166,25 +166,46 @@ const todayStats = ref({
     growth: { latestHeight: 0, latestWeight: 0 }
 })
 
-const fetchTodayStats = async () => {
+const upcomingVaccines = ref<string[]>([])
+
+const fetchData = async () => {
     if (!babyStore.currentBaby?.id) return
     loading.value = true
     try {
         const token = localStorage.getItem('token')
-        const res = await axios.get('/api/statistics', {
-            params: { babyId: babyStore.currentBaby.id },
-            headers: { Authorization: `Bearer ${token}` }
-        })
-        todayStats.value = res.data.today
+        
+        // Fetch stats and vaccines in parallel
+        const [statsRes, vaccineRes] = await Promise.all([
+            axios.get('/api/statistics', {
+                params: { babyId: babyStore.currentBaby.id },
+                headers: { Authorization: `Bearer ${token}` }
+            }),
+            axios.get('/api/baby/vaccines', {
+                params: { babyId: babyStore.currentBaby.id },
+                headers: { Authorization: `Bearer ${token}` }
+            })
+        ])
+        
+        todayStats.value = statsRes.data.today
+        
+        const pending = vaccineRes.data
+            .filter((v: any) => v.vaccinationStatus === 'pending')
+            .sort((a: any, b: any) => new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime())
+        
+        if (pending.length > 0) {
+            const next = pending[0]
+            upcomingVaccines.value = [`提醒：${next.vaccineName} 即将到期（预计 ${next.scheduledDate.split('T')[0]}）`]
+        } else {
+            upcomingVaccines.value = []
+        }
     } catch (e) {
-        console.error('Failed to fetch today stats', e)
+        console.error('Failed to fetch data', e)
     } finally {
         loading.value = false
     }
 }
 
 // Mock Data
-const upcomingVaccines = ref(['疫苗提醒：乙肝疫苗（第二针）预计近期接种'])
 const todayTips = ref([
   { id: '1', title: '今天开始尝试俯卧时间 (Tummy Time)!', description: '每天2-3次，每次3-5分钟。', type: 'Activity', priority: 'high' as const },
   { id: '2', title: '注意观察宝宝的睡眠信号', description: '揉眼睛、打哈欠是睡眠信号。', type: 'Sleep', priority: 'medium' as const }
@@ -205,15 +226,15 @@ const formatSleepDuration = (minutes: number) => {
 }
 
 // Actions
-const goToVaccine = () => router.push('/user')
+const goToVaccine = () => router.push('/vaccine')
 const handleTipClick = (tip: DailyTips) => console.log('Tip clicked', tip)
 const handleFeeding = () => router.push('/record/feeding')
 const handleSleep = () => router.push('/record/sleep')
 const handleDiaper = () => router.push('/record/diaper')
 const handleGrowth = () => router.push('/record/growth')
 
-onMounted(fetchTodayStats)
-watch(() => babyStore.currentBaby?.id, fetchTodayStats)
+onMounted(fetchData)
+watch(() => babyStore.currentBaby?.id, fetchData)
 
 </script>
 

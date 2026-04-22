@@ -3,7 +3,6 @@ import { PrismaClient } from '@prisma/client'
 const prisma = new PrismaClient()
 
 // Simplified WHO Standards Data (0-12 months for demo)
-// Source: WHO Child Growth Standards
 const standards = [
     // Boys Length (cm)
     { source: 'WHO', type: 'height', gender: 'male', month: 0, p3: 46.1, p15: 48.0, p50: 49.9, p85: 51.8, p97: 53.7 },
@@ -46,10 +45,25 @@ const standards = [
     { source: 'WHO', type: 'weight', gender: 'female', month: 12, p3: 7.0, p15: 7.9, p50: 8.9, p85: 10.1, p97: 11.5 },
 ]
 
+const vaccineTemplates = [
+    { vaccineName: '乙肝疫苗', vaccineType: '乙肝', description: '第1剂', ageInMonths: 0, doseNumber: 1, isRequired: true },
+    { vaccineName: '卡介苗', vaccineType: '卡介苗', description: '出生接种', ageInMonths: 0, doseNumber: 1, isRequired: true },
+    { vaccineName: '乙肝疫苗', vaccineType: '乙肝', description: '第2剂', ageInMonths: 1, doseNumber: 2, isRequired: true },
+    { vaccineName: '脊灰疫苗', vaccineType: '脊灰', description: '第1剂', ageInMonths: 2, doseNumber: 1, isRequired: true },
+    { vaccineName: '百白破疫苗', vaccineType: '百白破', description: '第1剂', ageInMonths: 3, doseNumber: 1, isRequired: true },
+    { vaccineName: '脊灰疫苗', vaccineType: '脊灰', description: '第2剂', ageInMonths: 3, doseNumber: 2, isRequired: true },
+    { vaccineName: '百白破疫苗', vaccineType: '百白破', description: '第2剂', ageInMonths: 4, doseNumber: 2, isRequired: true },
+    { vaccineName: '脊灰疫苗', vaccineType: '脊灰', description: '第3剂', ageInMonths: 4, doseNumber: 3, isRequired: true },
+    { vaccineName: '百白破疫苗', vaccineType: '百白破', description: '第3剂', ageInMonths: 5, doseNumber: 3, isRequired: true },
+    { vaccineName: '乙肝疫苗', vaccineType: '乙肝', description: '第3剂', ageInMonths: 6, doseNumber: 3, isRequired: true },
+    { vaccineName: 'A群流脑多糖疫苗', vaccineType: '流脑', description: '第1剂', ageInMonths: 6, doseNumber: 1, isRequired: true },
+    { vaccineName: '脊灰疫苗', vaccineType: '脊灰', description: '第4剂', ageInMonths: 48, doseNumber: 4, isRequired: true },
+]
+
 async function main() {
     console.log('Start seeding growth standards...')
     for (const s of standards) {
-        const exists = await prisma.growthStandard.findUnique({
+        await prisma.growthStandard.upsert({
             where: {
                 source_type_gender_month: {
                     source: s.source,
@@ -57,14 +71,19 @@ async function main() {
                     gender: s.gender,
                     month: s.month
                 }
-            }
+            },
+            update: s,
+            create: s
         })
+    }
 
-        if (!exists) {
-            await prisma.growthStandard.create({
-                data: s
-            })
-        }
+    console.log('Start seeding vaccine templates...')
+    // Delete existing templates to ensure a clean state
+    await prisma.vaccinePlanTemplate.deleteMany()
+    for (const v of vaccineTemplates) {
+        await prisma.vaccinePlanTemplate.create({
+            data: v
+        })
     }
     console.log('Seeding finished.')
 }
