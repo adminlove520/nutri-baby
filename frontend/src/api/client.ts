@@ -2,8 +2,10 @@ import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import router from '@/router'
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api'
+
 const client = axios.create({
-    baseURL: '/api',
+    baseURL: API_BASE_URL,
     timeout: 10000
 })
 
