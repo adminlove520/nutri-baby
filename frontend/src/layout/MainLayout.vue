@@ -66,6 +66,9 @@
               </div>
            </div>
            <div class="header-right">
+              <el-badge :is-dot="hasUnread" class="notification-badge" @click="router.push('/notifications')">
+                <el-icon :size="20"><Bell /></el-icon>
+              </el-badge>
               <el-dropdown @command="handleUserAction">
                 <span class="el-dropdown-link user-profile">
                    <el-avatar :size="32" :src="userStore.userInfo.avatarUrl || 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'" />
@@ -126,19 +129,31 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { House, Timer, PieChart, User as UserIcon, Setting, ArrowDown, Plus } from '@element-plus/icons-vue'
+import { House, Timer, PieChart, User as UserIcon, Setting, ArrowDown, Plus, Bell } from '@element-plus/icons-vue'
 import 'element-plus/theme-chalk/display.css'
 import { useBabyStore } from '@/stores/baby'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
+import axios from 'axios'
 
 const route = useRoute()
 const router = useRouter()
 const babyStore = useBabyStore()
 const userStore = useUserStore()
 const activeRoute = computed(() => route.path)
+const hasUnread = ref(false)
+
+const fetchUnread = async () => {
+    try {
+        const token = localStorage.getItem('token')
+        const res = await axios.get('/api/notifications', {
+            headers: { Authorization: `Bearer ${token}` }
+        })
+        hasUnread.value = res.data.some((n: any) => !n.isRead)
+    } catch (e) {}
+}
 
 const handleBabyChange = (command: string) => {
     if (command === 'add') {
@@ -162,7 +177,12 @@ const handleUserAction = (command: string) => {
 onMounted(() => {
     if (userStore.isLoggedIn) {
         babyStore.fetchBabies()
+        fetchUnread()
     }
+})
+
+watch(() => route.path, () => {
+    if (userStore.isLoggedIn) fetchUnread()
 })
 </script>
 
@@ -266,7 +286,17 @@ onMounted(() => {
   }
   
   .header-right {
+     display: flex;
+     align-items: center;
+     gap: 16px;
      margin-left: auto;
+
+     .notification-badge {
+        cursor: pointer;
+        color: #606266;
+        padding-top: 4px;
+        &:hover { color: var(--el-color-primary); }
+     }
   }
   
   .user-profile {

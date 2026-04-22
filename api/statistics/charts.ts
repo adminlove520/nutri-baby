@@ -73,14 +73,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
         });
 
+        // 4. Growth Standards (WHO)
+        const baby = await prisma.baby.findUnique({ where: { id: bId } });
+        const standards = await prisma.growthStandard.findMany({
+            where: { gender: baby?.gender || 'male', source: 'WHO' },
+            orderBy: { month: 'asc' }
+        });
+
         return res.status(200).json(safeJSON({
             feeding: Object.entries(dailyFeeding).map(([date, amount]) => ({ date, amount })),
             sleep: Object.entries(dailySleep).map(([date, minutes]) => ({ date, hours: parseFloat((minutes / 60).toFixed(1)) })),
             growth: growthRecords.map(r => ({
                 date: r.time.toISOString().split('T')[0],
+                month: Math.floor((r.time.getTime() - new Date(baby?.birthDate || '').getTime()) / (30 * 24 * 60 * 60 * 1000)),
                 height: r.height ? Number(r.height) : null,
                 weight: r.weight ? Number(r.weight) : null,
                 head: r.headCircumference ? Number(r.headCircumference) : null
+            })),
+            standards: standards.map(s => ({
+                month: s.month,
+                type: s.type,
+                p3: Number(s.p3),
+                p15: Number(s.p15),
+                p50: Number(s.p50),
+                p85: Number(s.p85),
+                p97: Number(s.p97)
             }))
         }));
 

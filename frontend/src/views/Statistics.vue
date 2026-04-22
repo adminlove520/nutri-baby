@@ -113,7 +113,8 @@ const growthMode = ref('height')
 const chartData = reactive({
   feeding: [] as any[],
   sleep: [] as any[],
-  growth: [] as any[]
+  growth: [] as any[],
+  standards: [] as any[]
 })
 
 const summary = reactive({
@@ -137,6 +138,7 @@ const fetchData = async () => {
     chartData.feeding = res.data.feeding
     chartData.sleep = res.data.sleep
     chartData.growth = res.data.growth
+    chartData.standards = res.data.standards
 
     // Calculate Summary
     const feedingSum = chartData.feeding.reduce((acc, curr) => acc + curr.amount, 0)
@@ -214,25 +216,80 @@ const sleepChartOption = computed(() => ({
 
 const growthChartOption = computed(() => {
   const isHeight = growthMode.value === 'height'
+  const typeKey = isHeight ? 'height' : 'weight'
+  
+  // Filter standards by type
+  const relevantStandards = chartData.standards.filter(s => s.type === typeKey)
+  
+  // X-axis will be age in months
+  const maxMonth = Math.max(
+    ...chartData.growth.map(i => i.month || 0),
+    ...relevantStandards.map(i => i.month)
+  )
+  
+  const months = Array.from({ length: Math.min(maxMonth + 1, 13) }, (_, i) => i)
+
   return {
     tooltip: { trigger: 'axis' },
-    legend: { bottom: 0 },
+    legend: { bottom: 0, icon: 'circle' },
     grid: { top: 40, left: 10, right: 10, bottom: 40, containLabel: true },
     xAxis: {
       type: 'category',
-      data: chartData.growth.map(i => i.date),
+      name: '月龄',
+      data: months,
       axisLabel: { color: '#909399', fontSize: 11 }
     },
-    yAxis: { type: 'value', axisLabel: { color: '#909399' }, scale: true },
-    series: [{
-      name: isHeight ? '身高 (cm)' : '体重 (kg)',
-      type: 'line',
-      smooth: true,
-      data: chartData.growth.map(i => isHeight ? i.height : i.weight),
-      itemStyle: { color: isHeight ? '#ff8e94' : '#ffd077' },
-      symbolSize: 8,
-      lineStyle: { width: 3 }
-    }]
+    yAxis: { type: 'value', axisLabel: { color: '#909399' }, scale: true, name: isHeight ? 'cm' : 'kg' },
+    series: [
+      {
+        name: 'WHO P50 (中位数)',
+        type: 'line',
+        smooth: true,
+        data: months.map(m => relevantStandards.find(s => s.month === m)?.p50),
+        lineStyle: { type: 'dashed', width: 2, color: '#909399' },
+        symbol: 'none',
+        z: 1
+      },
+      {
+        name: 'WHO P3-P97 (参考范围)',
+        type: 'line',
+        stack: 'range',
+        smooth: true,
+        data: months.map(m => relevantStandards.find(s => s.month === m)?.p3),
+        lineStyle: { opacity: 0 },
+        symbol: 'none',
+        areaStyle: { color: 'rgba(200, 200, 200, 0.1)' },
+        z: 0
+      },
+      {
+        name: 'Upper Range',
+        type: 'line',
+        stack: 'range',
+        smooth: true,
+        data: months.map(m => {
+           const s = relevantStandards.find(st => st.month === m)
+           return s ? (s.p97 - s.p3) : null
+        }),
+        lineStyle: { opacity: 0 },
+        symbol: 'none',
+        areaStyle: { color: 'rgba(200, 200, 200, 0.1)' },
+        z: 0
+      },
+      {
+        name: '宝宝数据',
+        type: 'line',
+        smooth: true,
+        data: months.map(m => {
+           const record = chartData.growth.find(r => r.month === m)
+           return record ? (isHeight ? record.height : record.weight) : null
+        }),
+        itemStyle: { color: isHeight ? '#ff8e94' : '#ffd077' },
+        symbolSize: 10,
+        lineStyle: { width: 4 },
+        connectNulls: true,
+        z: 10
+      }
+    ]
   }
 })
 

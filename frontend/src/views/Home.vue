@@ -145,7 +145,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Mug, Moon, ToiletPaper, TrendCharts, ArrowRight, Pouring } from '@element-plus/icons-vue'
 import DailyTipsCard from '@/components/DailyTipsCard.vue'
@@ -158,6 +158,14 @@ const router = useRouter()
 const babyStore = useBabyStore()
 const loading = ref(false)
 
+interface DailyTips {
+    id: string;
+    title: string;
+    description: string;
+    type: string;
+    priority: "high" | "medium" | "low";
+}
+
 // Today Stats
 const todayStats = ref({
     feeding: { totalCount: 0, bottleMl: 0, lastFeedingTime: null },
@@ -167,6 +175,7 @@ const todayStats = ref({
 })
 
 const upcomingVaccines = ref<string[]>([])
+const todayTips = ref<DailyTips[]>([])
 
 const fetchData = async () => {
     if (!babyStore.currentBaby?.id) return
@@ -174,8 +183,8 @@ const fetchData = async () => {
     try {
         const token = localStorage.getItem('token')
         
-        // Fetch stats and vaccines in parallel
-        const [statsRes, vaccineRes] = await Promise.all([
+        // Fetch stats, vaccines, and tips in parallel
+        const [statsRes, vaccineRes, tipsRes] = await Promise.all([
             axios.get('/api/statistics', {
                 params: { babyId: babyStore.currentBaby.id },
                 headers: { Authorization: `Bearer ${token}` }
@@ -183,10 +192,15 @@ const fetchData = async () => {
             axios.get('/api/baby/vaccines', {
                 params: { babyId: babyStore.currentBaby.id },
                 headers: { Authorization: `Bearer ${token}` }
+            }),
+            axios.get('/api/tips/daily', {
+                params: { babyId: babyStore.currentBaby.id },
+                headers: { Authorization: `Bearer ${token}` }
             })
         ])
         
         todayStats.value = statsRes.data.today
+        todayTips.value = tipsRes.data
         
         const pending = vaccineRes.data
             .filter((v: any) => v.vaccinationStatus === 'pending')
@@ -205,20 +219,6 @@ const fetchData = async () => {
     }
 }
 
-// Mock Data
-const todayTips = ref([
-  { id: '1', title: '今天开始尝试俯卧时间 (Tummy Time)!', description: '每天2-3次，每次3-5分钟。', type: 'Activity', priority: 'high' as const },
-  { id: '2', title: '注意观察宝宝的睡眠信号', description: '揉眼睛、打哈欠是睡眠信号。', type: 'Sleep', priority: 'medium' as const }
-])
-
-interface DailyTips {
-    id: string;
-    title: string;
-    description: string;
-    type: string;
-    priority: "high" | "medium" | "low";
-}
-
 const formatSleepDuration = (minutes: number) => {
   const h = Math.floor(minutes / 60)
   const m = minutes % 60
@@ -235,7 +235,6 @@ const handleGrowth = () => router.push('/record/growth')
 
 onMounted(fetchData)
 watch(() => babyStore.currentBaby?.id, fetchData)
-
 </script>
 
 <style scoped lang="scss">

@@ -17,9 +17,9 @@
            <el-form :model="loginForm" class="login-form">
               <el-form-item>
                 <el-input 
-                  v-model="loginForm.phone" 
-                  placeholder="手机号" 
-                  prefix-icon="Iphone" 
+                  v-model="loginForm.account" 
+                  placeholder="手机号 / 邮箱" 
+                  prefix-icon="User" 
                   size="large"
                 />
               </el-form-item>
@@ -57,7 +57,7 @@
                 <el-input v-model="registerForm.nickname" placeholder="您的昵称" prefix-icon="User" size="large" />
               </el-form-item>
               <el-form-item>
-                <el-input v-model="registerForm.phone" placeholder="手机号" prefix-icon="Iphone" size="large" />
+                <el-input v-model="registerForm.account" placeholder="手机号 / 邮箱" prefix-icon="Message" size="large" />
               </el-form-item>
               <el-form-item>
                 <el-input v-model="registerForm.password" type="password" placeholder="设置密码" prefix-icon="Lock" size="large" show-password @keyup.enter="handleRegister" />
@@ -82,21 +82,21 @@ import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
-import { User, Iphone, Lock } from '@element-plus/icons-vue'
+import { User, Lock, Message } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const userStore = useUserStore()
 const loading = ref(false)
 const activeTab = ref('password')
 
-const loginForm = reactive({ phone: '', password: '' })
-const registerForm = reactive({ phone: '', password: '', nickname: '' })
+const loginForm = reactive({ account: '', password: '' })
+const registerForm = reactive({ account: '', password: '', nickname: '' })
 
 const handlePasswordLogin = async () => {
-    if (!loginForm.phone || !loginForm.password) return ElMessage.warning('请输入账号密码')
+    if (!loginForm.account || !loginForm.password) return ElMessage.warning('请输入账号密码')
     loading.value = true
     try {
-        await userStore.loginCredential(loginForm.phone, loginForm.password)
+        await userStore.loginCredential(loginForm.account, loginForm.password)
         ElMessage.success('欢迎回来')
         router.push('/')
     } catch (e: any) {
@@ -108,17 +108,22 @@ const handlePasswordLogin = async () => {
 }
 
 const handleRegister = async () => {
-    if (!registerForm.phone || !registerForm.password) return ElMessage.warning('请填写完整信息')
-    if (registerForm.phone.length !== 11) return ElMessage.warning('请输入正确的11位手机号')
+    if (!registerForm.account || !registerForm.password) return ElMessage.warning('请填写完整信息')
+    
+    // Simple validation for email or account
+    const isEmail = registerForm.account.includes('@')
+    const isPhone = /^\d{11}$/.test(registerForm.account)
+    
+    if (!isEmail && !isPhone) return ElMessage.warning('请输入正确的手机号或邮箱')
     if (registerForm.password.length < 6) return ElMessage.warning('密码至少需要6位')
     
     loading.value = true
     try {
-        await userStore.register(registerForm.phone, registerForm.password, registerForm.nickname)
+        await userStore.register(registerForm.account, registerForm.password, registerForm.nickname)
         ElMessage.success('注册成功')
         router.push('/')
     } catch (e: any) {
-        const msg = e.response?.data?.message || '注册失败，该号码可能已被注册'
+        const msg = e.response?.data?.message || '注册失败，该号码/邮箱可能已被注册'
         ElMessage.error(msg)
     } finally {
         loading.value = false

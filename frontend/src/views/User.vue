@@ -7,11 +7,12 @@
     <!-- User Profile Card -->
     <el-card class="profile-card" shadow="hover">
        <div class="profile-body">
-          <div class="avatar-section">
+          <div class="avatar-section" @click="triggerUpload">
              <el-avatar :size="80" :src="userInfo.avatarUrl || 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'" />
              <div class="edit-btn">
                 <el-icon><Camera /></el-icon>
              </div>
+             <input type="file" ref="fileInput" class="hidden-input" @change="handleFileUpload" accept="image/*" />
           </div>
           <div class="info-section">
              <div class="nickname-row">
@@ -119,8 +120,46 @@ import { useBabyStore } from '@/stores/baby'
 const router = useRouter()
 const userStore = useUserStore()
 const babyStore = useBabyStore()
+const fileInput = ref<HTMLInputElement | null>(null)
 
 const userInfo = computed(() => userStore.userInfo)
+
+const triggerUpload = () => {
+    fileInput.value?.click()
+}
+
+const handleFileUpload = async (event: Event) => {
+    const target = event.target as HTMLInputElement
+    const file = target.files?.[0]
+    if (!file) return
+
+    if (file.size > 2 * 1024 * 1024) return ElMessage.warning('图片大小不能超过 2MB')
+
+    const loading = ElMessage({ message: '正在上传...', duration: 0 })
+    try {
+        const token = localStorage.getItem('token')
+        const res = await axios.post(`/api/upload?filename=${encodeURIComponent(file.name)}`, file, {
+            headers: { 
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': file.type
+            }
+        })
+        
+        const avatarUrl = res.data.url
+        // Update user profile with new avatar
+        await axios.post('/api/user/update', { avatarUrl }, {
+            headers: { Authorization: `Bearer ${token}` }
+        })
+        
+        userStore.setUserInfo({ ...userStore.userInfo, avatarUrl })
+        ElMessage.success('头像更新成功')
+    } catch (e) {
+        console.error('Upload Error:', e)
+        ElMessage.error('上传失败')
+    } finally {
+        loading.close()
+    }
+}
 const babyCount = ref(0)
 const totalRecords = ref(0)
 const joinDays = ref(0)
@@ -191,6 +230,11 @@ const handleLogout = () => {
   .avatar-section {
      position: relative;
      margin-right: 20px;
+     cursor: pointer;
+
+     .hidden-input {
+        display: none;
+     }
      
      .edit-btn {
         position: absolute;

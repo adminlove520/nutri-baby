@@ -10,10 +10,11 @@ datasource db {
 }
 
 model User {
-  id              BigInt    @id @default(autoincrement()) // Using BigInt to match int64 Snowflake, but autoincrement for simplicity in new DB unless snowflake gen is ported
-  openid          String?   @unique // Made optional for phone-only users
-  phone           String?   @unique // New: Phone Login
-  password        String?   // New: Hashed Password
+  id              BigInt    @id @default(autoincrement()) 
+  openid          String?   @unique 
+  phone           String?   @unique 
+  email           String?   @unique 
+  password        String?   
   nickname        String?
   avatarUrl       String?   @map("avatar_url")
   defaultBabyId   BigInt?   @map("default_baby_id")
@@ -29,8 +30,42 @@ model User {
   sleepRecords    SleepRecord[]
   diaperRecords   DiaperRecord[]
   growthRecords   GrowthRecord[]
+  vaccineSchedules BabyVaccineSchedule[] @relation("CompletedBy")
+  createdVaccineSchedules BabyVaccineSchedule[] @relation("CreatedBy")
+  notifications  Notification[]
+  expertTips     ExpertTip[]
 
   @@map("users")
+}
+
+model Notification {
+  id        BigInt    @id @default(autoincrement())
+  userId    BigInt    @map("user_id")
+  title     String
+  content   String
+  type      String    @default("system") // system, vaccine, tips
+  isRead    Boolean   @default(false) @map("is_read")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@map("notifications")
+}
+
+model ExpertTip {
+  id          BigInt    @id @default(autoincrement())
+  title       String
+  content     String
+  category    String    // feeding, sleep, development, safety
+  minAgeMonth Int       @map("min_age_month")
+  maxAgeMonth Int       @map("max_age_month")
+  source      String?   @default("AI") // AI, Expert, Manual
+  createdAt   DateTime  @default(now()) @map("created_at")
+  createdBy   BigInt?   @map("created_by")
+
+  creator     User?     @relation(fields: [createdBy], references: [id])
+
+  @@map("expert_tips")
 }
 
 model Baby {
@@ -234,6 +269,8 @@ model BabyVaccineSchedule {
 
   baby              Baby      @relation(fields: [babyId], references: [id])
   template          VaccinePlanTemplate? @relation(fields: [templateId], references: [id])
+  completer         User?     @relation("CompletedBy", fields: [completedBy], references: [id])
+  creator           User      @relation("CreatedBy", fields: [createdBy], references: [id])
 
   @@index([babyId, scheduledDate])
   @@map("baby_vaccine_schedules")

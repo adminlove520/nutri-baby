@@ -60,6 +60,13 @@ const vaccineTemplates = [
     { vaccineName: '脊灰疫苗', vaccineType: '脊灰', description: '第4剂', ageInMonths: 48, doseNumber: 4, isRequired: true },
 ]
 
+const expertTips = [
+    { title: '尝试俯卧时间 (Tummy Time)', content: '出生后即可开始，每天2-3次，每次3-5分钟，帮助锻炼颈部肌肉。', category: 'development', minAgeMonth: 0, maxAgeMonth: 3 },
+    { title: '建立睡眠程序', description: '固定的洗澡、读书、喂奶顺序可以帮助宝宝理解即将进入睡眠。', category: 'sleep', minAgeMonth: 2, maxAgeMonth: 12 },
+    { title: '观察饥饿信号', description: '寻乳反射、吸吮手指是早期信号，哭闹通常是晚期信号。', category: 'feeding', minAgeMonth: 0, maxAgeMonth: 6 },
+    { title: '开始尝试辅食', description: '通常在6个月左右，当宝宝能坐稳且对食物感兴趣时开始。', category: 'feeding', minAgeMonth: 4, maxAgeMonth: 8 },
+]
+
 async function main() {
     console.log('Start seeding growth standards...')
     for (const s of standards) {
@@ -78,13 +85,27 @@ async function main() {
     }
 
     console.log('Start seeding vaccine templates...')
-    // Delete existing templates to ensure a clean state
     await prisma.vaccinePlanTemplate.deleteMany()
     for (const v of vaccineTemplates) {
         await prisma.vaccinePlanTemplate.create({
             data: v
         })
     }
+
+    console.log('Start seeding expert tips...')
+    for (const t of expertTips) {
+        await prisma.expertTip.create({
+            data: {
+                title: t.title,
+                content: (t as any).description || t.content,
+                category: t.category,
+                minAgeMonth: t.minAgeMonth,
+                maxAgeMonth: t.maxAgeMonth,
+                source: 'Expert'
+            }
+        })
+    }
+
     console.log('Seeding finished.')
 }
 

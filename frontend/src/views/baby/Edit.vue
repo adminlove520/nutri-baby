@@ -14,10 +14,11 @@
         v-loading="loading"
       >
         <div class="avatar-uploader-section">
-          <div class="avatar-uploader" @click="handleUploadAvatar">
+          <div class="avatar-uploader" @click="triggerUpload">
             <el-avatar :size="100" :src="formData.avatarUrl || 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'" />
             <div class="overlay"><el-icon><Camera /></el-icon></div>
           </div>
+          <input type="file" ref="fileInput" class="hidden-input" @change="handleFileUpload" accept="image/*" />
           <p class="hint">点击更换头像</p>
         </div>
 
@@ -70,11 +71,13 @@ import { useRoute, useRouter } from 'vue-router'
 import { useBabyStore } from '@/stores/baby'
 import { Back, Camera } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
+import axios from 'axios'
 
 const route = useRoute()
 const router = useRouter()
 const babyStore = useBabyStore()
 const formRef = ref<FormInstance>()
+const fileInput = ref<HTMLInputElement | null>(null)
 
 const isEdit = computed(() => !!route.params.id)
 const loading = ref(false)
@@ -87,6 +90,36 @@ const formData = reactive({
   birthDate: '',
   avatarUrl: ''
 })
+
+const triggerUpload = () => {
+    fileInput.value?.click()
+}
+
+const handleFileUpload = async (event: Event) => {
+    const target = event.target as HTMLInputElement
+    const file = target.files?.[0]
+    if (!file) return
+
+    if (file.size > 2 * 1024 * 1024) return ElMessage.warning('图片大小不能超过 2MB')
+
+    const uploadLoading = ElMessage({ message: '正在上传...', duration: 0 })
+    try {
+        const token = localStorage.getItem('token')
+        const res = await axios.post(`/api/upload?filename=${encodeURIComponent(file.name)}`, file, {
+            headers: { 
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': file.type
+            }
+        })
+        formData.avatarUrl = res.data.url
+        ElMessage.success('上传成功')
+    } catch (e) {
+        console.error('Upload Error:', e)
+        ElMessage.error('上传失败')
+    } finally {
+        uploadLoading.close()
+    }
+}
 
 const rules = reactive<FormRules>({
   name: [{ required: true, message: '请输入宝宝姓名', trigger: 'blur' }],
@@ -115,12 +148,6 @@ onMounted(async () => {
     loading.value = false
   }
 })
-
-const handleUploadAvatar = () => {
-    // Mock upload
-    ElMessage.success('头像上传成功')
-    formData.avatarUrl = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
-}
 
 const submitForm = async () => {
   if (!formRef.value) return
@@ -170,8 +197,13 @@ const handleDelete = () => {
         display: inline-block;
         position: relative;
         cursor: pointer;
+    }
+    
+    .hidden-input {
+        display: none;
+    }
         
-        .overlay {
+    .avatar-uploader .overlay {
             position: absolute;
             bottom: 0;
             right: 0;
