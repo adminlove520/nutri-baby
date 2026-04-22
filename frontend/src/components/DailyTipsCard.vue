@@ -3,10 +3,12 @@
     <template #header>
       <div class="card-header">
         <div class="title-with-icon">
-          <div class="icon-bulb clickable" @click="$emit('generate')" :class="{ 'is-loading': loading }">
-            <el-icon v-if="!loading"><Opportunity /></el-icon>
-            <el-icon v-else class="is-loading"><Refresh /></el-icon>
-          </div>
+          <el-tooltip content="点击生成最新育儿锦囊" placement="top" :show-after="500">
+            <div class="icon-bulb clickable" @click="$emit('generate')" :class="{ 'is-loading': loading }">
+              <el-icon v-if="!loading"><Opportunity /></el-icon>
+              <el-icon v-else class="is-loading"><Refresh /></el-icon>
+            </div>
+          </el-tooltip>
           <span class="card-title">育儿锦囊</span>
         </div>
         <el-button link type="primary" class="more-btn">查看更多</el-button>

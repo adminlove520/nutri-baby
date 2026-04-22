@@ -167,6 +167,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
+import { ElMessage } from 'element-plus'
+import client from '@/api/client'
 import { useRouter } from 'vue-router'
 import { 
   Mug, Moon, ToiletPaper, TrendCharts, ArrowRight, Pouring, 
@@ -262,8 +264,6 @@ const fetchData = async () => {
         loading.value = false
     }
 }
-
-import client from '@/api/client'
 
 const formatSleepDuration = (minutes: number) => {
   const h = Math.floor(minutes / 60)

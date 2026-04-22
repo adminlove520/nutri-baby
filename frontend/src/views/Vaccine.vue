@@ -189,11 +189,9 @@ const aiPlanLoading = ref(false)
 const generateAiPlan = async () => {
     aiPlanLoading.value = true
     try {
-        const res: any = await client.get('/ai/analyze', {
-            params: { 
-                babyId: babyStore.currentBaby?.id,
-                query: '请作为一名专业的儿科专家，根据我宝宝的月龄（如果是新出生则从0月开始），列出一份精简的未来6个月的接种计划清单表。包括：疫苗名称、推荐接种时间、主要预防疾病。请使用Markdown表格格式返回。'
-            }
+        const res: any = await client.post('/ai/analyze', {
+            babyId: babyStore.currentBaby?.id,
+            query: '请作为一名专业的儿科专家，根据我宝宝的月龄（如果是新出生则从0月开始），列出一份精简的未来6个月的接种计划清单表。包括：疫苗名称、推荐接种时间、主要预防疾病。请使用Markdown表格格式返回。'
         })
         aiPlan.value = res.insight.replace(/\n/g, '<br/>')
         ElMessage.success('计划表已生成')
@@ -282,11 +280,9 @@ const showWiki = (v: any) => {
 const generateAiKnowledge = async () => {
     aiLoading.value = true
     try {
-        const res: any = await client.get('/ai/analyze', {
-            params: { 
-                babyId: babyStore.currentBaby?.id,
-                query: '请作为一名专业的儿科医生，为我的宝宝提供一份针对其月龄的疫苗接种百科知识，包括接种意义、常见反应及护理、注意事项等。请使用Markdown格式返回。'
-            }
+        const res: any = await client.post('/ai/analyze', {
+            babyId: babyStore.currentBaby?.id,
+            query: '请作为一名专业的儿科医生，为我的宝宝提供一份针对其月龄的疫苗接种百科知识，包括接种意义、常见反应及护理、注意事项等。请使用Markdown格式返回。'
         })
         aiKnowledge.value = res.insight.replace(/\n/g, '<br/>')
         ElMessage.success('知识库已优化')

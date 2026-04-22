@@ -23,11 +23,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // If the body is already parsed by Vercel, we use it directly
         const body = (req as any).body || req;
 
-        // Fix: Removed hardcoded access: 'public' because the user's store might be private
         const blob = await put(filename as string, body, {
-            // By omitting access, it uses the store's default or we can try 'public' only if allowed
-            // To be safe and respect user's store config:
-            ...(process.env.BLOB_ACCESS_MODE === 'public' ? { access: 'public' } : {})
+            access: 'public',
         });
 
         return res.status(200).json(blob);
