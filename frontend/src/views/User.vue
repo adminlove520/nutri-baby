@@ -110,7 +110,7 @@
 import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { 
-  User as UserIcon, ArrowRight, Plus, Memo, Setting, InfoFilled, Camera 
+  User as UserIcon, ArrowRight, Plus, Memo, Setting, InfoFilled, Camera, Message 
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import axios from 'axios'
@@ -183,6 +183,24 @@ onMounted(() => {
 })
 
 const showComingSoon = () => ElMessage.info('该功能正在开发中，敬请期待')
+
+const sendTestEmail = async () => {
+    if (!userInfo.value.email) return ElMessage.warning('请先绑定邮箱')
+    try {
+        await ElMessageBox.confirm(`系统将向 ${userInfo.value.email} 发送一封测试邮件，是否继续？`, '发送测试', {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'info'
+        })
+        const token = localStorage.getItem('token')
+        await axios.post('/api/cron?testEmail=true', {}, {
+            headers: { Authorization: `Bearer ${token}` }
+        })
+        ElMessage.success('测试邮件已发送，请检查收件箱')
+    } catch (e) {
+        if (e !== 'cancel') ElMessage.error('发送失败，请检查邮箱配置')
+    }
+}
 
 const showAbout = () => {
     ElMessageBox.alert(

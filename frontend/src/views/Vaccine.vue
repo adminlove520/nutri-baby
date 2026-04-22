@@ -55,7 +55,22 @@
       </el-tab-pane>
 
       <el-tab-pane label="百科知识" name="wiki">
-         <el-empty description="疫苗百科正在整理中..." />
+         <div class="vaccine-wiki">
+            <el-collapse v-model="activeWiki">
+               <el-collapse-item title="什么是国家免疫规划疫苗？" name="1">
+                  <div>国家免疫规划疫苗（一类疫苗）是政府免费向公民提供，公民应当依照政府规定受种的疫苗。包括乙肝疫苗、卡介苗、脊灰疫苗、百白破疫苗、麻腮风疫苗等。</div>
+               </el-collapse-item>
+               <el-collapse-item title="接种疫苗后可能有哪些反应？" name="2">
+                  <div>常见反应包括接种部位红肿、疼痛、硬结，以及全身反应如发热、哭闹、食欲不振等。多数反应较轻，1-3天可自行缓解。</div>
+               </el-collapse-item>
+               <el-collapse-item title="接种前需要注意什么？" name="3">
+                  <div>1. 携带预防接种证；2. 告知医生孩子近期的健康状况；3. 确保孩子皮肤清洁，穿着宽松。</div>
+               </el-collapse-item>
+               <el-collapse-item title="非免疫规划疫苗（二类疫苗）有必要打吗？" name="4">
+                  <div>二类疫苗（如流感疫苗、水痘疫苗、手足口疫苗等）是自费自愿接种的。它们是对一类疫苗的重要补充，能为孩子提供更全面的保护，专家通常建议在经济条件允许的情况下尽量接种。</div>
+               </el-collapse-item>
+            </el-collapse>
+         </div>
       </el-tab-pane>
     </el-tabs>
   </div>
@@ -70,6 +85,7 @@ import { useBabyStore } from '@/stores/baby'
 
 const babyStore = useBabyStore()
 const activeTab = ref('list')
+const activeWiki = ref(['1'])
 const loading = ref(false)
 const vaccines = ref<any[]>([])
 

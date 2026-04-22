@@ -1,12 +1,27 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import prisma from '../lib/prisma';
 import { sendEmail } from '../lib/mail';
+import { getUserFromRequest } from '../lib/auth';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Basic secret check for cron jobs
-    if (req.headers['x-cron-auth'] !== process.env.CRON_SECRET) {
-        // In local/dev we might skip this or use a default
+    if (req.headers['x-cron-auth'] !== process.env.CRON_SECRET && !req.query.testEmail) {
         // return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    if (req.query.testEmail === 'true') {
+        const user = await getUserFromRequest(req);
+        if (!user || !user.email) return res.status(400).json({ message: 'User email not found' });
+        await sendEmail(user.email, 'Nutri-Baby 测试邮件', `
+            <div style="font-family: sans-serif; padding: 20px; border: 1px solid #ff8e94; border-radius: 10px; background: #fff5f5;">
+                <h2 style="color: #ff8e94;">🎉 邮件服务测试成功！</h2>
+                <p>这是一封来自 <b>Nutri-Baby</b> 的测试邮件。</p>
+                <p>当您的宝宝有接种提醒时，我们将通过此邮箱通知您。</p>
+                <hr />
+                <p style="font-size: 12px; color: #999;">发送时间: ${new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}</p>
+            </div>
+        `);
+        return res.status(200).json({ message: 'Test email sent' });
     }
 
     const today = new Date();

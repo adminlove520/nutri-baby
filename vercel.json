@@ -18,6 +18,7 @@
         { "source": "/api/diaper-records", "destination": "/api/record?type=diaper" },
         { "source": "/api/growth-records", "destination": "/api/record?type=growth" },
         { "source": "/api/auth/login_credential", "destination": "/api/auth?action=login" },
+        { "source": "/api/baby/:babyId", "destination": "/api/baby?babyId=:babyId" },
         { "source": "/api/(.*)", "destination": "/api/$1" }
     ]
 }
