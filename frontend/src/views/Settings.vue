@@ -14,7 +14,7 @@
               <span class="label">默认首页显示</span>
               <span class="desc">打开应用时首选显示的宝宝</span>
             </div>
-            <el-select v-model="settings.defaultBabyId" placeholder="选择宝宝" size="default" style="width: 120px">
+            <el-select v-model="settings.defaultBabyId" placeholder="选择宝宝" size="default" style="width: 120px" @change="saveSettings">
               <el-option 
                 v-for="baby in babyStore.babyList" 
                 :key="baby.id" 
@@ -27,9 +27,9 @@
           <div class="setting-item">
             <div class="item-info">
               <span class="label">深色模式</span>
-              <span class="desc">根据系统自动切换 (开发中)</span>
+              <span class="desc">开启护眼深色界面</span>
             </div>
-            <el-switch v-model="settings.darkMode" disabled />
+            <el-switch v-model="settings.darkMode" @change="handleThemeChange" />
           </div>
         </el-card>
       </div>
@@ -58,7 +58,7 @@
       <div class="setting-group">
         <h3 class="group-title">账号与安全</h3>
         <el-card class="setting-card" shadow="never">
-          <div class="setting-item clickable" @click="handleResetPassword">
+          <div class="setting-item clickable" @click="passwordDialogVisible = true">
             <div class="item-info">
               <span class="label">修改登录密码</span>
               <span class="desc">定期更换密码更安全</span>
@@ -81,11 +81,32 @@
         <p>已通过 SSL 加密传输，确保您的数据隐私安全</p>
       </div>
     </div>
+
+    <!-- Password Change Dialog -->
+    <el-dialog v-model="passwordDialogVisible" title="修改登录密码" width="90%" class="rounded-dialog">
+       <el-form :model="passwordForm" label-position="top">
+          <el-form-item label="当前密码">
+             <el-input v-model="passwordForm.oldPassword" type="password" show-password placeholder="请输入当前密码" />
+          </el-form-item>
+          <el-form-item label="新密码">
+             <el-input v-model="passwordForm.newPassword" type="password" show-password placeholder="请输入新密码（不少于6位）" />
+          </el-form-item>
+          <el-form-item label="确认新密码">
+             <el-input v-model="passwordForm.confirmPassword" type="password" show-password placeholder="请再次输入新密码" />
+          </el-form-item>
+       </el-form>
+       <template #footer>
+          <div class="dialog-footer">
+            <el-button @click="passwordDialogVisible = false" round>取消</el-button>
+            <el-button type="primary" @click="changePassword" :loading="changingPassword" round>提交修改</el-button>
+          </div>
+       </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, reactive } from 'vue'
+import { ref, onMounted, reactive, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -105,41 +126,92 @@ const settings = reactive({
     darkMode: false
 })
 
+const passwordDialogVisible = ref(false)
+const changingPassword = ref(false)
+const passwordForm = reactive({
+    oldPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+})
+
 onMounted(async () => {
     // Load current settings from user info
     const userSettings = userStore.userInfo.settings || {}
     Object.assign(settings, userSettings)
     
+    // Apply theme on mount
+    if (settings.darkMode) {
+        document.documentElement.classList.add('dark')
+    } else {
+        document.documentElement.classList.remove('dark')
+    }
+
     if (babyStore.babyList.length === 0) {
         await babyStore.fetchBabies()
     }
 })
 
+const handleThemeChange = (val: boolean) => {
+    if (val) {
+        document.documentElement.classList.add('dark')
+    } else {
+        document.documentElement.classList.remove('dark')
+    }
+    saveSettings()
+}
+
 const saveSettings = async () => {
     try {
         await client.post('/user/update', { settings })
         userStore.setUserInfo({ ...userStore.userInfo, settings: { ...settings } })
-        ElMessage.success('设置已保存')
+        // No message for auto-save to keep UI clean
     } catch (e) {
         // Error handled globally
     }
 }
 
-const handleResetPassword = () => ElMessage.info('该功能正在维护中，请联系客服')
+const changePassword = async () => {
+    if (!passwordForm.oldPassword) return ElMessage.warning('请输入当前密码')
+    if (passwordForm.newPassword.length < 6) return ElMessage.warning('新密码不能少于6位')
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) return ElMessage.warning('两次输入的新密码不一致')
+    
+    changingPassword.value = true
+    try {
+        await client.post('/user/change-password', {
+            oldPassword: passwordForm.oldPassword,
+            newPassword: passwordForm.newPassword
+        })
+        ElMessage.success('密码修改成功，请重新登录')
+        passwordDialogVisible.value = false
+        userStore.logout()
+        router.push('/login')
+    } catch (e: any) {
+        // Handled
+    } finally {
+        changingPassword.value = false
+    }
+}
 
 const handleDeleteAccount = () => {
-    ElMessageBox.confirm(
-        '账号注销后，所有宝宝记录、成长曲线和疫苗计划将永久删除且无法找回。确认注销？',
+    ElMessageBox.prompt(
+        '账号注销后，所有数据将永久删除。请输入您的登录密码以确认身份：',
         '极端危险操作',
         {
-            confirmButtonText: '确定注销',
-            cancelButtonText: '我再想想',
-            type: 'error',
+            confirmButtonText: '确认注销',
+            cancelButtonText: '取消',
+            inputPlaceholder: '请输入密码',
+            inputType: 'password',
             confirmButtonClass: 'el-button--danger',
-            roundButton: true
+            roundButton: true,
+            inputValidator: (val) => val ? true : '密码不能为空'
         }
-    ).then(() => {
-        ElMessage.warning('为了您的数据安全，请联系 info@nutribaby.app 进行人工核验注销')
+    ).then(async ({ value }) => {
+        try {
+            await client.post('/user/delete-account', { password: value })
+            ElMessage.success('账号已成功注销')
+            userStore.logout()
+            router.push('/login')
+        } catch (e) {}
     }).catch(() => {})
 }
 </script>
@@ -205,5 +277,19 @@ const handleDeleteAccount = () => {
     text-align: center;
     margin-top: 40px;
     p { font-size: 12px; color: var(--el-text-color-secondary); margin: 4px 0; }
+}
+
+.rounded-dialog {
+  :deep(.el-dialog) {
+    border-radius: 28px !important;
+    max-width: 500px;
+  }
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 10px;
 }
 </style>

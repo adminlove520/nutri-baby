@@ -2,6 +2,7 @@ import { VercelRequest, VercelResponse } from '@vercel/node';
 import prisma from '../lib/prisma';
 import { getUserFromRequest } from '../lib/auth';
 import { success, error } from '../lib/utils';
+import * as bcrypt from 'bcryptjs';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     const user = await getUserFromRequest(req);
@@ -44,6 +45,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 totalRecords: feedingCount + sleepCount + diaperCount + growthCount,
                 joinDays: joinDays || 1
             });
+        }
+
+        if (req.method === 'POST' && action === 'change-password') {
+            const { oldPassword, newPassword } = req.body;
+            const userData = await prisma.user.findUnique({ where: { id: uId } });
+            if (!userData) return error(res, '用户不存在', 404);
+
+            const isMatch = await bcrypt.compare(oldPassword, userData.password);
+            if (!isMatch) return error(res, '原密码不正确', 400);
+
+            const hashed = await bcrypt.hash(newPassword, 10);
+            await prisma.user.update({
+                where: { id: uId },
+                data: { password: hashed }
+            });
+            return success(res, { message: '密码修改成功' });
+        }
+
+        if (req.method === 'POST' && action === 'delete-account') {
+            const { password } = req.body;
+            const userData = await prisma.user.findUnique({ where: { id: uId } });
+            if (!userData) return error(res, '用户不存在', 404);
+
+            const isMatch = await bcrypt.compare(password, userData.password);
+            if (!isMatch) return error(res, '密码不正确', 400);
+
+            // Soft delete
+            await prisma.user.update({
+                where: { id: uId },
+                data: { deletedAt: new Date() }
+            });
+            return success(res, { message: '账号已注销' });
         }
 
         return error(res, '请求无效', 404);

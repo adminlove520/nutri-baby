@@ -26,7 +26,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             if (!targetAccount || !password) return error(res, '请输入账号和密码');
 
             const user = await prisma.user.findFirst({
-                where: { OR: [{ phone: targetAccount }, { email: targetAccount }] }
+                where: { 
+                    OR: [{ phone: targetAccount }, { email: targetAccount }],
+                    deletedAt: null
+                }
             });
 
             if (!user || !user.password) return error(res, '账号不存在或未设置密码', 401);

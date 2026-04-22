@@ -30,6 +30,50 @@
   --border-radius-small: 12px;
 }
 
+html.dark {
+  --el-bg-color: #1a1a1c;
+  --el-bg-color-page: #121214;
+  --el-text-color-primary: #e5eaf3;
+  --el-text-color-regular: #a3a6ad;
+  --el-text-color-secondary: #606266;
+  --el-border-color: #363637;
+  --el-border-color-light: #2a2a2b;
+  --el-border-color-lighter: #1d1d1e;
+  --el-fill-color-blank: #1a1a1c;
+
+  --app-bg-color: #121214;
+  --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  --card-shadow-hover: 0 15px 40px rgba(0, 0, 0, 0.4);
+
+  .el-card {
+    background-color: #1a1a1c !important;
+    border: 1px solid #2a2a2b !important;
+  }
+
+  .glass-effect {
+    background: rgba(26, 26, 28, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .el-message.el-message--info {
+    background: rgba(30, 30, 32, 0.95) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    .el-message__content { color: #e5eaf3 !important; }
+  }
+
+  .setting-card, .action-card {
+    background-color: #1a1a1c !important;
+  }
+  
+  .divider {
+    background-color: #2a2a2b !important;
+  }
+
+  .section-title {
+    color: #e5eaf3;
+  }
+}
+
 body {
   background-color: var(--app-bg-color);
   color: var(--el-text-color-primary);
