@@ -1,6 +1,6 @@
 {
     "outputDirectory": "frontend/dist",
-    "buildCommand": "prisma generate && npm run build --workspace=frontend",
+    "buildCommand": "prisma generate && prisma db push --accept-data-loss && npm run build --workspace=frontend",
     "rewrites": [
         { "source": "/api/auth/login", "destination": "/api/auth?action=login" },
         { "source": "/api/auth/register", "destination": "/api/auth?action=register" },
