@@ -5,9 +5,9 @@ export class MinimaxProvider implements AIProvider {
     private groupId: string;
     private model: string;
 
-    constructor(apiKey: string, groupId: string = '', model: string = 'abab6.5s-chat') {
+    constructor(apiKey: string, groupId: string = '', model: string = 'MiniMax-M2.7') {
         this.apiKey = apiKey;
-        this.groupId = groupId; // 如果有 groupId 建议填入，有些接口需要
+        this.groupId = groupId;
         this.model = model;
     }
 

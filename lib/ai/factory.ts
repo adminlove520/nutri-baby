@@ -8,7 +8,7 @@ export class AIFactory {
     static createProvider(type?: ProviderType): AIProvider {
         const providerType = (type || process.env.AI_PROVIDER || 'minimax') as ProviderType;
         const apiKey = process.env.AI_API_KEY || process.env.MINIMAX_API_KEY || 'mock-key';
-        const model = process.env.AI_MODEL || 'abab6.5s-chat';
+        const model = process.env.AI_MODEL || 'MiniMax-M2.7';
         const groupId = process.env.MINIMAX_GROUP_ID || '';
 
         switch (providerType) {
