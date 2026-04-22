@@ -7,18 +7,20 @@ const prismaClientSingleton = () => {
     
     let url = accelerateUrl || directUrl;
     
+    console.log(`[Prisma] Initializing. Accelerate URL present: ${!!accelerateUrl}, Direct URL present: ${!!directUrl}`);
+    
     if (url && (url.startsWith('prisma://') || url.startsWith('prisma+postgres://'))) {
-        // If it starts with prisma+postgres://, try converting to prisma:// as some extension versions are strict
         const formattedUrl = url.startsWith('prisma+postgres://') 
             ? url.replace('prisma+postgres://', 'prisma://') 
             : url;
             
+        console.log(`[Prisma] Using Accelerate extension with protocol: ${formattedUrl.split(':')[0]}`);
         return new PrismaClient({
             datasourceUrl: formattedUrl,
         }).$extends(withAccelerate());
     }
     
-    // Fallback: Direct connection without accelerate extension
+    console.log(`[Prisma] Using direct connection fallback (No Accelerate)`);
     return new PrismaClient({
         datasourceUrl: url,
     });

@@ -14,7 +14,7 @@
         "db:push:sqlite": "prisma --schema=prisma/schema.sqlite.prisma db push",
         "db:seed": "prisma db seed",
         "db:seed:sqlite": "prisma --schema=prisma/schema.sqlite.prisma db seed",
-        "postinstall": "prisma generate --no-engine"
+        "postinstall": "prisma generate"
     },
     "dependencies": {
         "@prisma/client": "^5.22.0",
