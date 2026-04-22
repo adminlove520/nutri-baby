@@ -17,74 +17,69 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const { babyId, query } = req.body;
 
-    if (!babyId) {
-        return error(res, 'Baby ID is required', 400);
-    }
-
     try {
-        const id = BigInt(babyId);
-        if (!(await hasBabyPermission(user.userId, id))) return error(res, 'Forbidden', 403);
+        let babyProfile = undefined;
+        let records = { feeding: [], sleep: [], growth: [] };
 
-        // 1. Gather Context Data
-        const baby = await prisma.baby.findFirst({
-            where: { id: id }
-        });
+        if (babyId) {
+            const id = BigInt(babyId);
+            if (!(await hasBabyPermission(user.userId, id))) return error(res, 'Forbidden', 403);
 
-        if (!baby) {
-            return error(res, 'Baby not found', 404);
+            // 1. Gather Context Data
+            const baby = await prisma.baby.findFirst({
+                where: { id: id }
+            });
+
+            if (baby) {
+                // Fetch last 7 days records for context
+                const sevenDaysAgo = new Date();
+                sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+                const [feeding, sleep, growth] = await Promise.all([
+                    prisma.feedingRecord.findMany({
+                        where: { babyId: id, time: { gte: sevenDaysAgo } },
+                        orderBy: { time: 'desc' },
+                        take: 20
+                    }),
+                    prisma.sleepRecord.findMany({
+                        where: { babyId: id, startTime: { gte: sevenDaysAgo } },
+                        orderBy: { startTime: 'desc' },
+                        take: 20
+                    }),
+                    prisma.growthRecord.findMany({
+                        where: { babyId: id, time: { gte: sevenDaysAgo } },
+                        orderBy: { time: 'desc' },
+                        take: 5
+                    })
+                ]);
+
+                babyProfile = {
+                    name: baby.name,
+                    gender: baby.gender,
+                    birthDate: baby.birthDate,
+                    month: Math.floor((new Date().getTime() - new Date(baby.birthDate).getTime()) / (1000 * 60 * 60 * 24 * 30))
+                };
+
+                records = {
+                    feeding: JSON.parse(JSON.stringify(feeding, (key, value) => typeof value === 'bigint' ? value.toString() : value)),
+                    sleep: JSON.parse(JSON.stringify(sleep, (key, value) => typeof value === 'bigint' ? value.toString() : value)),
+                    growth: JSON.parse(JSON.stringify(growth, (key, value) => typeof value === 'bigint' ? value.toString() : value))
+                };
+            }
         }
-        
-        // Validate permission again to ensure consistency
-        if (!(await hasBabyPermission(user.userId, id))) {
-            return error(res, 'Forbidden', 403);
-        }
-
-        // Fetch last 7 days records for context
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-        const [feeding, sleep, growth] = await Promise.all([
-            prisma.feedingRecord.findMany({
-                where: { babyId: id, time: { gte: sevenDaysAgo } },
-                orderBy: { time: 'desc' },
-                take: 20
-            }),
-            prisma.sleepRecord.findMany({
-                where: { babyId: id, startTime: { gte: sevenDaysAgo } },
-                orderBy: { startTime: 'desc' },
-                take: 20
-            }),
-            prisma.growthRecord.findMany({
-                where: { babyId: id, time: { gte: sevenDaysAgo } },
-                orderBy: { time: 'desc' },
-                take: 5
-            })
-        ]);
-
-        const babyProfile = {
-            name: baby.name,
-            gender: baby.gender,
-            birthDate: baby.birthDate,
-            month: Math.floor((new Date().getTime() - new Date(baby.birthDate).getTime()) / (1000 * 60 * 60 * 24 * 30))
-        };
-
-        const records = {
-            feeding: JSON.parse(JSON.stringify(feeding, (key, value) => typeof value === 'bigint' ? value.toString() : value)),
-            sleep: JSON.parse(JSON.stringify(sleep, (key, value) => typeof value === 'bigint' ? value.toString() : value)),
-            growth: JSON.parse(JSON.stringify(growth, (key, value) => typeof value === 'bigint' ? value.toString() : value))
-        };
 
         // 2. Call AI Provider
         const provider = AIFactory.createProvider();
         const result = await provider.analyze({
             babyProfile,
             recentRecords: records,
-            query
+            query: babyProfile ? query : `(用户尚未添加宝宝，请提供通用的育儿或接种建议) ${query}`
         });
 
         return res.status(200).json(result);
 
-    } catch (error) {
+    } catch (err) {
+        console.error('AI Analyze Error:', err);
         return error(res, 'Internal Server Error', 500);
     }
 }

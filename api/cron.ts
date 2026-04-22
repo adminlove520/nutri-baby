@@ -12,7 +12,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // 1. Test Email Logic
     if (req.query.testEmail === 'true') {
-        // ... (existing test email code)
+        const decoded = await getUserFromRequest(req);
+        if (!decoded) return res.status(401).json({ message: 'Unauthorized' });
+
+        const user = await prisma.user.findUnique({ where: { id: BigInt(decoded.userId) } });
+        if (!user || !user.email) {
+            return res.status(400).json({ message: 'User email not found in database' });
+        }
+
+        try {
+            await sendEmail(
+                user.email,
+                'Nutri-Baby 育儿助手 - 提醒测试成功',
+                `
+                <div style="font-family: sans-serif; padding: 20px; color: #333;">
+                    <h2 style="color: #ff8e94;">🎉 提醒邮件通道测试成功！</h2>
+                    <p>亲爱的家长，这是一封来自 <b>Nutri-Baby</b> 的系统测试邮件。</p>
+                    <p>目前您的账号邮件提醒通道已畅通。当您的宝宝有即将到来的疫苗接种、或是系统为您生成了深度育儿分析时，我们都会通过此邮箱及时通知您。</p>
+                    <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+                    <p style="font-size: 12px; color: #999;">本邮件由系统自动发出，请勿直接回复。</p>
+                </div>
+                `
+            );
+            return res.status(200).json({ message: 'Test email sent successfully' });
+        } catch (err) {
+            console.error('Test Email Failed:', err);
+            return res.status(500).json({ message: 'Failed to send test email' });
+        }
     }
 
     // 2. Daily AI Tip Generation (Triggered by Cron or Manual)

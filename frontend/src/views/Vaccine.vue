@@ -36,19 +36,38 @@
       <el-tab-pane label="接种清单" name="list">
         <div class="vaccine-list">
            <!-- AI Plan Section -->
-           <div class="ai-plan-section mb-32" v-if="babyStore.currentBaby">
+           <div class="ai-plan-section mb-32">
               <el-card class="ai-plan-card" shadow="hover">
                  <div class="ai-header">
-                    <div class="title">✨ AI 定制接种计划表</div>
+                    <div class="title">✨ AI 定制接种清单</div>
                     <el-button size="small" round @click="generateAiPlan" :loading="aiPlanLoading">智能生成</el-button>
                  </div>
                  <div class="ai-plan-content">
                     <div v-if="!aiPlan" class="plan-placeholder">
-                       点击“智能生成”，由 AI 根据宝宝月龄定制专属接种路线图
+                       点击“智能生成”，由 AI 定制专属接种建议
                     </div>
-                    <div v-else class="plan-text" v-html="aiPlan"></div>
+                    <div v-else class="plan-text markdown-body" v-html="aiPlan"></div>
                  </div>
               </el-card>
+           </div>
+
+           <!-- Nearby Hospitals Section -->
+           <div class="nearby-hospitals mb-32">
+              <div class="section-header">
+                 <div class="section-title">🏥 附近接种点</div>
+                 <el-button link type="primary" :icon="Refresh" @click="searchNearbyHospitals" :loading="mapLoading">重新搜索</el-button>
+              </div>
+              <div class="hospital-list" v-loading="mapLoading">
+                 <el-empty v-if="hospitals.length === 0 && !mapLoading" description="未找到附近的接种点" />
+                 <div v-for="h in hospitals" :key="h.id" class="hospital-item" @click="openMap(h)">
+                    <div class="h-info">
+                       <div class="h-name">{{ h.name }}</div>
+                       <div class="h-address">{{ h.address }}</div>
+                       <div class="h-distance" v-if="h.distance">{{ (h.distance / 1000).toFixed(1) }}km</div>
+                    </div>
+                    <el-button type="primary" size="small" circle :icon="ArrowRight"></el-button>
+                 </div>
+              </div>
            </div>
 
            <div class="section-header">
@@ -80,7 +99,7 @@
                 </div>
                 
                 <div class="v-card-body" v-if="v.description">
-                   <p class="v-desc">{{ v.description }}</p>
+                   <p class="v-desc line-clamp">{{ v.description }}</p>
                 </div>
                 
                 <div class="v-card-footer">
@@ -178,27 +197,90 @@ import { useBabyStore } from '@/stores/baby'
 
 const babyStore = useBabyStore()
 const activeTab = ref('list')
-const activeWiki = ref(['1'])
 const loading = ref(false)
 const aiLoading = ref(false)
 const vaccines = ref<any[]>([])
 const aiKnowledge = ref('')
 const aiPlan = ref('')
 const aiPlanLoading = ref(false)
+const hospitals = ref<any[]>([])
+const mapLoading = ref(false)
+
+const AMAP_KEY = '5266c29c18f9281ce3bf76c3a3fc61ec' // Corrected key from user (replacing l with 1 as common in hex)
 
 const generateAiPlan = async () => {
     aiPlanLoading.value = true
     try {
         const res: any = await client.post('/ai/analyze', {
             babyId: babyStore.currentBaby?.id,
-            query: '请作为一名专业的儿科专家，根据我宝宝的月龄（如果是新出生则从0月开始），列出一份精简的未来6个月的接种计划清单表。包括：疫苗名称、推荐接种时间、主要预防疾病。请使用Markdown表格格式返回。'
+            query: '请作为一名专业的儿科专家，列出一份精简的针对0-1岁宝宝的国家免疫规划接种清单。包括：疫苗名称、推荐接种时间、主要预防疾病。如果是针对特定月龄的宝宝，请重点标注。请使用Markdown表格格式返回。'
         })
         aiPlan.value = res.insight.replace(/\n/g, '<br/>')
-        ElMessage.success('计划表已生成')
+        ElMessage.success('接种清单已生成')
     } catch (e) {
         // Handled
     } finally {
         aiPlanLoading.value = false
+    }
+}
+
+const searchNearbyHospitals = () => {
+    if (typeof (window as any).AMap === 'undefined') {
+        loadAMap()
+        return
+    }
+    
+    mapLoading.value = true
+    const AMap = (window as any).AMap
+    
+    AMap.plugin(['AMap.Geolocation', 'AMap.PlaceSearch'], () => {
+        const geolocation = new AMap.Geolocation({
+            enableHighAccuracy: true,
+            timeout: 10000,
+        })
+        
+        geolocation.getCurrentPosition((status: string, result: any) => {
+            if (status === 'complete') {
+                const placeSearch = new AMap.PlaceSearch({
+                    type: '社区卫生服务中心|疫苗接种点|医院',
+                    pageSize: 5,
+                    pageIndex: 1,
+                    extensions: 'all'
+                })
+                
+                placeSearch.searchNearBy('社区卫生服务中心', [result.position.lng, result.position.lat], 5000, (s: string, r: any) => {
+                    if (s === 'complete') {
+                        hospitals.value = r.poiList.pois
+                    } else {
+                        ElMessage.warning('附近未找到接种点')
+                    }
+                    mapLoading.value = false
+                })
+            } else {
+                ElMessage.error('获取定位失败，请检查浏览器定位权限')
+                mapLoading.value = false
+            }
+        })
+    })
+}
+
+const loadAMap = () => {
+    if ((window as any).AMap) {
+        searchNearbyHospitals()
+        return
+    }
+    const script = document.createElement('script')
+    script.src = `https://webapi.amap.com/maps?v=2.0&key=${AMAP_KEY}`
+    script.onload = () => searchNearbyHospitals()
+    document.head.appendChild(script)
+}
+
+const openMap = (h: any) => {
+    const isPC = !/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    if (isPC) {
+        window.open(`https://www.amap.com/search?query=${encodeURIComponent(h.name)}`, '_blank')
+    } else {
+        window.location.href = `https://uri.amap.com/marker?position=${h.location.lng},${h.location.lat}&name=${encodeURIComponent(h.name)}`
     }
 }
 
@@ -214,23 +296,35 @@ const currentWiki = reactive({
 const upcoming = computed(() => {
     return vaccines.value
         .filter(v => v.vaccinationStatus === 'pending')
-        .sort((a, b) => new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime())
+        .sort((a, b) => {
+            const dateA = a.scheduledDate ? new Date(a.scheduledDate).getTime() : 0
+            const dateB = b.scheduledDate ? new Date(b.scheduledDate).getTime() : 0
+            return dateA - dateB
+        })
 })
 
 const completed = computed(() => {
     return vaccines.value
         .filter(v => v.vaccinationStatus === 'completed')
-        .sort((a, b) => new Date(b.vaccineDate).getTime() - new Date(a.vaccineDate).getTime())
+        .sort((a, b) => {
+            const dateA = a.vaccineDate ? new Date(a.vaccineDate).getTime() : 0
+            const dateB = b.vaccineDate ? new Date(b.vaccineDate).getTime() : 0
+            return dateB - dateA
+        })
 })
 
 const nextVaccineDate = computed(() => {
     if (upcoming.value.length === 0) return '无计划'
+    if (!upcoming.value[0].scheduledDate) return '时间未定'
     const date = new Date(upcoming.value[0].scheduledDate)
     return `${date.getMonth() + 1}/${date.getDate()}`
 })
 
 const fetchVaccines = async () => {
-    if (!babyStore.currentBaby?.id) return
+    if (!babyStore.currentBaby?.id) {
+        vaccines.value = []
+        return
+    }
     loading.value = true
     try {
         const res: any = await client.get('/baby/vaccines', {
@@ -282,7 +376,7 @@ const generateAiKnowledge = async () => {
     try {
         const res: any = await client.post('/ai/analyze', {
             babyId: babyStore.currentBaby?.id,
-            query: '请作为一名专业的儿科医生，为我的宝宝提供一份针对其月龄的疫苗接种百科知识，包括接种意义、常见反应及护理、注意事项等。请使用Markdown格式返回。'
+            query: '请作为一名专业的儿科医生，提供一份疫苗接种百科知识，包括接种意义、常见反应及护理、注意事项等。如果宝宝信息存在，请针对宝宝月龄定制。请使用Markdown格式返回。'
         })
         aiKnowledge.value = res.insight.replace(/\n/g, '<br/>')
         ElMessage.success('知识库已优化')
@@ -301,23 +395,27 @@ const wikiItems = [
 ]
 
 const isNear = (dateStr: string) => {
+    if (!dateStr) return false
     const diff = new Date(dateStr).getTime() - new Date().getTime()
     return diff > 0 && diff < 7 * 24 * 60 * 60 * 1000 // Within 7 days
 }
 
-const getMonth = (dateStr: string) => new Date(dateStr).getMonth() + 1 + '月'
-const getDay = (dateStr: string) => new Date(dateStr).getDate()
+const getMonth = (dateStr: string) => dateStr ? new Date(dateStr).getMonth() + 1 + '月' : '-'
+const getDay = (dateStr: string) => dateStr ? new Date(dateStr).getDate() : '-'
 const formatDate = (dateStr: string) => {
     if (!dateStr) return '-'
     return dateStr.split('T')[0]
 }
 
-onMounted(fetchVaccines)
+onMounted(() => {
+    fetchVaccines()
+    loadAMap()
+})
 watch(() => babyStore.currentBaby?.id, fetchVaccines)
 </script>
 
 <style scoped lang="scss">
-.vaccine-page { padding: 10px 16px 60px; }
+.vaccine-page { padding: 10px 16px 60px; max-width: 800px; margin: 0 auto; }
 
 .page-header {
   display: flex;
@@ -326,7 +424,19 @@ watch(() => babyStore.currentBaby?.id, fetchVaccines)
   margin-bottom: 24px;
   .title { font-size: 22px; font-weight: 900; color: var(--el-text-color-primary); margin: 0; }
   .subtitle { font-size: 13px; color: var(--el-text-color-secondary); margin-top: 4px; }
-  .refresh-btn { box-shadow: 0 4px 12px rgba(255, 142, 148, 0.2); }
+}
+
+.mini-stat-card {
+    background: white;
+    padding: 16px;
+    border-radius: 20px;
+    text-align: center;
+    border: 1px solid var(--el-border-color-lighter);
+    .val { font-size: 20px; font-weight: 900; color: var(--el-text-color-primary); }
+    .lab { font-size: 11px; color: var(--el-text-color-secondary); margin-top: 4px; font-weight: 600; }
+    &.c1 .val { color: var(--el-color-success); }
+    &.c2 .val { color: var(--el-color-primary); }
+    &.c3 .val { color: #409eff; }
 }
 
 .ai-plan-card {
@@ -370,6 +480,79 @@ watch(() => babyStore.currentBaby?.id, fetchVaccines)
                 th { background: var(--el-color-primary-light-9); font-weight: 800; }
             }
         }
+    }
+}
+
+.nearby-hospitals {
+    .hospital-list {
+        background: white;
+        border-radius: 24px;
+        padding: 10px;
+        border: 1px solid var(--el-border-color-lighter);
+    }
+    .hospital-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px;
+        border-bottom: 1px solid var(--el-border-color-extra-light);
+        cursor: pointer;
+        transition: background 0.2s;
+        &:last-child { border-bottom: none; }
+        &:hover { background: var(--el-fill-color-light); border-radius: 16px; }
+        .h-name { font-weight: 800; font-size: 15px; color: var(--el-text-color-primary); margin-bottom: 4px; }
+        .h-address { font-size: 12px; color: var(--el-text-color-secondary); }
+        .h-distance { font-size: 11px; color: var(--el-color-primary); font-weight: 700; margin-top: 4px; }
+    }
+}
+
+.upcoming-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.vaccine-card {
+    border-radius: 24px !important;
+    .v-card-top {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+    .v-icon-box {
+        width: 44px; height: 44px;
+        background: var(--el-color-primary-light-9);
+        color: var(--el-color-primary);
+        border-radius: 14px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 20px;
+    }
+    .v-main-info {
+        flex: 1;
+        .v-name { font-weight: 800; font-size: 16px; color: var(--el-text-color-primary); margin-bottom: 4px; }
+        .v-tags { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--el-text-color-secondary); }
+    }
+    .v-date-badge {
+        text-align: center;
+        min-width: 50px;
+        padding: 6px;
+        border-radius: 12px;
+        background: var(--el-fill-color-light);
+        .d-month { font-size: 10px; font-weight: 700; color: var(--el-text-color-secondary); }
+        .d-day { font-size: 18px; font-weight: 900; color: var(--el-text-color-primary); }
+        &.is-near { background: var(--el-color-primary-light-9); .d-month, .d-day { color: var(--el-color-primary); } }
+    }
+    .v-desc { font-size: 13px; color: var(--el-text-color-regular); line-height: 1.6; margin: 12px 0; }
+    .line-clamp {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        overflow: hidden;
+    }
+    .v-card-footer {
+        display: flex; justify-content: space-between; align-items: center;
+        border-top: 1px solid var(--el-border-color-extra-light);
+        padding-top: 12px;
     }
 }
 
@@ -430,6 +613,25 @@ watch(() => babyStore.currentBaby?.id, fetchVaccines)
     }
 }
 
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    .section-title { font-size: 17px; font-weight: 800; color: var(--el-text-color-primary); }
+}
+
+.mb-24 { margin-bottom: 24px; }
 .mb-32 { margin-bottom: 32px; }
 .mt-40 { margin-top: 40px; }
+
+.rounded-dialog {
+  :deep(.el-dialog) { border-radius: 28px !important; }
+}
+
+.wiki-detail {
+    .wiki-meta { display: flex; gap: 12px; margin-bottom: 16px; align-items: center; font-size: 12px; color: var(--el-text-color-secondary); }
+    .wiki-text { font-size: 15px; line-height: 1.8; color: var(--el-text-color-primary); }
+    .wiki-tips { background: var(--el-color-primary-light-9); padding: 16px; border-radius: 12px; margin-top: 20px; .tips-title { font-weight: 800; margin-bottom: 4px; } p { font-size: 13px; margin: 0; } }
+}
 </style>

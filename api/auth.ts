@@ -64,7 +64,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 where: { OR: [{ phone: targetAccount }, { email: targetAccount }] }
             });
 
-            if (existing) return error(res, '该账号已被注册', 409);
+            if (existing) {
+                if (existing.deletedAt) {
+                    // Reactivate account
+                    const hashedPassword = await bcrypt.hash(password, 10);
+                    const user = await prisma.user.update({
+                        where: { id: existing.id },
+                        data: {
+                            password: hashedPassword,
+                            nickname: nickname || existing.nickname || `用户-${targetAccount.slice(-4)}`,
+                            deletedAt: null,
+                            lastLoginTime: new Date()
+                        }
+                    });
+                    const token = jwt.sign(
+                        { userId: user.id.toString(), phone: user.phone, email: user.email },
+                        JWT_SECRET,
+                        { expiresIn: '7d' }
+                    );
+                    return success(res, { token, userInfo: user }, 200);
+                }
+                return error(res, '该账号已被注册', 409);
+            }
 
             const hashedPassword = await bcrypt.hash(password, 10);
             const userData: any = {

@@ -22,7 +22,7 @@
         :key="n.id" 
         class="notification-item" 
         :class="{ unread: !n.isRead }"
-        @click="markAsRead(n)"
+        @click="showDetail(n)"
       >
         <div class="item-icon-wrap" :class="n.type">
           <el-icon v-if="n.type === 'vaccine'"><FirstAidKit /></el-icon>
@@ -34,11 +34,29 @@
                <span class="item-title">{{ n.title }}</span>
                <span class="item-date">{{ formatRelativeDate(n.createdAt) }}</span>
             </div>
-            <div class="item-desc">{{ n.content }}</div>
+            <div class="item-desc line-clamp">{{ n.content }}</div>
             <div v-if="!n.isRead" class="unread-badge">未读</div>
         </div>
       </div>
     </div>
+
+    <!-- Notification Detail Dialog -->
+    <el-dialog v-model="detailVisible" :title="currentNotif?.title || '消息详情'" width="90%" class="rounded-dialog">
+       <div class="notif-detail-content">
+          <div class="detail-meta">
+             <el-tag size="small" :type="getNotifTagType(currentNotif?.type)">{{ getNotifTypeName(currentNotif?.type) }}</el-tag>
+             <span class="detail-time">{{ currentNotif ? formatRelativeDate(currentNotif.createdAt) : '' }}</span>
+          </div>
+          <div class="detail-body">
+             {{ currentNotif?.content }}
+          </div>
+       </div>
+       <template #footer>
+          <div class="dialog-footer">
+            <el-button type="primary" @click="detailVisible = false" round>我知道了</el-button>
+          </div>
+       </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -53,6 +71,8 @@ import { formatRelative } from '@/utils/date'
 const router = useRouter()
 const loading = ref(false)
 const notifications = ref<any[]>([])
+const detailVisible = ref(false)
+const currentNotif = ref<any>(null)
 
 const fetchNotifications = async () => {
     loading.value = true
@@ -63,6 +83,14 @@ const fetchNotifications = async () => {
         // Error handled globally
     } finally {
         loading.value = false
+    }
+}
+
+const showDetail = (n: any) => {
+    currentNotif.value = n
+    detailVisible.value = true
+    if (!n.isRead) {
+        markAsRead(n)
     }
 }
 
@@ -86,6 +114,24 @@ const markAllAsRead = async () => {
 
 const formatRelativeDate = (dateStr: string) => {
     return formatRelative(dateStr)
+}
+
+const getNotifTagType = (type: string) => {
+    switch(type) {
+        case 'vaccine': return 'danger'
+        case 'system': return 'success'
+        case 'tips': return 'primary'
+        default: return 'info'
+    }
+}
+
+const getNotifTypeName = (type: string) => {
+    switch(type) {
+        case 'vaccine': return '疫苗接种'
+        case 'system': return '系统通知'
+        case 'tips': return '育儿锦囊'
+        default: return '其他消息'
+    }
 }
 
 onMounted(fetchNotifications)
@@ -181,6 +227,12 @@ onMounted(fetchNotifications)
     color: var(--el-text-color-regular);
     line-height: 1.6;
     margin-bottom: 8px;
+    &.line-clamp {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        overflow: hidden;
+    }
   }
   
   .unread-badge {
@@ -194,7 +246,36 @@ onMounted(fetchNotifications)
   }
 }
 
+.notif-detail-content {
+    .detail-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        .detail-time { font-size: 12px; color: var(--el-text-color-secondary); }
+    }
+    .detail-body {
+        font-size: 16px;
+        line-height: 1.8;
+        color: var(--el-text-color-primary);
+        white-space: pre-wrap;
+        background: var(--el-fill-color-light);
+        padding: 20px;
+        border-radius: 16px;
+    }
+}
+
 .empty-notif {
   padding-top: 60px;
+}
+
+.rounded-dialog {
+  :deep(.el-dialog) { border-radius: 28px !important; }
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 10px;
 }
 </style>

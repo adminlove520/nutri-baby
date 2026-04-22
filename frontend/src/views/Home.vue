@@ -104,6 +104,23 @@
            <div class="section-title">育儿锦囊</div>
         </div>
         <DailyTipsCard :tips="todayTips" :loading="tipsLoading" @tip-click="handleTipClick" @generate="manualGenerateTip" />
+
+        <!-- Tip Detail Dialog -->
+        <el-dialog v-model="tipDetailVisible" :title="tipDetail?.title || '育儿锦囊'" width="90%" class="rounded-dialog">
+           <div class="tip-detail-content">
+              <div class="detail-tag" v-if="tipDetail?.type">
+                 <el-tag effect="plain" round size="small">{{ tipDetail?.type }}</el-tag>
+              </div>
+              <div class="detail-body">
+                 {{ tipDetail?.description }}
+              </div>
+           </div>
+           <template #footer>
+              <div class="dialog-footer">
+                <el-button type="primary" @click="tipDetailVisible = false" round>我学到了</el-button>
+              </div>
+           </template>
+        </el-dialog>
       </el-col>
 
       <el-col :xs="24" :sm="9" :md="8" :lg="7">
@@ -226,10 +243,18 @@ const manualGenerateTip = async () => {
 }
 
 const fetchData = async () => {
-    if (!babyStore.currentBaby?.id) return
     loading.value = true
     try {
-        const babyId = babyStore.currentBaby.id
+        const babyId = babyStore.currentBaby?.id
+        
+        // Fetch tips even if no baby is selected
+        const tipsRes: any = await client.get('/tips', { params: { babyId } })
+        todayTips.value = tipsRes
+
+        if (!babyId) {
+            loading.value = false
+            return
+        }
 
         const [statsRes, vaccineRes, userStats] = await Promise.all([
             getStatistics(babyId),
@@ -272,7 +297,13 @@ const formatSleepDuration = (minutes: number) => {
 }
 
 const goToVaccine = () => router.push('/vaccine')
-const handleTipClick = (tip: any) => ElMessage.info(`锦囊详情：${tip.title}`)
+const handleTipClick = (tip: any) => {
+    tipDetail.value = tip
+    tipDetailVisible.value = true
+}
+
+const tipDetailVisible = ref(false)
+const tipDetail = ref<any>(null)
 const handleFeeding = () => router.push('/record/feeding')
 const handleSleep = () => router.push('/record/sleep')
 const handleDiaper = () => router.push('/record/diaper')
@@ -472,4 +503,28 @@ watch(() => babyStore.currentBaby?.id, fetchData)
 .mb-24 { margin-bottom: 24px; }
 .mt-32 { margin-top: 32px; }
 .clickable { cursor: pointer; }
+
+.tip-detail-content {
+    .detail-tag { margin-bottom: 16px; }
+    .detail-body {
+        font-size: 16px;
+        line-height: 1.8;
+        color: var(--el-text-color-primary);
+        white-space: pre-wrap;
+        background: var(--el-fill-color-light);
+        padding: 20px;
+        border-radius: 16px;
+    }
+}
+
+.rounded-dialog {
+  :deep(.el-dialog) { border-radius: 28px !important; max-width: 500px; }
+  :deep(.el-dialog__header) { padding-bottom: 0; }
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 10px;
+}
 </style>

@@ -13,6 +13,8 @@
         { "source": "/api/user/stats", "destination": "/api/user?action=stats" },
         { "source": "/api/user/update", "destination": "/api/user?action=update" },
         { "source": "/api/user/info", "destination": "/api/user?action=info" },
+        { "source": "/api/user/change-password", "destination": "/api/user?action=change-password" },
+        { "source": "/api/user/delete-account", "destination": "/api/user?action=delete-account" },
         { "source": "/api/tips/daily", "destination": "/api/tips" },
         { "source": "/api/ai/analyze", "destination": "/api/ai" },
         { "source": "/api/cron/reminders", "destination": "/api/cron" },
