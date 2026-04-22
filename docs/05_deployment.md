@@ -1,22 +1,46 @@
-# 5. 部署与维护 (Deployment)
+# 05. 部署与维护
 
-## 5.1 Vercel 部署流程
-1.  **关联仓库**: 在 Vercel Dashboard 关联此 GitHub 仓库。
-2.  **环境变量**: 必须配置以下变量：
-    - `POSTGRES_PRISMA_URL`
-    - `POSTGRES_URL_NON_POOLING`
-    - `JWT_SECRET`
-    - `MINIMAX_API_KEY`
-    - `MINIMAX_GROUP_ID`
-3.  **构建设置**:
-    - **Build Command**: `prisma generate && npm run build --workspace=frontend`
-    - **Output Directory**: `frontend/dist`
+Nutri-Baby 专为 Vercel 自动化部署设计。通过简单的配置，您可以拥有一套完全属于自己的育儿助手。
 
-## 5.2 数据库维护
--   **备份**: 建议使用 Vercel Postgres 提供的自动快照功能。
--   **迁移**: 生产环境建议使用 `npx prisma migrate deploy` 确保数据安全。
+## 📦 Vercel 部署步骤
 
-## 5.3 故障排查
--   **Function Timeout**: 检查数据库查询是否由于缺少索引（Index）导致缓慢。
--   **AI 调用失败**: 确认 MiniMax 余量及 API 权限设置。
--   **Build Error**: 确保 `typescript` 版本不低于 5.8，或检查 `tsconfig.json` 是否包含当前环境不支持的编译选项。
+### 1. 仓库准备
+将本项目代码上传至您的 GitHub 个人私有或公开仓库。
+
+### 2. 创建 Vercel 项目
+在 Vercel 控制台点击 **"Add New"** -> **"Project"**，选择您的仓库并导入。
+
+### 3. 存储资源配置
+-   **Postgres**: 进入项目的 "Storage" 标签页，创建一个 **Vercel Postgres** 数据库并连接。
+-   **Blob**: 同样在 "Storage" 中，创建一个 **Vercel Blob** 存储桶，并将其 **Access Level** 修改为 **Public**（用于展示头像）。
+
+### 4. 环境变量
+在 "Settings" -> "Environment Variables" 中添加以下关键变量：
+
+| 变量名 | 必填 | 说明 |
+| :--- | :--- | :--- |
+| `JWT_SECRET` | 是 | 用于 JWT 签名的随机长字符串 |
+| `AI_PROVIDER` | 否 | 默认为 `minimax` |
+| `MINIMAX_API_KEY` | 是 | 您的 MiniMax API Key |
+| `MINIMAX_GROUP_ID` | 否 | MiniMax 团队 ID |
+| `EMAIL_USER` | 否 | QQ 邮箱账号（用于提醒） |
+| `EMAIL_PASS` | 否 | QQ 邮箱 SMTP 授权码 |
+
+### 5. 自动化构建
+Vercel 会自动读取 `vercel.json` 并执行构建。默认构建命令已包含 Prisma 同步逻辑。
+
+## 🛠️ 日常维护
+
+### 数据库迁移
+如果您修改了 `prisma/schema.prisma`，请在本地运行：
+```bash
+npx prisma generate
+npx prisma db push
+```
+然后将代码推送至 GitHub，Vercel 会自动更新线上数据库结构。
+
+### Cron 任务
+本项目预设了每日 08:00 (UTC+8) 触发 AI 建议生成。您可以在 Vercel 项目的 **"Cron Jobs"** 面板中看到 `/api/cron/reminders` 的配置情况。
+
+---
+*Back to [首页](../README.md)*

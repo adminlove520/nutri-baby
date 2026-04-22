@@ -1,29 +1,75 @@
-# 3. 开发手册 (Development)
+# 03. 开发手册
 
-## 3.1 快速环境准备
-1.  **Node.js**: 推荐 v20+。
-2.  **Vercel CLI**: `npm i -g vercel`。
-3.  **Postgres**: 本地可以使用 Docker 运行 Postgres 或直接连接 Vercel Postgres 预览库。
+欢迎参与 Nutri-Baby 的开发！本手册将引导您了解本地开发环境的搭建、API 规范以及如何添加新功能。
 
-## 3.2 项目结构
-```text
-/
-├── api/            # Vercel Serverless Functions (后端)
-├── frontend/       # Vue 3 Vite 项目 (前端)
-├── lib/            # 后端共享库 (数据库客户端, AI 逻辑)
-├── prisma/         # 数据库 Schema 与迁移文件
-└── vercel.json     # Vercel 部署配置文件
+## 🛠️ 环境依赖
+
+-   **Node.js**: v18.0.0+
+-   **Package Manager**: npm v9+
+-   **Database**: PostgreSQL 14+ (或直接使用 Vercel Postgres)
+
+## 🏁 本地运行步聚
+
+1.  **安装工作区依赖**:
+    ```bash
+    npm install
+    ```
+2.  **配置 Prisma**:
+    修改 `prisma/schema.prisma` 中的 `datasource` 并在 `.env` 中设置 `DATABASE_URL`。
+3.  **生成 Prisma Client**:
+    ```bash
+    npx prisma generate
+    ```
+4.  **推送到本地/测试数据库**:
+    ```bash
+    npx prisma db push
+    ```
+5.  **启动开发模式**:
+    ```bash
+    npm run dev
+    ```
+
+## 📡 API 开发规范
+
+### 1. 路由结构
+Vercel Serverless Functions 位于 `/api` 目录。我们采用 **Action Pattern** 来整合功能：
+
+```typescript
+// api/user.ts 示例
+export default async function handler(req, res) {
+    const { action } = req.query;
+    switch(action) {
+        case 'info': return getInfo(req, res);
+        case 'update': return updateProfile(req, res);
+        default: return res.status(405).end();
+    }
+}
 ```
 
-## 3.3 开发规范
--   **API 开发**: 鉴于 Vercel Hobby 方案的 Function 数量限制，禁止新增顶级路由文件。新功能应整合进现有的 5 个核心模块（`auth`, `baby`, `record`, `user`, `ai`），通过 `action` 或 `type` 参数区分业务逻辑，并在 `vercel.json` 中配置对应的 Rewrite 规则。
--   **状态管理**: 前端持久化数据必须存储在 Pinia Store 中（`user.ts`, `baby.ts`, `record.ts`）。
--   **组件库**: 优先使用 Element Plus 提供的组件，自定义样式放在 `frontend/src/assets/theme.scss`。
--   **Sass 编译器**: 本项目强制使用 Sass Modern API。配置文件 `vite.config.ts` 已设为 `api: 'modern'`，开发时请确保 Vite 版本 >= 5.4.0 以消除警告。
--   **AI 调用**: 如需更换模型，仅需在 `lib/ai/providers/` 下实现 `AIProvider` 接口，并在 `AIFactory` 中切换。
+### 2. 身份认证
+在 API 中使用 `getUserFromRequest` 获取当前登录用户：
 
-## 3.4 常用命令
--   `npm install`: 安装根目录及工作区依赖。
--   `npm run dev`: 启动本地模拟环境（前端 + API）。
--   `npx prisma generate`: 修改 Schema 后必须运行。
--   `npx prisma db push`: 将 Schema 更改应用到数据库。
+```typescript
+import { getUserFromRequest } from '../lib/auth';
+const user = await getUserFromRequest(req);
+if (!user) return res.status(401).json({ message: 'Unauthorized' });
+```
+
+### 3. 数据返回格式
+推荐使用 `lib/utils.ts` 中的 `success` 和 `error` 函数：
+-   `success(res, data)` -> 200 OK
+-   `error(res, message, status)` -> 错误返回
+
+## 🎨 前端组件开发
+
+-   **图标库**: 使用 `@element-plus/icons-vue`。
+-   **状态管理**: 通过 `stores/baby.ts` 获取当前活跃宝宝的 `id`。
+-   **API 调用**: 使用预配置好的 `api/client.ts` (基于 Axios)，它会自动处理 JWT Token 的添加。
+
+## 🧪 常用脚本
+
+-   `npm run build`: 全量构建前端和 Prisma Client。
+-   `npx prisma studio`: 可视化管理本地数据库数据。
+
+---
+*Next: [用户操作指南](./04_user_manual.md)*
