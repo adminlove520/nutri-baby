@@ -1,20 +1,26 @@
 # 1. 项目介绍 (Introduction)
 
 ## 1.1 项目背景
-Nutri-Baby Web 是一个现代化的母婴护理管理平台，旨在帮助家长轻松记录宝宝的喂养、睡眠、排泄和生长数据，并通过可视化图表提供健康建议。本项目是从原有的 Uni-app + Go 架构重构而来的 Web 版本。
+Nutri-Baby 是一个现代化的母婴护理管理平台，旨在帮助家长轻松记录宝宝的喂养、睡眠、排泄和生长数据。
+
+本项目经历了从 **Uni-app + Go** 到 **Vue 3 + Node.js Serverless** 的重大架构重构。重构的主要目标是：
+-   **零运维成本**: 利用 Vercel Serverless 架构，摆脱传统的服务器管理。
+-   **AI 赋能**: 集成 MiniMax M2.7 模型，将静态数据转化为有意义的育儿建议。
+-   **极致体验**: 使用 Web 标准技术栈（Vite + Element Plus）提供更流畅的交互。
 
 ## 1.2 核心功能
-*   **宝宝管理**: 多宝宝档案管理，支持头像上传和协作者邀请。
+*   **宝宝管理**: 多宝宝档案、头像上传、全家协作（通过 24 小时邀请链）。
 *   **记录追踪**:
-    *   喂养记录 (母乳、奶瓶、辅食)
-    *   睡眠记录 (入睡时间、时长)
-    *   排泄记录 (尿布更换、性状分析)
-    *   生长记录 (身高、体重)
-*   **数据统计**: 提供日、周、月维度的健康数据可视化图表。
-*   **多端适配**: 基于响应式设计，适配 PC 和移动端浏览器。
+    *   **喂养**: 支持母乳、奶瓶、辅食，包含量和持续时间。
+    *   **睡眠**: 自动计算时长，分析睡眠规律。
+    *   **排泄**: 详细记录尿布状态（干、湿、便、两者），支持性状和颜色分析。
+    *   **生长**: 身高、体重、头围追踪。
+*   **AI 智能分析**: 首页健康分析卡片，基于最近记录自动评估宝宝健康状态并给出建议。
+*   **数据统计**: 专业的 ECharts 图表展示生长发育趋势和喂养量规律。
 
 ## 1.3 技术栈
-*   **前端**: Vue 3, TypeScript, Vite, Element Plus, Pinia, Vue Router, ECharts.
-*   **后端**: Node.js (Vercel Serverless Functions), Prisma ORM.
-*   **数据库**: PostgreSQL (Vercel Postgres).
-*   **部署**: Vercel (Production), Docker (Self-hosted).
+*   **前端**: Vue 3 (Composition API), TypeScript, Vite, Element Plus, Pinia.
+*   **后端**: Node.js (Vercel Functions), Prisma ORM.
+*   **数据库**: PostgreSQL (Vercel Postgres / Neon).
+*   **AI**: MiniMax M2.7 (MiniMax-M2.7-text-generation-v2).
+*   **监控/部署**: Vercel.
