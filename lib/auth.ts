@@ -16,15 +16,20 @@ interface DecodedToken {
 
 export async function getUserFromRequest(req: VercelRequest) {
     const authHeader = req.headers.authorization;
+    console.log('[DEBUG getUserFromRequest] authHeader:', authHeader);
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        console.log('[DEBUG getUserFromRequest] No valid Bearer token found');
         return null;
     }
 
     const token = authHeader.split(' ')[1];
+    console.log('[DEBUG getUserFromRequest] token:', token);
     try {
-        const decoded = jwt.verify(token, JWT_SECRET) as DecodedToken;
+        const decoded = jwt.verify(token, JWT_SECRET!) as DecodedToken;
+        console.log('[DEBUG getUserFromRequest] decoded:', decoded);
         return decoded;
     } catch (error) {
+        console.log('[DEBUG getUserFromRequest] JWT verification failed:', error);
         return null;
     }
 }

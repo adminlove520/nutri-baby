@@ -6,7 +6,8 @@
         "frontend"
     ],
     "scripts": {
-        "dev": "vercel dev",
+        "dev": "npm run dev --workspace=frontend",
+        "dev:api": "vercel dev",
         "build": "prisma generate && npm run build --workspace=frontend",
         "build:sqlite": "prisma --schema=prisma/schema.sqlite.prisma generate && npm run build --workspace=frontend",
         "db:push": "prisma db push",

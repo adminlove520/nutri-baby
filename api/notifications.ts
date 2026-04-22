@@ -9,7 +9,11 @@ const safeJSON = (data: any) => {
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+    console.log('[DEBUG /api/notifications] method:', req.method);
+    console.log('[DEBUG /api/notifications] headers:', JSON.stringify(req.headers, null, 2));
+    
     const user = await getUserFromRequest(req);
+    console.log('[DEBUG /api/notifications] user from request:', user);
     if (!user) return res.status(401).json({ message: 'Unauthorized' });
 
     const uId = BigInt(user.userId);

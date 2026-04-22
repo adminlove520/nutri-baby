@@ -11,8 +11,10 @@ const client = axios.create({
 client.interceptors.request.use(
     config => {
         const token = localStorage.getItem('token')
+        console.log('[DEBUG API Client] token from localStorage:', token)
         if (token) {
             config.headers.Authorization = `Bearer ${token}`
+            console.log('[DEBUG API Client] Authorization header set:', config.headers.Authorization)
         }
         return config
     },
