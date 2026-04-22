@@ -8,14 +8,22 @@
 
 ## 2.2 核心模块设计
 
-### 2.2.1 统一 API 路由
-后端 API 位于 `/api` 目录，利用文件路由系统：
--   `/api/auth/` - 用户认证（手机号/密码/JWT）。
--   `/api/baby/` - 宝宝档案管理及成员邀请。
--   `/api/record/` - 动态路由 `[type].ts` 处理不同类型的生长记录。
--   `/api/ai/` - 对接 MiniMax 进行数据脱敏与智能分析。
+### 2.2.1 模块化 API 设计
+后端 API 位于 `/api` 目录，针对 Vercel Hobby 限制进行了模块化整合（Consolidation）：
+-   `/api/auth.ts` - 统一身份认证模块，支持手机号/邮箱双登录。
+-   `/api/baby.ts` - 整合宝宝档案 CRUD、疫苗计划及成员邀请。
+-   `/api/record.ts` - 统一处理 Feeding, Sleep, Diaper, Growth 四类记录。
+-   `/api/user.ts` - 用户中心及统计数据聚合。
+-   `/api/cron.ts` - 自动化任务，集成 Nodemailer 实现疫苗邮件推送。
+-   `/api/ai.ts` - 对接 MiniMax 进行智能分析。
 
-### 2.2.2 数据库模型 (Prisma)
+### 2.2.2 路由重写 (Vercel Rewrite)
+为了保持前端 API 调用习惯不变，我们在 `vercel.json` 中配置了高级重写逻辑，将前端的各细分请求自动分发至上述模块：
+-   `/api/auth/login` -> `/api/auth?action=login`
+-   `/api/user/stats` -> `/api/user?action=stats`
+-   `/api/record/:type` -> `/api/record?type=:type`
+
+### 2.2.3 数据库模型 (Prisma)
 使用 Prisma 保证类型安全：
 -   `User` & `Baby`: 一对多关系，配合 `BabyCollaborator` 实现权限控制。
 -   `Record` 模型: 分表存储 Feeding, Sleep, Diaper, Growth 以提升查询效率。

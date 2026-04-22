@@ -16,9 +16,10 @@
 ```
 
 ## 3.3 开发规范
--   **API 开发**: 新增接口需在 `api/` 下创建 `.ts` 文件，引用 `lib/prisma.ts` 进行数据库操作。
+-   **API 开发**: 鉴于 Vercel Hobby 方案的 Function 数量限制，禁止新增顶级路由文件。新功能应整合进现有的 5 个核心模块（`auth`, `baby`, `record`, `user`, `ai`），通过 `action` 或 `type` 参数区分业务逻辑，并在 `vercel.json` 中配置对应的 Rewrite 规则。
 -   **状态管理**: 前端持久化数据必须存储在 Pinia Store 中（`user.ts`, `baby.ts`, `record.ts`）。
 -   **组件库**: 优先使用 Element Plus 提供的组件，自定义样式放在 `frontend/src/assets/theme.scss`。
+-   **Sass 编译器**: 本项目强制使用 Sass Modern API。配置文件 `vite.config.ts` 已设为 `api: 'modern'`，开发时请确保 Vite 版本 >= 5.4.0 以消除警告。
 -   **AI 调用**: 如需更换模型，仅需在 `lib/ai/providers/` 下实现 `AIProvider` 接口，并在 `AIFactory` 中切换。
 
 ## 3.4 常用命令
