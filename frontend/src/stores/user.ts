@@ -7,6 +7,7 @@ export interface UserInfo {
     nickname: string
     avatarUrl: string
     phone?: string
+    email?: string
 }
 
 export const useUserStore = defineStore('user', () => {
@@ -15,7 +16,8 @@ export const useUserStore = defineStore('user', () => {
         id: '',
         nickname: '访客',
         avatarUrl: '',
-        phone: ''
+        phone: '',
+        email: ''
     })
 
     const login = async (code: string) => {
@@ -28,13 +30,13 @@ export const useUserStore = defineStore('user', () => {
         }
     }
 
-    const loginCredential = async (phone: string, pass: string) => {
-        const data = await authApi.loginCredential({ phone, password: pass })
+    const loginCredential = async (account: string, pass: string) => {
+        const data = await authApi.loginCredential({ account, password: pass })
         setSession(data)
     }
 
-    const register = async (phone: string, pass: string, nickname: string) => {
-        const data = await authApi.register({ phone, password: pass, nickname })
+    const register = async (account: string, pass: string, nickname: string) => {
+        const data = await authApi.register({ account, password: pass, nickname })
         setSession(data)
     }
 
@@ -44,15 +46,21 @@ export const useUserStore = defineStore('user', () => {
             id: String(data.userInfo.id),
             nickname: data.userInfo.nickname || 'Parent',
             avatarUrl: data.userInfo.avatarUrl || '',
-            phone: data.userInfo.phone || ''
+            phone: data.userInfo.phone || '',
+            email: data.userInfo.email || ''
         }
         localStorage.setItem('token', data.token)
         localStorage.setItem('user_info', JSON.stringify(userInfo.value))
     }
 
+    const setUserInfo = (info: Partial<UserInfo>) => {
+        userInfo.value = { ...userInfo.value, ...info }
+        localStorage.setItem('user_info', JSON.stringify(userInfo.value))
+    }
+
     const logout = () => {
         isLoggedIn.value = false
-        userInfo.value = { id: '', nickname: '', avatarUrl: '', phone: '' }
+        userInfo.value = { id: '', nickname: '', avatarUrl: '', phone: '', email: '' }
         localStorage.removeItem('token')
         localStorage.removeItem('user_info')
     }
@@ -71,6 +79,7 @@ export const useUserStore = defineStore('user', () => {
         login,
         loginCredential,
         register,
-        logout
+        logout,
+        setUserInfo
     }
 })

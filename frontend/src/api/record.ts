@@ -1,55 +1,13 @@
-import axios from 'axios'
+import client from './client'
 
-const api = axios.create({
-    baseURL: '/api'
-})
-
-api.interceptors.request.use(config => {
-    const token = localStorage.getItem('token')
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`
-    }
-    return config
-})
-
-// Unified Record Interface (Frontend)
-export interface ApiRecordPayload {
-    babyId: string
-    time?: number
-    startTime?: number
-    endTime?: number
-    type?: string
-    [key: string]: any
+export const getRecords = async (type: string, babyId: string, limit = 50) => {
+    return client.get(`/record?type=${type}&babyId=${babyId}&limit=${limit}`)
 }
 
-// Feeding
-export const createFeedingRecord = async (data: ApiRecordPayload) => {
-    return (await api.post('/feeding-records', data)).data
-}
-export const getFeedingRecords = async (babyId: string, startTime?: number, endTime?: number) => {
-    return (await api.get('/feeding-records', { params: { babyId, startTime, endTime } })).data
+export const createRecord = async (type: string, data: any) => {
+    return client.post(`/record?type=${type}`, data)
 }
 
-// Sleep
-export const createSleepRecord = async (data: ApiRecordPayload) => {
-    return (await api.post('/sleep-records', data)).data
-}
-export const getSleepRecords = async (babyId: string, startTime?: number, endTime?: number) => {
-    return (await api.get('/sleep-records', { params: { babyId, startTime, endTime } })).data
-}
-
-// Diaper
-export const createDiaperRecord = async (data: ApiRecordPayload) => {
-    return (await api.post('/diaper-records', data)).data
-}
-export const getDiaperRecords = async (babyId: string, startTime?: number, endTime?: number) => {
-    return (await api.get('/diaper-records', { params: { babyId, startTime, endTime } })).data
-}
-
-// Growth
-export const createGrowthRecord = async (data: ApiRecordPayload) => {
-    return (await api.post('/growth-records', data)).data
-}
-export const getGrowthRecords = async (babyId: string, startTime?: number, endTime?: number) => {
-    return (await api.get('/growth-records', { params: { babyId, startTime, endTime } })).data
+export const deleteRecord = async (type: string, id: string) => {
+    return client.delete(`/record?type=${type}&id=${id}`)
 }

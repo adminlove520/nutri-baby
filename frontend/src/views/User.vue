@@ -17,7 +17,7 @@
           <div class="info-section">
              <div class="nickname-row">
                 <span class="nickname">{{ userInfo.nickname || '新用户' }}</span>
-                <el-tag size="small" round effect="plain">普通成员</el-tag>
+                <el-button link :icon="Edit" @click="openEditDialog" style="color: white; margin-left: 8px;"></el-button>
              </div>
              <div class="phone-text">{{ userInfo.phone || userInfo.email || '未绑定账号' }}</div>
           </div>
@@ -111,17 +111,33 @@
     <div class="logout-btn-wrapper">
        <el-button type="danger" plain size="large" round @click="handleLogout">退出登录</el-button>
     </div>
+
+    <!-- Edit Profile Dialog -->
+    <el-dialog v-model="editDialogVisible" title="修改个人信息" width="90%" class="custom-dialog">
+       <el-form :model="editForm" label-position="top">
+          <el-form-item label="昵称">
+             <el-input v-model="editForm.nickname" placeholder="请输入昵称" />
+          </el-form-item>
+          <el-form-item label="绑定邮箱 (用于接收疫苗提醒)">
+             <el-input v-model="editForm.email" placeholder="请输入邮箱地址" />
+          </el-form-item>
+       </el-form>
+       <template #footer>
+          <el-button @click="editDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="saveProfile" :loading="saving">保存修改</el-button>
+       </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { 
-  User as UserIcon, ArrowRight, Plus, Memo, Setting, InfoFilled, Camera, Message 
+  User as UserIcon, ArrowRight, Plus, Memo, Setting, InfoFilled, Camera, Message, Edit 
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import axios from 'axios'
+import client from '@/api/client'
 import { useUserStore } from '@/stores/user'
 import { useBabyStore } from '@/stores/baby'
 
@@ -131,6 +147,34 @@ const babyStore = useBabyStore()
 const fileInput = ref<HTMLInputElement | null>(null)
 
 const userInfo = computed(() => userStore.userInfo)
+
+const editDialogVisible = ref(false)
+const saving = ref(false)
+const editForm = reactive({
+    nickname: '',
+    email: ''
+})
+
+const openEditDialog = () => {
+    editForm.nickname = userInfo.value.nickname
+    editForm.email = userInfo.value.email || ''
+    editDialogVisible.value = true
+}
+
+const saveProfile = async () => {
+    if (!editForm.nickname) return ElMessage.warning('昵称不能为空')
+    saving.value = true
+    try {
+        const res = await client.post('/user?action=update', editForm)
+        userStore.setUserInfo(res)
+        ElMessage.success('信息已更新')
+        editDialogVisible.value = false
+    } catch (e) {
+        // Error handled globally
+    } finally {
+        saving.value = false
+    }
+}
 
 const triggerUpload = () => {
     fileInput.value?.click()
@@ -145,44 +189,35 @@ const handleFileUpload = async (event: Event) => {
 
     const loading = ElMessage({ message: '正在上传...', duration: 0 })
     try {
-        const token = localStorage.getItem('token')
-        const res = await axios.post(`/api/upload?filename=${encodeURIComponent(file.name)}`, file, {
-            headers: { 
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': file.type
-            }
+        const res: any = await client.post(`/upload?filename=${encodeURIComponent(file.name)}`, file, {
+            headers: { 'Content-Type': file.type }
         })
         
-        const avatarUrl = res.data.url
+        const avatarUrl = res.url
         // Update user profile with new avatar
-        await axios.post('/api/user/update', { avatarUrl }, {
-            headers: { Authorization: `Bearer ${token}` }
-        })
+        await client.post('/user?action=update', { avatarUrl })
         
-        userStore.setUserInfo({ ...userStore.userInfo, avatarUrl })
+        userStore.setUserInfo({ avatarUrl })
         ElMessage.success('头像更新成功')
     } catch (e) {
-        console.error('Upload Error:', e)
-        ElMessage.error('上传失败')
+        // Error handled globally
     } finally {
         loading.close()
     }
 }
+
 const babyCount = ref(0)
 const totalRecords = ref(0)
 const joinDays = ref(0)
 
 const fetchStats = async () => {
     try {
-        const token = localStorage.getItem('token')
-        const res = await axios.get('/api/user/stats', {
-            headers: { Authorization: `Bearer ${token}` }
-        })
-        babyCount.value = res.data.babyCount
-        totalRecords.value = res.data.totalRecords
-        joinDays.value = res.data.joinDays
+        const res: any = await client.get('/user?action=stats')
+        babyCount.value = res.babyCount
+        totalRecords.value = res.totalRecords
+        joinDays.value = res.joinDays
     } catch (e) {
-        console.error('Failed to fetch stats', e)
+        // Error handled globally
     }
 }
 
@@ -200,13 +235,10 @@ const sendTestEmail = async () => {
             cancelButtonText: '取消',
             type: 'info'
         })
-        const token = localStorage.getItem('token')
-        await axios.post('/api/cron?testEmail=true', {}, {
-            headers: { Authorization: `Bearer ${token}` }
-        })
+        await client.post('/cron?testEmail=true')
         ElMessage.success('测试邮件已发送，请检查收件箱')
     } catch (e) {
-        if (e !== 'cancel') ElMessage.error('发送失败，请检查邮箱配置')
+        // Error handled globally or ignored if cancelled
     }
 }
 

@@ -152,7 +152,8 @@ import DailyTipsCard from '@/components/DailyTipsCard.vue'
 import AIInsightCard from './components/AIInsightCard.vue'
 import { formatRelative } from '@/utils/date'
 import { useBabyStore } from '@/stores/baby'
-import axios from 'axios'
+import { getStatistics } from '@/api/statistics'
+import { getVaccines } from '@/api/baby'
 
 const router = useRouter()
 const babyStore = useBabyStore()
@@ -181,28 +182,23 @@ const fetchData = async () => {
     if (!babyStore.currentBaby?.id) return
     loading.value = true
     try {
-        const token = localStorage.getItem('token')
+        const babyId = babyStore.currentBaby.id
         
         // Fetch stats, vaccines, and tips in parallel
-        const [statsRes, vaccineRes, tipsRes] = await Promise.all([
-            axios.get('/api/statistics', {
-                params: { babyId: babyStore.currentBaby.id },
-                headers: { Authorization: `Bearer ${token}` }
-            }),
-            axios.get('/api/baby/vaccines', {
-                params: { babyId: babyStore.currentBaby.id },
-                headers: { Authorization: `Bearer ${token}` }
-            }),
-            axios.get('/api/tips/daily', {
-                params: { babyId: babyStore.currentBaby.id },
-                headers: { Authorization: `Bearer ${token}` }
-            })
+        const [statsRes, vaccineRes] = await Promise.all([
+            getStatistics(babyId),
+            getVaccines(babyId)
         ])
         
-        todayStats.value = statsRes.data.today
-        todayTips.value = tipsRes.data
+        todayStats.value = statsRes.today
         
-        const pending = vaccineRes.data
+        // Mock tips for now
+        todayTips.value = [
+            { id: '1', title: '母乳喂养建议', description: '坚持按需哺乳，帮助宝宝建立良好的消化系统。', type: 'feeding', priority: 'high' },
+            { id: '2', title: '睡眠环境优化', description: '保持室内温度在 22-24 度，营造舒适的睡眠氛围。', type: 'sleep', priority: 'medium' }
+        ]
+        
+        const pending = vaccineRes
             .filter((v: any) => v.vaccinationStatus === 'pending')
             .sort((a: any, b: any) => new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime())
         
@@ -213,7 +209,7 @@ const fetchData = async () => {
             upcomingVaccines.value = []
         }
     } catch (e) {
-        console.error('Failed to fetch data', e)
+        // Global interceptor handles this
     } finally {
         loading.value = false
     }

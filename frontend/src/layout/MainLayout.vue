@@ -136,7 +136,7 @@ import 'element-plus/theme-chalk/display.css'
 import { useBabyStore } from '@/stores/baby'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
-import axios from 'axios'
+import client from '@/api/client'
 
 const route = useRoute()
 const router = useRouter()
@@ -147,11 +147,8 @@ const hasUnread = ref(false)
 
 const fetchUnread = async () => {
     try {
-        const token = localStorage.getItem('token')
-        const res = await axios.get('/api/notifications', {
-            headers: { Authorization: `Bearer ${token}` }
-        })
-        hasUnread.value = res.data.some((n: any) => !n.isRead)
+        const res: any = await client.get('/notifications')
+        hasUnread.value = res.some((n: any) => !n.isRead)
     } catch (e) {}
 }
 

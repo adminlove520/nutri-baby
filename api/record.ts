@@ -1,29 +1,24 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import prisma from '../lib/prisma';
 import { getUserFromRequest, hasBabyPermission } from '../lib/auth';
-
-const safeJSON = (data: any) => {
-    return JSON.parse(JSON.stringify(data, (key, value) =>
-        typeof value === 'bigint' ? value.toString() : value
-    ));
-};
+import { success, error } from '../lib/utils';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ message: 'Unauthorized' });
+    if (!user) return error(res, '请先登录', 401);
 
     const rawType = req.query.type;
     const type = Array.isArray(rawType) ? rawType[0] : rawType;
 
-    if (!type) return res.status(400).json({ message: 'Record type unspecified' });
+    if (!type) return error(res, '未指定记录类型');
 
     try {
         if (req.method === 'GET') {
             const { babyId, limit = '50' } = req.query;
-            if (!babyId) return res.status(400).json({ message: 'Baby ID required' });
+            if (!babyId) return error(res, '宝宝 ID 缺失');
 
             const bId = BigInt(babyId as string);
-            if (!(await hasBabyPermission(user.userId, bId))) return res.status(403).json({ message: 'Forbidden' });
+            if (!(await hasBabyPermission(user.userId, bId))) return error(res, '权限不足', 403);
 
             const take = parseInt(limit as string);
 
@@ -38,14 +33,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 records = await prisma.growthRecord.findMany({ where: { babyId: bId }, orderBy: { time: 'desc' }, take });
             }
 
-            return res.status(200).json({ records: safeJSON(records) });
+            return success(res, { records });
 
         } else if (req.method === 'POST') {
             const { babyId, time, ...rest } = req.body;
-            if (!babyId) return res.status(400).json({ message: 'Baby ID required' });
+            if (!babyId) return error(res, '宝宝 ID 缺失');
 
             const bId = BigInt(babyId);
-            if (!(await hasBabyPermission(user.userId, bId))) return res.status(403).json({ message: 'Forbidden' });
+            if (!(await hasBabyPermission(user.userId, bId))) return error(res, '权限不足', 403);
 
             const uId = BigInt(user.userId);
             const recordTime = new Date(time || new Date());
@@ -72,7 +67,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         startTime: new Date(startTime || recordTime),
                         endTime: endTime ? new Date(endTime) : null,
                         duration: duration ? parseInt(duration) : null,
-                        type: sleepType,
+                        type: sleepType || 'night',
                         createdBy: uId
                     }
                 });
@@ -104,10 +99,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 });
             }
 
-            return res.status(201).json(safeJSON(result));
+            return success(res, result, 201);
         } else if (req.method === 'DELETE') {
             const { id } = req.query;
-            if (!id) return res.status(400).json({ message: 'Record ID required' });
+            if (!id) return error(res, '记录 ID 缺失');
 
             const rId = BigInt(id as string);
             
@@ -117,10 +112,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             else if (type === 'diaper') record = await prisma.diaperRecord.findUnique({ where: { id: rId } });
             else if (type === 'growth') record = await prisma.growthRecord.findUnique({ where: { id: rId } });
 
-            if (!record) return res.status(404).json({ message: 'Record not found' });
+            if (!record) return error(res, '记录不存在', 404);
             
             if (!(await hasBabyPermission(user.userId, record.babyId))) {
-                return res.status(403).json({ message: 'Forbidden' });
+                return error(res, '权限不足', 403);
             }
 
             if (type === 'feeding') await prisma.feedingRecord.delete({ where: { id: rId } });
@@ -128,10 +123,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             else if (type === 'diaper') await prisma.diaperRecord.delete({ where: { id: rId } });
             else if (type === 'growth') await prisma.growthRecord.delete({ where: { id: rId } });
 
-            return res.status(200).json({ message: 'Deleted' });
+            return success(res, { message: '记录已删除' });
         }
-    } catch (error) {
-        console.error(`Record API Error (${type}):`, error);
-        return res.status(500).json({ message: 'Internal Server Error' });
+    } catch (err) {
+        console.error(`Record API Error (${type}):`, err);
+        return error(res, '服务器开小差了，请稍后再试', 500);
     }
 }

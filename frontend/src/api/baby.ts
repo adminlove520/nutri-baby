@@ -1,44 +1,34 @@
-import axios from 'axios'
+import client from './client'
 import type { BabyProfile } from '@/stores/baby'
 
-const api = axios.create({
-    baseURL: '/api'
-})
-
-// Interceptor to add token
-api.interceptors.request.use(config => {
-    const token = localStorage.getItem('token')
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`
-    }
-    return config
-})
-
-export const getBabies = async () => {
-    const response = await api.get<BabyProfile[]>('/baby')
-    return response.data
+export const getBabies = async (): Promise<BabyProfile[]> => {
+    return client.get('/baby')
 }
 
-export const createBaby = async (baby: Partial<BabyProfile>) => {
-    const response = await api.post<BabyProfile>('/baby', baby)
-    return response.data
+export const createBaby = async (data: Partial<BabyProfile>) => {
+    return client.post('/baby', data)
 }
 
-export const updateBaby = async (id: string, updates: Partial<BabyProfile>) => {
-    const response = await api.put<BabyProfile>(`/baby/${id}`, updates)
-    return response.data
+export const updateBaby = async (id: string, data: Partial<BabyProfile>) => {
+    return client.put(`/baby?babyId=${id}`, data)
 }
 
 export const deleteBaby = async (id: string) => {
-    await api.delete(`/baby/${id}`)
+    return client.delete(`/baby?babyId=${id}`)
 }
 
-export const inviteBaby = async (babyId: string, role: string = 'editor') => {
-    const response = await api.post<{ url: string, token: string }>('/baby/invite', { babyId, role })
-    return response.data
+export const getVaccines = async (babyId: string) => {
+    return client.get(`/baby?action=vaccines&babyId=${babyId}`)
 }
 
-export const joinBaby = async (token: string) => {
-    const response = await api.post('/baby/join', { token })
-    return response.data
+export const updateVaccine = async (babyId: string, data: any) => {
+    return client.post(`/baby?action=vaccines&babyId=${babyId}`, data)
+}
+
+export const getInviteToken = async (babyId: string) => {
+    return client.get(`/baby?action=invite&babyId=${babyId}`)
+}
+
+export const joinTeam = async (token: string, role: string) => {
+    return client.post('/baby?action=join', { token, role })
 }

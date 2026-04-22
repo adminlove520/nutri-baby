@@ -2,59 +2,83 @@ import { VercelRequest, VercelResponse } from '@vercel/node';
 import prisma from '../lib/prisma';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { success, error, validate } from '../lib/utils';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
-
-const safeJSON = (data: any) => {
-    return JSON.parse(JSON.stringify(data, (key, value) =>
-        typeof value === 'bigint' ? value.toString() : (key === 'password' ? undefined : value)
-    ));
-};
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { action } = req.query;
 
-    if (req.method === 'POST') {
+    if (req.method !== 'POST') return error(res, '仅支持 POST 请求', 405);
+
+    try {
         if (action === 'login') {
-            const { account, password, code } = req.body;
-            try {
-                if (account && password) {
-                    const user = await prisma.user.findFirst({
-                        where: { OR: [{ phone: account }, { email: account }] }
-                    });
-                    if (!user || !user.password) return res.status(401).json({ message: '账号或密码错误' });
-                    const isValid = await bcrypt.compare(password, user.password);
-                    if (!isValid) return res.status(401).json({ message: '账号或密码错误' });
-                    await prisma.user.update({ where: { id: user.id }, data: { lastLoginTime: new Date() } });
-                    const token = jwt.sign({ userId: user.id.toString(), phone: user.phone, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
-                    return res.status(200).json({ token, userInfo: safeJSON(user) });
-                }
-                return res.status(400).json({ message: 'Missing credentials' });
-            } catch (error) {
-                return res.status(500).json({ message: 'Internal Error' });
-            }
+            const { account, password, phone } = req.body;
+            const targetAccount = account || phone;
+
+            if (!targetAccount || !password) return error(res, '请输入账号和密码');
+
+            const user = await prisma.user.findFirst({
+                where: { OR: [{ phone: targetAccount }, { email: targetAccount }] }
+            });
+
+            if (!user || !user.password) return error(res, '账号不存在或未设置密码', 401);
+
+            const isValid = await bcrypt.compare(password, user.password);
+            if (!isValid) return error(res, '账号或密码错误', 401);
+
+            await prisma.user.update({ where: { id: user.id }, data: { lastLoginTime: new Date() } });
+
+            const token = jwt.sign(
+                { userId: user.id.toString(), phone: user.phone, email: user.email },
+                JWT_SECRET,
+                { expiresIn: '7d' }
+            );
+
+            return success(res, { token, userInfo: user });
         }
 
         if (action === 'register') {
-            const { account, password, nickname } = req.body;
-            if (!account || !password) return res.status(400).json({ message: '账号和密码必填' });
-            const isEmail = account.includes('@');
-            const isPhone = /^\d{11}$/.test(account);
-            if (!isEmail && !isPhone) return res.status(400).json({ message: '请输入正确的手机号或邮箱' });
-            try {
-                const existing = await prisma.user.findFirst({ where: { OR: [{ phone: account }, { email: account }] } });
-                if (existing) return res.status(409).json({ message: '该手机号或邮箱已注册' });
-                const hashedPassword = await bcrypt.hash(password, 10);
-                const userData: any = { password: hashedPassword, nickname: nickname || `用户-${account.slice(-4)}`, avatarUrl: 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png', lastLoginTime: new Date() };
-                if (isEmail) userData.email = account; else userData.phone = account;
-                const user = await prisma.user.create({ data: userData });
-                const token = jwt.sign({ userId: user.id.toString(), phone: user.phone, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
-                return res.status(201).json({ token, userInfo: safeJSON(user) });
-            } catch (error) {
-                return res.status(500).json({ message: 'Internal Error' });
-            }
-        }
-    }
+            const { account, password, nickname, phone } = req.body;
+            const targetAccount = account || phone;
 
-    return res.status(405).json({ message: 'Method Not Allowed' });
+            if (!targetAccount || !password) return error(res, '账号和密码为必填项');
+            
+            const isEmail = validate.email(targetAccount);
+            const isPhone = validate.phone(targetAccount);
+
+            if (!isEmail && !isPhone) return error(res, '请输入有效的手机号或邮箱');
+            if (password.length < 6) return error(res, '密码长度至少为 6 位');
+
+            const existing = await prisma.user.findFirst({
+                where: { OR: [{ phone: targetAccount }, { email: targetAccount }] }
+            });
+
+            if (existing) return error(res, '该账号已被注册', 409);
+
+            const hashedPassword = await bcrypt.hash(password, 10);
+            const userData: any = {
+                password: hashedPassword,
+                nickname: nickname || `新用户-${targetAccount.slice(-4)}`,
+                avatarUrl: 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png',
+                lastLoginTime: new Date()
+            };
+
+            if (isEmail) userData.email = targetAccount; else userData.phone = targetAccount;
+
+            const user = await prisma.user.create({ data: userData });
+            const token = jwt.sign(
+                { userId: user.id.toString(), phone: user.phone, email: user.email },
+                JWT_SECRET,
+                { expiresIn: '7d' }
+            );
+
+            return success(res, { token, userInfo: user }, 201);
+        }
+
+        return error(res, '未知的操作类型');
+    } catch (err) {
+        console.error('Auth API Error:', err);
+        return error(res, '服务器繁忙，请稍后再试', 500);
+    }
 }

@@ -1,49 +1,54 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import prisma from '../lib/prisma';
 import { getUserFromRequest } from '../lib/auth';
-
-const safeJSON = (data: any) => {
-    return JSON.parse(JSON.stringify(data, (key, value) =>
-        typeof value === 'bigint' ? value.toString() : (key === 'password' ? undefined : value)
-    ));
-};
+import { success, error } from '../lib/utils';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ message: 'Unauthorized' });
+    if (!user) return error(res, '请先登录', 401);
     const uId = BigInt(user.userId);
 
     const { action } = req.query;
 
-    if (req.method === 'GET' && action === 'stats') {
-        const userData = await prisma.user.findUnique({
-            where: { id: uId },
-            include: { babies: { select: { id: true } }, collaborations: { select: { babyId: true } } }
-        });
-        if (!userData) return res.status(404).json({ message: 'User not found' });
-        const babyIdsSet = new Set<bigint>();
-        userData.babies.forEach(b => babyIdsSet.add(b.id));
-        userData.collaborations.forEach(c => babyIdsSet.add(c.babyId));
-        const babyIds = Array.from(babyIdsSet);
-        const [feedingCount, sleepCount, diaperCount, growthCount] = await Promise.all([
-            prisma.feedingRecord.count({ where: { babyId: { in: babyIds } } }),
-            prisma.sleepRecord.count({ where: { babyId: { in: babyIds } } }),
-            prisma.diaperRecord.count({ where: { babyId: { in: babyIds } } }),
-            prisma.growthRecord.count({ where: { babyId: { in: babyIds } } })
-        ]);
-        const totalRecords = feedingCount + sleepCount + diaperCount + growthCount;
-        const joinDays = Math.max(1, Math.ceil((new Date().getTime() - new Date(userData.createdAt).getTime()) / (1000 * 60 * 60 * 24)));
-        return res.status(200).json({ babyCount: babyIds.length, totalRecords, joinDays });
-    }
+    try {
+        if (req.method === 'GET' && action === 'info') {
+            const userData = await prisma.user.findUnique({ where: { id: uId } });
+            if (!userData) return error(res, '用户不存在', 404);
+            return success(res, userData);
+        }
 
-    if (req.method === 'POST' && action === 'update') {
-        const { nickname, avatarUrl } = req.body;
-        const updatedUser = await prisma.user.update({
-            where: { id: uId },
-            data: { nickname, avatarUrl }
-        });
-        return res.status(200).json(safeJSON(updatedUser));
-    }
+        if (req.method === 'POST' && action === 'update') {
+            const { nickname, avatarUrl, email } = req.body;
+            const updatedUser = await prisma.user.update({
+                where: { id: uId },
+                data: { nickname, avatarUrl, email }
+            });
+            return success(res, updatedUser);
+        }
 
-    return res.status(405).json({ message: 'Method Not Allowed' });
+        if (req.method === 'GET' && action === 'stats') {
+            const babyCount = await prisma.baby.count({
+                where: { OR: [{ userId: uId }, { collaborators: { some: { userId: uId } } }] }
+            });
+
+            const feedingCount = await prisma.feedingRecord.count({ where: { createdBy: uId } });
+            const sleepCount = await prisma.sleepRecord.count({ where: { createdBy: uId } });
+            const diaperCount = await prisma.diaperRecord.count({ where: { createdBy: uId } });
+            const growthCount = await prisma.growthRecord.count({ where: { createdBy: uId } });
+
+            const userData = await prisma.user.findUnique({ where: { id: uId } });
+            const joinDays = userData ? Math.floor((new Date().getTime() - new Date(userData.createdAt).getTime()) / (1000 * 60 * 60 * 24)) : 0;
+
+            return success(res, {
+                babyCount,
+                totalRecords: feedingCount + sleepCount + diaperCount + growthCount,
+                joinDays: joinDays || 1
+            });
+        }
+
+        return error(res, '请求无效', 404);
+    } catch (err) {
+        console.error('User API Error:', err);
+        return error(res, '获取用户信息失败', 500);
+    }
 }
