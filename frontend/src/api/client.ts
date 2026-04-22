@@ -50,7 +50,12 @@ client.interceptors.response.use(
             msg = '网络连接超时，请检查您的网络'
         }
         
-        ElMessage.error(msg)
+        ElMessage({
+            message: msg,
+            type: 'error',
+            grouping: true,
+            duration: 3000
+        })
         return Promise.reject(error)
     }
 )

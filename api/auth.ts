@@ -9,6 +9,10 @@ const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { action } = req.query;
 
+    if (!process.env.DATABASE_URL && !process.env.POSTGRES_URL) {
+        return error(res, '数据库配置缺失，请在 Vercel 中设置 DATABASE_URL', 500);
+    }
+
     if (req.method !== 'POST') return error(res, '仅支持 POST 请求', 405);
 
     try {
@@ -77,8 +81,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         return error(res, '未知的操作类型');
-    } catch (err) {
+    } catch (err: any) {
         console.error('Auth API Error:', err);
-        return error(res, '服务器繁忙，请稍后再试', 500);
+        // Temporarily return the error message to the user for debugging
+        return error(res, `注册失败: ${err.message || '未知内部错误'}`, 500);
     }
 }
