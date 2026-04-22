@@ -68,7 +68,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         };
 
         // 2. Call AI Provider
-        const provider = AIFactory.createProvider('gemini');
+        const provider = AIFactory.createProvider();
         const result = await provider.analyze({
             babyProfile,
             recentRecords: records,

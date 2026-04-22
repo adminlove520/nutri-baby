@@ -3,11 +3,14 @@
     <template #header>
       <div class="card-header">
         <div class="header-left">
-             <span class="ai-icon">✨</span>
-             <span class="card-title">宝宝健康周报 (AI)</span>
+             <div class="ai-icon-wrapper">
+                <el-icon :size="18"><MagicStick /></el-icon>
+             </div>
+             <span class="card-title">AI 健康分析</span>
         </div>
-        <el-button text size="small" :loading="loading" @click="analyze">
-             {{ loading ? '分析中...' : '刷新分析' }}
+        <el-button link type="primary" size="small" :loading="loading" @click="analyze">
+             <el-icon><Refresh /></el-icon>
+             {{ loading ? '分析中...' : '重新分析' }}
         </el-button>
       </div>
     </template>
@@ -16,21 +19,39 @@
         <div v-if="loading" class="loading-state">
             <el-skeleton :rows="3" animated />
         </div>
-        <div v-else-if="result" class="markdown-body">
-             <div class="summary">{{ result.insight }}</div>
-             <!-- Recommendations list logic here if changed from previous view -->
+        <div v-else-if="result" class="analysis-result">
+             <div class="sentiment-badge" :class="result.sentiment">
+                 {{ sentimentLabel }}
+             </div>
+             <div class="summary-box">
+                <p class="insight-text">{{ result.insight }}</p>
+             </div>
+             
+             <div class="recommendations" v-if="result.recommendations && result.recommendations.length > 0">
+                <div class="rec-title">
+                    <el-icon><InfoFilled /></el-icon>
+                    <span>建议与对策</span>
+                </div>
+                <ul class="rec-list">
+                    <li v-for="(rec, index) in result.recommendations" :key="index">
+                        <span class="bullet">•</span>
+                        <span class="text">{{ rec }}</span>
+                    </li>
+                </ul>
+             </div>
         </div>
         <div v-else class="empty-state">
-            <p>暂无分析数据，点击刷新获取 AI 建议</p>
-            <el-button type="primary" plain @click="analyze">开始分析</el-button>
+            <div class="empty-icon">🤖</div>
+            <p>通过 AI 分析宝宝最近的喂养和睡眠情况</p>
+            <el-button type="primary" round @click="analyze">立即生成报告</el-button>
         </div>
     </div>
   </el-card>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { MagicStick } from '@element-plus/icons-vue'
+import { ref, computed } from 'vue'
+import { MagicStick, Refresh, InfoFilled } from '@element-plus/icons-vue'
 import axios from 'axios'
 import { useBabyStore } from '@/stores/baby'
 import { ElMessage } from 'element-plus'
@@ -39,20 +60,31 @@ const loading = ref(false)
 const result = ref<any>(null)
 const babyStore = useBabyStore()
 
+const sentimentLabel = computed(() => {
+    const s = result.value?.sentiment
+    if (s === 'positive') return '状态优'
+    if (s === 'concern') return '需关注'
+    return '状态平稳'
+})
+
 const analyze = async () => {
-    if (!babyStore.currentBaby?.babyId) return
+    if (!babyStore.currentBaby?.id) {
+        ElMessage.warning('请先选择一个宝宝')
+        return
+    }
 
     loading.value = true
     try {
         const token = localStorage.getItem('token')
         const res = await axios.post('/api/ai/analyze', {
-            babyId: babyStore.currentBaby.babyId
+            babyId: babyStore.currentBaby.id
         }, {
              headers: { Authorization: `Bearer ${token}` }
         })
         result.value = res.data
     } catch (e) {
-        ElMessage.error('Failed to generate insights')
+        console.error(e)
+        ElMessage.error('无法生成分析报告，请稍后再试')
     } finally {
         loading.value = false
     }
@@ -61,9 +93,9 @@ const analyze = async () => {
 
 <style scoped lang="scss">
 .ai-insight-card {
-    margin-bottom: 20px;
-    background: linear-gradient(135deg, #f0f9eb 0%, #ffffff 100%);
-    border: 1px solid #e1f3d8;
+    margin-bottom: 24px;
+    background: linear-gradient(135deg, #fff9f9 0%, #ffffff 100%);
+    border: 1px solid var(--el-color-primary-light-8) !important;
 }
 
 .card-header {
@@ -71,51 +103,117 @@ const analyze = async () => {
     justify-content: space-between;
     align-items: center;
     
-    .title {
+    .header-left {
         display: flex;
         align-items: center;
-        gap: 8px;
-        font-weight: bold;
-        color: #67C23A;
+        gap: 12px;
     }
     
-    .icon-sparkle {
-        font-size: 18px;
+    .ai-icon-wrapper {
+        background: var(--el-color-primary);
+        color: #fff;
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .card-title {
+        font-weight: 800;
+        font-size: 16px;
+        color: #2c3e50;
     }
 }
 
 .insight-content {
-    .summary {
-        font-size: 14px;
-        line-height: 1.6;
-        color: #303133;
-        margin-bottom: 15px;
+    min-height: 100px;
+}
+
+.analysis-result {
+    position: relative;
+    padding-top: 10px;
+
+    .sentiment-badge {
+        position: absolute;
+        top: -45px;
+        right: 0;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: bold;
+        
+        &.positive { background: #f0f9eb; color: #67C23A; }
+        &.concern { background: #fef0f0; color: #F56C6C; }
+        &.neutral { background: #f4f4f5; color: #909399; }
+    }
+
+    .summary-box {
+        margin-bottom: 20px;
+        .insight-text {
+            font-size: 15px;
+            line-height: 1.6;
+            color: #303133;
+            font-weight: 500;
+        }
     }
     
     .recommendations {
-        h4 {
-            font-size: 13px;
-            color: #909399;
-            margin-bottom: 8px;
+        background: #fff;
+        border-radius: 12px;
+        padding: 16px;
+        border: 1px dashed var(--el-color-primary-light-7);
+
+        .rec-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--el-color-primary);
+            margin-bottom: 12px;
         }
         
-        ul {
-            padding-left: 20px;
+        .rec-list {
+            list-style: none;
+            padding: 0;
             margin: 0;
             
             li {
-                font-size: 13px;
+                display: flex;
+                gap: 8px;
+                font-size: 13.5px;
                 color: #606266;
-                margin-bottom: 5px;
+                margin-bottom: 8px;
+                line-height: 1.5;
+                
+                .bullet {
+                    color: var(--el-color-primary);
+                    font-weight: bold;
+                }
             }
         }
     }
 }
 
-.placeholder {
+.empty-state {
     text-align: center;
-    color: #909399;
-    font-size: 13px;
-    padding: 10px;
+    padding: 30px 20px;
+    
+    .empty-icon {
+        font-size: 40px;
+        margin-bottom: 16px;
+    }
+    
+    p {
+        color: #909399;
+        font-size: 14px;
+        margin-bottom: 20px;
+    }
+}
+
+.loading-state {
+    padding: 10px 0;
 }
 </style>

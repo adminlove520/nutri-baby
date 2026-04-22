@@ -1,6 +1,11 @@
 {
     "outputDirectory": "frontend/dist",
     "rewrites": [
+        { "source": "/api/feeding-records", "destination": "/api/record/feeding" },
+        { "source": "/api/sleep-records", "destination": "/api/record/sleep" },
+        { "source": "/api/diaper-records", "destination": "/api/record/diaper" },
+        { "source": "/api/growth-records", "destination": "/api/record/growth" },
+        { "source": "/api/auth/login_credential", "destination": "/api/auth/login" },
         { "source": "/api/(.*)", "destination": "/api/$1" }
     ]
 }

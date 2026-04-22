@@ -1,0 +1,57 @@
+// BabyCare Theme Variables
+:root {
+  --el-color-primary: #ff8e94; // Gentle Pink
+  --el-color-primary-light-3: #ffb1b5;
+  --el-color-primary-light-5: #ffc7ca;
+  --el-color-primary-light-7: #ffdee0;
+  --el-color-primary-light-8: #ffeaec;
+  --el-color-primary-light-9: #fff4f5;
+  --el-color-primary-dark-2: #cc7276;
+
+  --el-color-success: #88d498; // Soft Green
+  --el-color-warning: #ffd077; // Soft Yellow
+  --el-color-danger: #ffb1b5;
+  --el-color-info: #909399;
+
+  --app-bg-color: #fcf9f9;
+  --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  --border-radius-base: 16px;
+}
+
+body {
+  background-color: var(--app-bg-color);
+  color: #333;
+}
+
+.el-card {
+  border-radius: var(--border-radius-base) !important;
+  border: none !important;
+  box-shadow: var(--card-shadow) !important;
+  transition: all 0.3s ease;
+
+  &:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08) !important;
+  }
+}
+
+.el-button {
+  border-radius: 10px !important;
+}
+
+.section-title {
+  margin: 24px 0 16px;
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: #2c3e50;
+  display: flex;
+  align-items: center;
+  
+  &::before {
+    content: '';
+    width: 4px;
+    height: 18px;
+    background: var(--el-color-primary);
+    margin-right: 10px;
+    border-radius: 2px;
+  }
+}

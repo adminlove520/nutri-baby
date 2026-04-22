@@ -116,7 +116,7 @@ const activeRoute = computed(() => route.path)
 .common-layout {
   height: 100vh;
   display: flex;
-  background-color: #f5f7fa;
+  background-color: var(--app-bg-color);
 }
 
 .main-container {
@@ -127,46 +127,64 @@ const activeRoute = computed(() => route.path)
 /* Sidebar (Desktop) */
 .app-sidebar {
   background-color: #fff;
-  border-right: 1px solid #e6e6e6;
+  border-right: 1px solid #f0f0f0;
   display: flex;
   flex-direction: column;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.02);
 
   .sidebar-logo {
-    height: 60px;
+    height: 64px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid #f9f9f9;
     font-size: 20px;
-    font-weight: bold;
+    font-weight: 800;
     color: var(--el-color-primary);
     
     .logo-img {
-       width: 28px;
-       height: 28px;
-       margin-right: 10px;
+       width: 32px;
+       height: 32px;
+       margin-right: 12px;
     }
   }
 
   .sidebar-menu {
     border-right: none;
     flex: 1;
+    padding: 10px;
+
+    .el-menu-item {
+      height: 50px;
+      line-height: 50px;
+      margin-bottom: 4px;
+      border-radius: 12px;
+
+      &:hover, &.is-active {
+        background-color: var(--el-color-primary-light-9);
+        color: var(--el-color-primary);
+      }
+    }
   }
 }
 
 /* Header */
 .app-header {
-  height: 60px;
-  background-color: #fff;
-  border-bottom: 1px solid #e6e6e6;
+  height: 64px;
+  background-color: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid #f0f0f0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
+  padding: 0 24px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
   
   .mobile-logo {
-     font-weight: bold;
-     font-size: 18px;
+     font-weight: 800;
+     font-size: 20px;
      color: var(--el-color-primary);
   }
   
@@ -178,10 +196,18 @@ const activeRoute = computed(() => route.path)
      display: flex;
      align-items: center;
      cursor: pointer;
+     padding: 4px 8px;
+     border-radius: 20px;
+     transition: background 0.2s;
+
+     &:hover {
+       background: #f5f7fa;
+     }
      
      .username {
-        margin-left: 8px;
+        margin-left: 10px;
         font-size: 14px;
+        font-weight: 500;
         color: #606266;
      }
   }
@@ -193,14 +219,14 @@ const activeRoute = computed(() => route.path)
   overflow-y: auto;
   
   .content-wrapper {
-     padding: 20px;
+     padding: 24px;
      max-width: 1200px; /* PC Content Limit */
      margin: 0 auto;
      
      /* Mobile Adjustments */
      @media (max-width: 768px) {
-        padding: 15px;
-        padding-bottom: 80px; /* Space for footer */
+        padding: 16px;
+        padding-bottom: 100px; /* Space for footer */
      }
   }
 }
@@ -213,9 +239,10 @@ const activeRoute = computed(() => route.path)
   height: auto;
   padding: 0;
   z-index: 100;
-  background-color: #fff;
-  border-top: 1px solid #eba6a6;
-  box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid var(--el-color-primary-light-8);
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.04);
 }
 
 .mobile-nav {
@@ -223,6 +250,7 @@ const activeRoute = computed(() => route.path)
   justify-content: space-around;
   width: 100%;
   border-top: none;
+  background: transparent;
   
   .el-menu-item {
     flex: 1;
@@ -230,22 +258,24 @@ const activeRoute = computed(() => route.path)
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 56px;
+    height: 64px;
     line-height: 1;
     padding: 0;
+    border-bottom: none !important;
     
     &.is-active {
        background-color: transparent !important;
+       color: var(--el-color-primary) !important;
+       font-weight: bold;
     }
     
     .el-icon {
-      margin-bottom: 4px;
-      font-size: 20px;
+      margin-bottom: 6px;
+      font-size: 22px;
     }
     
     span {
-      font-size: 10px;
-      transform: scale(0.9);
+      font-size: 11px;
     }
   }
 }
@@ -253,7 +283,7 @@ const activeRoute = computed(() => route.path)
 /* Transition */
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.2s ease;
+  transition: opacity 0.25s ease;
 }
 
 .fade-enter-from,

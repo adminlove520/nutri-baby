@@ -10,7 +10,7 @@ export const login = async (code: string) => {
 }
 
 export const loginCredential = async (data: any) => {
-    const response = await api.post('/auth/login_credential', data)
+    const response = await api.post('/auth/login', data)
     return response.data
 }
 
@@ -21,6 +21,4 @@ export const register = async (data: any) => {
 
 export const getUserInfo = async () => {
     // TODO: Implement me endpoint
-    // const response = await api.get('/auth/me')
-    // return response.data
 }
