@@ -100,8 +100,7 @@ const handlePasswordLogin = async () => {
         ElMessage.success('欢迎回来')
         router.push('/')
     } catch (e: any) {
-        const msg = e.response?.data?.message || '账号或密码错误'
-        ElMessage.error(msg)
+        // Handled by global interceptor
     } finally {
         loading.value = false
     }
@@ -123,8 +122,7 @@ const handleRegister = async () => {
         ElMessage.success('注册成功')
         router.push('/')
     } catch (e: any) {
-        const msg = e.response?.data?.message || '注册失败，该号码/邮箱可能已被注册'
-        ElMessage.error(msg)
+        // Handled by global interceptor
     } finally {
         loading.value = false
     }

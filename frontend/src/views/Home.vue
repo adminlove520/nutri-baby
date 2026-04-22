@@ -235,7 +235,14 @@ watch(() => babyStore.currentBaby?.id, fetchData)
 
 <style scoped lang="scss">
 .home-page { padding-bottom: 40px; }
-.vaccine-banner { margin-bottom: 24px; cursor: pointer; border-radius: 12px; }
+.vaccine-banner { 
+    margin-bottom: 24px; 
+    cursor: pointer; 
+    border-radius: 16px; 
+    border: 1px solid #ffd07744;
+    padding: 12px;
+    :deep(.el-alert__title) { font-weight: bold; }
+}
 .section-title { margin: 24px 0 16px; font-weight: 700; font-size: 1.2rem; display: flex; align-items: center; }
 
 .stat-card {
