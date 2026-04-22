@@ -1,5 +1,4 @@
 {
-    "project": "nutri-baby",
     "outputDirectory": "frontend/dist",
     "buildCommand": "prisma generate --no-engine && npm run build --workspace=frontend",
     "rewrites": [
