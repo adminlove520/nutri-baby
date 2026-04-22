@@ -1,56 +1,65 @@
 <template>
-  <div class="diaper-page">
+  <div class="record-page diaper-page">
     <div class="page-header">
-      <el-button link :icon="Back" @click="router.back()">Back</el-button>
-      <h2>Diaper Change</h2>
+      <el-button link :icon="Back" @click="router.back()">返回</el-button>
+      <h2 class="title">记录尿布</h2>
     </div>
 
-    <el-card class="form-card">
+    <el-card class="form-card" shadow="hover">
        <el-form label-position="top">
-          <el-form-item label="Type">
-             <div class="type-selector">
-                <el-radio-group v-model="form.type" size="large">
-                   <el-radio-button label="pee">💧 Pee</el-radio-button>
-                   <el-radio-button label="poop">💩 Poop</el-radio-button>
-                   <el-radio-button label="both">Both</el-radio-button>
-                </el-radio-group>
+          <el-form-item label="尿布状态">
+             <div class="diaper-types">
+                <div 
+                   v-for="item in diaperTypes" 
+                   :key="item.value" 
+                   class="diaper-item" 
+                   :class="{ active: form.type === item.value }"
+                   @click="form.type = item.value"
+                >
+                   <div class="emoji">{{ item.emoji }}</div>
+                   <div class="label">{{ item.label }}</div>
+                </div>
              </div>
           </el-form-item>
-          
-          <div v-if="form.type !== 'pee'">
-             <el-form-item label="Color">
-                <div class="color-grid">
+
+          <el-divider v-if="form.type === 'poop' || form.type === 'both'" />
+
+          <div v-if="form.type === 'poop' || form.type === 'both'" class="poop-details">
+             <el-form-item label="便便颜色">
+                <div class="color-picker">
                    <div 
-                     v-for="color in colors" 
-                     :key="color.value"
-                     class="color-item"
-                     :class="{ active: form.poopColor === color.value }"
-                     @click="form.poopColor = color.value"
-                   >
-                      <div class="color-circle" :style="{ backgroundColor: color.hex }"></div>
-                      <span>{{ color.label }}</span>
-                   </div>
+                      v-for="c in colors" 
+                      :key="c" 
+                      class="color-dot" 
+                      :style="{ backgroundColor: c }"
+                      :class="{ active: form.poopColor === c }"
+                      @click="form.poopColor = c"
+                   ></div>
                 </div>
              </el-form-item>
-             
-             <el-form-item label="Texture">
-                <el-radio-group v-model="form.poopTexture">
-                   <el-radio label="watery">Watery</el-radio>
-                   <el-radio label="paste">Paste</el-radio>
-                   <el-radio label="hard">Hard</el-radio>
+             <el-form-item label="便便质地">
+                <el-radio-group v-model="form.poopTexture" size="small">
+                   <el-radio-button label="soft">软</el-radio-button>
+                   <el-radio-button label="watery">稀</el-radio-button>
+                   <el-radio-button label="hard">硬</el-radio-button>
+                   <el-radio-button label="normal">正常</el-radio-button>
                 </el-radio-group>
              </el-form-item>
           </div>
-          
-          <el-form-item label="Note">
-             <el-input v-model="form.note" type="textarea" placeholder="Optional note..." />
+
+          <el-divider />
+
+          <el-form-item label="记录时间">
+             <el-date-picker v-model="form.time" type="datetime" style="width: 100%" :editable="false" />
           </el-form-item>
-          
-          <el-form-item label="Time">
-             <el-date-picker v-model="form.time" type="datetime" style="width: 100%" />
+
+          <el-form-item label="备注">
+             <el-input v-model="form.remark" type="textarea" :rows="2" placeholder="有什么异常吗？" />
           </el-form-item>
-          
-          <el-button type="primary" size="large" class="submit-btn" @click="save">Save Record</el-button>
+
+          <div class="submit-wrapper">
+             <el-button type="primary" size="large" round class="submit-btn" :loading="loading" @click="saveRecord">保存记录</el-button>
+          </div>
        </el-form>
     </el-card>
   </div>
@@ -68,85 +77,87 @@ const router = useRouter()
 const recordStore = useRecordStore()
 const babyStore = useBabyStore()
 
+const loading = ref(false)
 const form = reactive({
-  type: 'pee' as 'pee' | 'poop' | 'both',
-  poopColor: '',
-  poopTexture: '',
-  note: '',
-  time: new Date()
+    type: 'pee',
+    poopColor: '#F4D03F',
+    poopTexture: 'normal',
+    time: new Date(),
+    remark: ''
 })
 
-const colors = [
-  { value: 'yellow', label: 'Yellow', hex: '#FFD700' },
-  { value: 'green', label: 'Green', hex: '#90EE90' },
-  { value: 'brown', label: 'Brown', hex: '#8B4513' },
-  { value: 'black', label: 'Black', hex: '#000000' }
+const diaperTypes = [
+    { value: 'pee', label: '嘘嘘', emoji: '💧' },
+    { value: 'poop', label: '臭臭', emoji: '💩' },
+    { value: 'both', label: '都有', emoji: '🌟' },
+    { value: 'dry', label: '干爽', emoji: '☁️' }
 ]
 
-const save = () => {
-   if (!babyStore.currentBaby) return
-   
-   recordStore.addRecord({
-      babyId: babyStore.currentBaby.babyId,
-      type: 'diaper',
-      startTime: form.time.getTime(),
-      detail: {
-         diaperType: form.type,
-         poopColor: form.poopColor,
-         poopTexture: form.poopTexture,
-         note: form.note
-      }
-   })
-   
-   ElMessage.success('Saved successfully')
-   router.back()
+const colors = ['#F4D03F', '#D35400', '#229954', '#7D6608', '#5D6D7E']
+
+const saveRecord = async () => {
+  if (!babyStore.currentBaby?.id) return ElMessage.warning('请选择宝宝')
+
+  loading.value = true
+  try {
+    await recordStore.addRecord({
+        babyId: babyStore.currentBaby.id,
+        type: 'diaper',
+        time: form.time.toISOString(),
+        ...form
+    })
+    ElMessage.success('已保存尿布记录')
+    router.back()
+  } catch (e) {
+    ElMessage.error('保存失败')
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 
 <style scoped lang="scss">
-.diaper-page {
-  padding: 20px;
-  max-width: 600px;
-  margin: 0 auto;
+.diaper-page { max-width: 500px; margin: 0 auto; }
+.page-header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; .title { font-size: 20px; font-weight: 800; color: #2c3e50; } }
+
+.diaper-types {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    
+    .diaper-item {
+        background: #fcfcfc;
+        border: 1px solid #f0f0f0;
+        border-radius: 16px;
+        padding: 16px 8px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        
+        &.active {
+            border-color: var(--el-color-primary);
+            background: var(--el-color-primary-light-9);
+            .label { font-weight: bold; color: var(--el-color-primary); }
+        }
+        
+        .emoji { font-size: 24px; margin-bottom: 8px; }
+        .label { font-size: 13px; color: #606266; }
+    }
 }
-.page-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 20px;
-  h2 { margin-left: 10px; }
+
+.color-picker {
+    display: flex;
+    gap: 12px;
+    .color-dot {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        cursor: pointer;
+        border: 3px solid transparent;
+        transition: transform 0.2s;
+        &.active { transform: scale(1.2); border-color: #eee; }
+    }
 }
-.type-selector {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-}
-.color-grid {
-   display: flex; 
-   gap: 15px;
-}
-.color-item {
-   display: flex;
-   flex-direction: column;
-   align-items: center;
-   cursor: pointer;
-   padding: 5px;
-   border-radius: 8px;
-   border: 2px solid transparent;
-   
-   &.active {
-      border-color: var(--el-color-primary);
-      background-color: var(--el-color-primary-light-9);
-   }
-}
-.color-circle {
-   width: 40px;
-   height: 40px;
-   border-radius: 50%;
-   margin-bottom: 5px;
-   border: 1px solid #ddd;
-}
-.submit-btn {
-   width: 100%;
-   margin-top: 20px;
-}
+
+.submit-wrapper { margin-top: 40px; .submit-btn { width: 100%; height: 50px; font-weight: bold; } }
 </style>

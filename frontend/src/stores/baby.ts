@@ -3,32 +3,37 @@ import { ref } from 'vue'
 import * as babyApi from '@/api/baby'
 
 export interface BabyProfile {
-    babyId: string
+    id: string
     name: string
     nickname?: string
     gender: 'male' | 'female'
     birthDate: string
     avatarUrl?: string
     isDefault?: boolean
-    id?: string // Backend ID
 }
 
 export const useBabyStore = defineStore('baby', () => {
-    // Mock Initial Data (Replaced by API)
     const babyList = ref<BabyProfile[]>([])
     const currentBaby = ref<BabyProfile | null>(null)
 
-    // Initial loading
-    const loadBabies = async () => {
+    const fetchBabies = async () => {
         try {
-            babyList.value = await babyApi.getBabies()
-            // Set default: find one marked as default, or first one
-            let defaultBaby = babyList.value.find(b => b.isDefault)
-            if (!defaultBaby && babyList.value.length > 0) {
-                defaultBaby = babyList.value[0]
+            const data = await babyApi.getBabies()
+            babyList.value = data.map((b: any) => ({
+                ...b,
+                id: String(b.id)
+            }))
+            
+            // Set current baby
+            const savedId = localStorage.getItem('current_baby_id')
+            let found = babyList.value.find(b => b.id === savedId)
+            if (!found && babyList.value.length > 0) {
+                found = babyList.value[0]
             }
-            if (defaultBaby) {
-                currentBaby.value = defaultBaby
+            
+            if (found) {
+                currentBaby.value = found
+                localStorage.setItem('current_baby_id', found.id)
             }
         } catch (error) {
             console.error('Failed to load babies', error)
@@ -36,20 +41,20 @@ export const useBabyStore = defineStore('baby', () => {
     }
 
     const setCurrentBaby = (id: string) => {
-        const baby = babyList.value.find(b => b.babyId === id)
+        const baby = babyList.value.find(b => b.id === id)
         if (baby) {
             currentBaby.value = baby
+            localStorage.setItem('current_baby_id', id)
         }
     }
 
-    const addBaby = async (baby: Omit<BabyProfile, 'babyId'>) => {
+    const addBaby = async (baby: Omit<BabyProfile, 'id'>) => {
         try {
-            const newBaby = await babyApi.createBaby(baby)
-            // Ensure ID is string
-            newBaby.babyId = String(newBaby.id || newBaby.babyId)
+            const res = await babyApi.createBaby(baby)
+            const newBaby = { ...res, id: String(res.id) }
             babyList.value.push(newBaby)
             if (!currentBaby.value) {
-                currentBaby.value = newBaby
+                setCurrentBaby(newBaby.id)
             }
             return newBaby
         } catch (error) {
@@ -60,16 +65,17 @@ export const useBabyStore = defineStore('baby', () => {
 
     const updateBaby = async (id: string, updates: Partial<BabyProfile>) => {
         try {
-            const updatedBaby = await babyApi.updateBaby(id, updates)
-            updatedBaby.babyId = String(updatedBaby.id || updatedBaby.babyId)
+            const res = await babyApi.updateBaby(id, updates)
+            const updated = { ...res, id: String(res.id) }
 
-            const index = babyList.value.findIndex(b => b.babyId === id)
+            const index = babyList.value.findIndex(b => b.id === id)
             if (index !== -1) {
-                babyList.value[index] = updatedBaby
-                if (currentBaby.value?.babyId === id) {
-                    currentBaby.value = updatedBaby
+                babyList.value[index] = updated
+                if (currentBaby.value?.id === id) {
+                    currentBaby.value = updated
                 }
             }
+            return updated
         } catch (error) {
             console.error('Update baby failed', error)
             throw error
@@ -79,9 +85,12 @@ export const useBabyStore = defineStore('baby', () => {
     const deleteBaby = async (id: string) => {
         try {
             await babyApi.deleteBaby(id)
-            babyList.value = babyList.value.filter(b => b.babyId !== id)
-            if (currentBaby.value && currentBaby.value.babyId === id) {
-                currentBaby.value = babyList.value[0] || null
+            babyList.value = babyList.value.filter(b => b.id !== id)
+            if (currentBaby.value && currentBaby.value.id === id) {
+                const next = babyList.value[0] || null
+                currentBaby.value = next
+                if (next) localStorage.setItem('current_baby_id', next.id)
+                else localStorage.removeItem('current_baby_id')
             }
         } catch (error) {
             console.error('Delete baby failed', error)
@@ -92,7 +101,7 @@ export const useBabyStore = defineStore('baby', () => {
     return {
         babyList,
         currentBaby,
-        loadBabies,
+        fetchBabies,
         setCurrentBaby,
         addBaby,
         updateBaby,

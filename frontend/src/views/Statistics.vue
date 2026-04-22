@@ -1,385 +1,291 @@
 <template>
   <div class="statistics-page">
     <div class="page-header">
-      <h2>Statistics</h2>
-      <el-radio-group v-model="timeRange" size="small">
-        <el-radio-button label="week">Week</el-radio-button>
-        <el-radio-button label="month">Month</el-radio-button>
-      </el-radio-group>
+      <div class="header-left">
+        <h2 class="title">数据统计</h2>
+        <p class="subtitle">洞察宝宝的成长趋势</p>
+      </div>
+      <el-select v-model="range" size="large" class="range-select">
+        <el-option label="最近 7 天" value="7" />
+        <el-option label="最近 30 天" value="30" />
+        <el-option label="最近 90 天" value="90" />
+      </el-select>
     </div>
 
-    <!-- Feeding Section -->
-    <el-card class="section-card" shadow="never">
-      <template #header>
-        <div class="card-header">
-          <span><el-icon><Mug /></el-icon> Feeding</span>
-        </div>
-      </template>
-
-      <el-row :gutter="20" class="stat-cards">
-        <el-col :span="8">
-           <div class="stat-item">
-             <div class="label">Total</div>
-             <div class="value">{{ feedingStats.totalMilk }} ml</div>
-           </div>
+    <div v-loading="loading" class="stats-content">
+      <!-- Feeding & Sleep -->
+      <el-row :gutter="24">
+        <el-col :xs="24" :md="12">
+          <el-card class="chart-card" shadow="hover">
+            <template #header>
+              <div class="card-header">
+                <span class="card-title"><el-icon><Mug /></el-icon> 奶量趋势</span>
+              </div>
+            </template>
+            <div class="chart-container">
+               <v-chart class="chart" :option="feedingChartOption" autoresize />
+            </div>
+          </el-card>
         </el-col>
-        <el-col :span="8">
-           <div class="stat-item">
-             <div class="label">Count</div>
-             <div class="value">{{ feedingStats.count }} times</div>
-           </div>
-        </el-col>
-        <el-col :span="8">
-           <div class="stat-item">
-             <div class="label">Avg</div>
-             <div class="value">{{ feedingStats.avgMilk }} ml</div>
-           </div>
-        </el-col>
-      </el-row>
-
-      <div class="chart-container">
-        <v-chart class="chart" :option="feedingChartOption" autoresize />
-      </div>
-    </el-card>
-
-    <!-- Growth Section -->
-    <el-card class="section-card" shadow="never">
-      <template #header>
-        <div class="card-header">
-          <span><el-icon><TrendCharts /></el-icon> Growth</span>
-        </div>
-      </template>
-
-      <el-row :gutter="20" class="stat-cards">
-        <el-col :span="12">
-           <div class="stat-item">
-             <div class="label">Latest Height</div>
-             <div class="value">{{ growthStats.latestHeight }} cm</div>
-           </div>
-        </el-col>
-        <el-col :span="12">
-           <div class="stat-item">
-             <div class="label">Latest Weight</div>
-             <div class="value">{{ growthStats.latestWeight }} kg</div>
-           </div>
+        <el-col :xs="24" :md="12">
+          <el-card class="chart-card" shadow="hover">
+            <template #header>
+              <div class="card-header">
+                <span class="card-title"><el-icon><Moon /></el-icon> 睡眠趋势</span>
+              </div>
+            </template>
+            <div class="chart-container">
+               <v-chart class="chart" :option="sleepChartOption" autoresize />
+            </div>
+          </el-card>
         </el-col>
       </el-row>
 
-      <div class="chart-container">
-        <h4>Height Trend</h4>
-        <v-chart class="chart" :option="heightChartOption" autoresize />
-      </div>
-       <div class="chart-container">
-        <h4>Weight Trend</h4>
-        <v-chart class="chart" :option="weightChartOption" autoresize />
-      </div>
-    </el-card>
+      <!-- Growth -->
+      <el-card class="chart-card growth-card" shadow="hover">
+        <template #header>
+          <div class="card-header">
+            <span class="card-title"><el-icon><TrendCharts /></el-icon> 生长曲线</span>
+            <div class="header-right">
+              <el-radio-group v-model="growthMode" size="small">
+                <el-radio-button label="height">身高</el-radio-button>
+                <el-radio-button label="weight">体重</el-radio-button>
+              </el-radio-group>
+            </div>
+          </div>
+        </template>
+        <div class="chart-container tall">
+           <v-chart class="chart" :option="growthChartOption" autoresize />
+        </div>
+      </el-card>
 
+      <!-- Summary Info -->
+      <div class="section-title">本周期汇总</div>
+      <el-row :gutter="24" class="summary-row">
+         <el-col :xs="12" :sm="6">
+            <div class="summary-item">
+               <div class="val">{{ summary.avgFeeding }} ml</div>
+               <div class="lab">日均奶量</div>
+            </div>
+         </el-col>
+         <el-col :xs="12" :sm="6">
+            <div class="summary-item">
+               <div class="val">{{ summary.avgSleep }} h</div>
+               <div class="lab">日均睡眠</div>
+            </div>
+         </el-col>
+         <el-col :xs="12" :sm="6">
+            <div class="summary-item">
+               <div class="val">{{ summary.weightGain }} kg</div>
+               <div class="lab">体重增长</div>
+            </div>
+         </el-col>
+         <el-col :xs="12" :sm="6">
+            <div class="summary-item">
+               <div class="val">{{ summary.heightGain }} cm</div>
+               <div class="lab">身高增长</div>
+            </div>
+         </el-col>
+      </el-row>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive, onMounted, watch } from 'vue'
-import { Mug, TrendCharts } from '@element-plus/icons-vue'
+import { ref, onMounted, watch, computed, reactive } from 'vue'
+import { Mug, Moon, TrendCharts } from '@element-plus/icons-vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { BarChart, LineChart } from 'echarts/charts'
-import { GridComponent, TooltipComponent, LegendComponent, TitleComponent } from 'echarts/components'
+import { GridComponent, TooltipComponent, LegendComponent, MarkLineComponent } from 'echarts/components'
 import VChart from 'vue-echarts'
-import { getStatistics, getGrowthStandards } from '@/api/statistics'
+import axios from 'axios'
 import { useBabyStore } from '@/stores/baby'
+import { ElMessage } from 'element-plus'
 
-use([
-  CanvasRenderer,
-  BarChart,
-  LineChart,
-  GridComponent,
-  TooltipComponent,
-  LegendComponent,
-  TitleComponent
-])
+use([CanvasRenderer, BarChart, LineChart, GridComponent, TooltipComponent, LegendComponent, MarkLineComponent])
 
-const timeRange = ref('week')
 const babyStore = useBabyStore()
 const loading = ref(false)
+const range = ref('7')
+const growthMode = ref('height')
 
-// Data State
-const feedingStats = reactive({
-  totalMilk: 0,
-  count: 0,
-  avgMilk: 0,
-  chartData: { labels: [] as string[], values: [] as number[] }
+const chartData = reactive({
+  feeding: [] as any[],
+  sleep: [] as any[],
+  growth: [] as any[]
 })
 
-const growthStats = reactive({
-  latestHeight: 0,
-  latestWeight: 0,
-  heightChart: { labels: [] as string[], values: [] as number[] },
-  weightChart: { labels: [] as string[], values: [] as number[] }
-})
-
-// Standards State
-const standards = reactive({
-    height: [] as any[],
-    weight: [] as any[]
+const summary = reactive({
+  avgFeeding: 0,
+  avgSleep: 0,
+  weightGain: 0,
+  heightGain: 0
 })
 
 const fetchData = async () => {
-    if (!babyStore.currentBaby?.babyId) return
+  if (!babyStore.currentBaby?.id) return
+
+  loading.value = true
+  try {
+    const token = localStorage.getItem('token')
+    const res = await axios.get('/api/statistics/charts', {
+      params: { babyId: babyStore.currentBaby.id, range: range.value },
+      headers: { Authorization: `Bearer ${token}` }
+    })
     
-    loading.value = true
-    try {
-        const [stats, heightStd, weightStd] = await Promise.all([
-             getStatistics(babyStore.currentBaby.babyId),
-             getGrowthStandards('height', babyStore.currentBaby.gender),
-             getGrowthStandards('weight', babyStore.currentBaby.gender)
-        ])
-        
-        const data: any = stats
+    chartData.feeding = res.data.feeding
+    chartData.sleep = res.data.sleep
+    chartData.growth = res.data.growth
 
-        // Standards
-        standards.height = heightStd
-        standards.weight = weightStd
+    // Calculate Summary
+    const feedingSum = chartData.feeding.reduce((acc, curr) => acc + curr.amount, 0)
+    summary.avgFeeding = Math.round(feedingSum / parseInt(range.value))
+    
+    const sleepSum = chartData.sleep.reduce((acc, curr) => acc + curr.hours, 0)
+    summary.avgSleep = parseFloat((sleepSum / parseInt(range.value)).toFixed(1))
 
-        // Feeding
-        const feeding = data.feeding
-        feedingStats.totalMilk = feeding.total
-        feedingStats.count = feeding.count
-        feedingStats.avgMilk = feeding.average
-        feedingStats.chartData.labels = feeding.chart.map((i: any) => i.date)
-        feedingStats.chartData.values = feeding.chart.map((i: any) => i.amount)
-
-        // Growth
-        const growth = data.growth
-        growthStats.latestHeight = growth.latestHeight
-        growthStats.latestWeight = growth.latestWeight
-        
-        // Growth charts are usually cumulative over time, not just the selected range, unless specified
-        // For simplicity, let's assume the API returns what we need
-        growthStats.heightChart.labels = growth.heightChart.map((i: any) => i.date)
-        growthStats.heightChart.values = growth.heightChart.map((i: any) => i.value)
-        
-        growthStats.weightChart.labels = growth.weightChart.map((i: any) => i.date)
-        growthStats.weightChart.values = growth.weightChart.map((i: any) => i.value)
-
-    } catch (e) {
-        console.error('Failed to load stats', e)
-    } finally {
-        loading.value = false
+    if (chartData.growth.length >= 2) {
+       const first = chartData.growth[0]
+       const last = chartData.growth[chartData.growth.length - 1]
+       summary.weightGain = parseFloat((last.weight - first.weight).toFixed(2))
+       summary.heightGain = parseFloat((last.height - first.height).toFixed(1))
+    } else {
+       summary.weightGain = 0
+       summary.heightGain = 0
     }
+
+  } catch (e) {
+    console.error(e)
+    ElMessage.error('无法加载统计数据')
+  } finally {
+    loading.value = false
+  }
 }
 
-onMounted(() => {
-    fetchData()
-})
-
-watch(() => babyStore.currentBaby?.babyId, () => {
-    fetchData()
-})
-
-watch(timeRange, () => {
-    // API might support timeRange param
-    fetchData()
-})
-
-
-// Chart Options
 const feedingChartOption = computed(() => ({
-  tooltip: {
-    trigger: 'axis',
-    axisPointer: { type: 'shadow' }
-  },
-  grid: {
-    left: '3%',
-    right: '4%',
-    bottom: '3%',
-    containLabel: true
-  },
+  tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+  grid: { top: 20, left: 10, right: 10, bottom: 0, containLabel: true },
   xAxis: {
     type: 'category',
-    data: feedingStats.chartData.labels,
-    axisTick: { alignWithLabel: true }
+    data: chartData.feeding.map(i => i.date.split('-').slice(1).join('/')),
+    axisLabel: { color: '#909399', fontSize: 11 }
   },
-  yAxis: {
-    type: 'value'
-  },
-  series: [
-    {
-      name: 'Milk (ml)',
-      type: 'bar',
-      barWidth: '60%',
-      data: feedingStats.chartData.values,
-      itemStyle: { color: '#409EFF' }
-    }
-  ]
+  yAxis: { type: 'value', axisLabel: { color: '#909399' }, splitLine: { lineStyle: { type: 'dashed', color: '#f0f0f0' } } },
+  series: [{
+    name: '奶量 (ml)',
+    type: 'bar',
+    data: chartData.feeding.map(i => i.amount),
+    itemStyle: { 
+      borderRadius: [4, 4, 0, 0],
+      color: {
+        type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+        colorStops: [{ offset: 0, color: '#ffb1b5' }, { offset: 1, color: '#ff8e94' }]
+      }
+    },
+    barWidth: '40%'
+  }]
 }))
 
-const heightChartOption = computed(() => {
-  // Add Standard Lines (P3, P50, P97)
-  const standardSeries = [
-    {
-      name: 'P50 (Standard)',
-      data: standards.height.map((s: any) => s.p50),
-      type: 'line',
-      smooth: true,
-      showSymbol: false,
-      lineStyle: { type: 'dashed', color: '#909399', width: 1 },
-      itemStyle: { color: '#909399' }
+const sleepChartOption = computed(() => ({
+  tooltip: { trigger: 'axis' },
+  grid: { top: 20, left: 10, right: 10, bottom: 0, containLabel: true },
+  xAxis: {
+    type: 'category',
+    data: chartData.sleep.map(i => i.date.split('-').slice(1).join('/')),
+    axisLabel: { color: '#909399', fontSize: 11 }
+  },
+  yAxis: { type: 'value', axisLabel: { color: '#909399' }, splitLine: { lineStyle: { type: 'dashed', color: '#f0f0f0' } } },
+  series: [{
+    name: '睡眠 (h)',
+    type: 'line',
+    smooth: true,
+    data: chartData.sleep.map(i => i.hours),
+    itemStyle: { color: '#88d498' },
+    areaStyle: {
+      color: {
+        type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+        colorStops: [{ offset: 0, color: 'rgba(136, 212, 152, 0.3)' }, { offset: 1, color: 'rgba(136, 212, 152, 0)' }]
+      }
     },
-    {
-      name: 'P3-P97',
-      type: 'line',
-      data: standards.height.map((s: any) => s.p97),
-      lineStyle: { opacity: 0 },
-      areaStyle: {
-        color: '#E1F3D8',
-        origin: 'start',
-        opacity: 0.3
-      },
-      stack: 'confidence-band',
-      symbol: 'none'
-    },
-    {
-      name: 'P3-P97-Lower',
-      type: 'line',
-      data: standards.height.map((s: any) => s.p3),
-      lineStyle: { opacity: 0 },
-      areaStyle: {
-        color: '#fff',
-        origin: 'start',
-        opacity: 1
-      },
-      stack: 'confidence-band',
-      symbol: 'none'
-    }
-  ]
-  // Note: ECharts confidence band implementation usually involves 'stack' tricks or 'custom' series. 
-  // For simplicity here, we just show P50 line.
-  
+    symbolSize: 6
+  }]
+}))
+
+const growthChartOption = computed(() => {
+  const isHeight = growthMode.value === 'height'
   return {
     tooltip: { trigger: 'axis' },
-    legend: { show: true },
-    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+    legend: { bottom: 0 },
+    grid: { top: 40, left: 10, right: 10, bottom: 40, containLabel: true },
     xAxis: {
       type: 'category',
-      data: [...new Set([...growthStats.heightChart.labels, ...standards.height.map((s:any) => `Month ${s.month}`)])].sort() // Simplified merge
+      data: chartData.growth.map(i => i.date),
+      axisLabel: { color: '#909399', fontSize: 11 }
     },
-    yAxis: { type: 'value', min: 40 },
-    series: [
-      {
-        name: 'Height',
-        data: growthStats.heightChart.values,
-        type: 'line',
-        smooth: true,
-        itemStyle: { color: '#67C23A' },
-        markLine: {
-            data: [
-                { type: 'average', name: 'Avg' }
-            ]
-        }
-      },
-      {
-          name: 'P50 (WHO)',
-          type: 'line',
-          data: standards.height.map((s:any) => s.p50),
-          smooth: true,
-          showSymbol: false,
-          lineStyle: { type: 'dashed', color: '#999' }
-      }
-    ]
+    yAxis: { type: 'value', axisLabel: { color: '#909399' }, scale: true },
+    series: [{
+      name: isHeight ? '身高 (cm)' : '体重 (kg)',
+      type: 'line',
+      smooth: true,
+      data: chartData.growth.map(i => isHeight ? i.height : i.weight),
+      itemStyle: { color: isHeight ? '#ff8e94' : '#ffd077' },
+      symbolSize: 8,
+      lineStyle: { width: 3 }
+    }]
   }
 })
 
-const weightChartOption = computed(() => {
-    return {
-      tooltip: { trigger: 'axis' },
-      legend: { show: true },
-      grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-      xAxis: {
-        type: 'category',
-        data: growthStats.weightChart.labels
-      },
-      yAxis: { type: 'value', min: 2 },
-      series: [
-        {
-          name: 'Weight',
-          data: growthStats.weightChart.values,
-          type: 'line',
-          smooth: true,
-          itemStyle: { color: '#E6A23C' }
-        },
-        {
-          name: 'P50 (WHO)',
-          type: 'line',
-          data: standards.weight.map((s:any) => s.p50),
-          smooth: true,
-          showSymbol: false,
-          lineStyle: { type: 'dashed', color: '#999' }
-        }
-      ]
-    }
-})
+onMounted(fetchData)
+watch([range, () => babyStore.currentBaby?.id], fetchData)
 </script>
 
 <style scoped lang="scss">
 .statistics-page {
-  padding: 20px;
-  max-width: 800px;
-  margin: 0 auto;
+  padding-bottom: 60px;
 }
 
 .page-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
+  align-items: flex-end;
+  margin-bottom: 30px;
+  
+  .title { font-size: 24px; font-weight: 800; color: #2c3e50; margin-bottom: 4px; }
+  .subtitle { font-size: 14px; color: #909399; }
+  .range-select { width: 130px; }
 }
 
-.section-card {
-  margin-bottom: 20px;
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  span {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      font-weight: bold;
-  }
-}
-
-.stat-cards {
-  margin-bottom: 20px;
-  text-align: center;
-}
-
-.stat-item {
-  .label {
-    font-size: 12px;
-    color: var(--el-text-color-secondary);
-  }
-  .value {
-    font-size: 18px;
-    font-weight: bold;
-    color: var(--el-text-color-primary);
+.chart-card {
+  margin-bottom: 24px;
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    .card-title { font-weight: 700; display: flex; align-items: center; gap: 8px; }
   }
 }
 
 .chart-container {
-  height: 300px;
-  margin-top: 20px;
-  
-  h4 {
-      text-align: center;
-      color: var(--el-text-color-regular);
-      margin-bottom: 10px;
-  }
+  height: 260px;
+  &.tall { height: 360px; }
 }
 
-.chart {
-  height: 100%;
-  width: 100%;
+.chart { width: 100%; height: 100%; }
+
+.summary-row {
+  margin-top: 16px;
+}
+
+.summary-item {
+   background: #fff;
+   padding: 20px 10px;
+   border-radius: 16px;
+   text-align: center;
+   box-shadow: var(--card-shadow);
+   margin-bottom: 16px;
+   
+   .val { font-size: 18px; font-weight: 800; color: var(--el-color-primary); margin-bottom: 4px; }
+   .lab { font-size: 12px; color: #909399; }
 }
 </style>

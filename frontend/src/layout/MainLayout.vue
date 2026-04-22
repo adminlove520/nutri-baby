@@ -103,13 +103,19 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { House, Timer, PieChart, User, Setting } from '@element-plus/icons-vue'
 import 'element-plus/theme-chalk/display.css' // Important for hidden classes
+import { useBabyStore } from '@/stores/baby'
 
 const route = useRoute()
+const babyStore = useBabyStore()
 const activeRoute = computed(() => route.path)
+
+onMounted(() => {
+    babyStore.fetchBabies()
+})
 </script>
 
 <style scoped lang="scss">

@@ -1,11 +1,11 @@
 <template>
   <div class="baby-edit-page">
     <div class="page-header">
-      <el-button link :icon="Back" @click="goBack">Back</el-button>
-      <h2>{{ isEdit ? 'Edit Baby' : 'Add Baby' }}</h2>
+      <el-button link :icon="Back" @click="router.back()">返回</el-button>
+      <h2 class="title">{{ isEdit ? '修改资料' : '添加宝宝' }}</h2>
     </div>
 
-    <el-card class="form-card">
+    <el-card class="form-card" shadow="hover">
       <el-form 
         ref="formRef" 
         :model="formData" 
@@ -13,64 +13,54 @@
         label-position="top"
         v-loading="loading"
       >
-        <el-form-item label="Avatar">
+        <div class="avatar-uploader-section">
           <div class="avatar-uploader" @click="handleUploadAvatar">
-            <el-avatar :size="80" :src="formData.avatarUrl || ''" icon="UserFilled" />
-            <div class="upload-text">Click to upload</div>
+            <el-avatar :size="100" :src="formData.avatarUrl || 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'" />
+            <div class="overlay"><el-icon><Camera /></el-icon></div>
           </div>
+          <p class="hint">点击更换头像</p>
+        </div>
+
+        <el-form-item label="宝宝姓名" prop="name">
+          <el-input v-model="formData.name" placeholder="请输入宝宝真实姓名" size="large" />
         </el-form-item>
 
-        <el-form-item label="Name" prop="name">
-          <el-input v-model="formData.name" placeholder="Baby Name" />
+        <el-form-item label="小名/昵称" prop="nickname">
+          <el-input v-model="formData.nickname" placeholder="例如：皮皮、心心" size="large" />
         </el-form-item>
 
-        <el-form-item label="Nickname" prop="nickname">
-          <el-input v-model="formData.nickname" placeholder="Nickname (Optional)" />
-        </el-form-item>
-
-        <el-form-item label="Gender" prop="gender">
-          <el-radio-group v-model="formData.gender">
-            <el-radio label="male">Boy</el-radio>
-            <el-radio label="female">Girl</el-radio>
+        <el-form-item label="性别" prop="gender">
+          <el-radio-group v-model="formData.gender" size="large" class="full-radio">
+            <el-radio-button label="male">小王子 (男)</el-radio-button>
+            <el-radio-button label="female">小公主 (女)</el-radio-button>
           </el-radio-group>
         </el-form-item>
 
-        <el-form-item label="Birth Date" prop="birthDate">
+        <el-form-item label="出生日期" prop="birthDate">
           <el-date-picker
             v-model="formData.birthDate"
             type="date"
-            placeholder="Select Birth Date"
+            placeholder="请选择日期"
             format="YYYY-MM-DD"
             value-format="YYYY-MM-DD"
             style="width: 100%"
+            size="large"
+            :editable="false"
           />
         </el-form-item>
 
-        <el-form-item>
-          <el-button type="primary" @click="submitForm" :loading="submitting" style="width: 100%">
-            {{ isEdit ? 'Save Changes' : 'Create Baby' }}
+        <div class="submit-wrapper">
+          <el-button type="primary" size="large" round @click="submitForm" :loading="submitting" class="submit-btn">
+            {{ isEdit ? '保存修改' : '确认添加' }}
           </el-button>
-          
-          <!-- Family Invite Section -->
-          <div v-if="isEdit" style="width: 100%; margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px;">
-              <h4 style="margin-bottom: 10px;">Family Collaboration</h4>
-              <el-button v-if="!inviteUrl" type="warning" plain style="width: 100%" @click="generateInvite">
-                  Invite Family Member
-              </el-button>
-              <div v-else class="invite-box">
-                  <el-input v-model="inviteUrl" readonly>
-                      <template #append>
-                          <el-button @click="copyInvite">Copy</el-button>
-                      </template>
-                  </el-input>
-                  <p class="hint">Link valid for 24 hours</p>
-              </div>
-          </div>
-
-          <el-button @click="goBack" style="width: 100%; margin: 10px 0 0 0;">Cancel</el-button>
-        </el-form-item>
+        </div>
       </el-form>
     </el-card>
+
+    <!-- Dangerous Zone -->
+    <div v-if="isEdit" class="danger-zone">
+       <el-button link type="danger" @click="handleDelete">删除此宝宝档案</el-button>
+    </div>
   </div>
 </template>
 
@@ -78,9 +68,8 @@
 import { ref, onMounted, computed, reactive } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useBabyStore } from '@/stores/baby'
-import * as babyApi from '@/api/baby'
-import { Back, UserFilled } from '@element-plus/icons-vue'
-import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
+import { Back, Camera } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 
 const route = useRoute()
 const router = useRouter()
@@ -100,21 +89,19 @@ const formData = reactive({
 })
 
 const rules = reactive<FormRules>({
-  name: [
-    { required: true, message: 'Please input baby name', trigger: 'blur' },
-  ],
-  gender: [
-    { required: true, message: 'Please select gender', trigger: 'change' },
-  ],
-  birthDate: [
-    { required: true, message: 'Please pick a date', trigger: 'change' },
-  ],
+  name: [{ required: true, message: '请输入宝宝姓名', trigger: 'blur' }],
+  gender: [{ required: true, message: '请选择性别', trigger: 'change' }],
+  birthDate: [{ required: true, message: '请选择出生日期', trigger: 'change' }],
 })
 
-onMounted(() => {
+onMounted(async () => {
   if (isEdit.value) {
+    loading.value = true
     const id = route.params.id as string
-    const baby = babyStore.babyList.find(b => b.babyId === id)
+    // Ensure list is loaded
+    if (babyStore.babyList.length === 0) await babyStore.fetchBabies()
+    
+    const baby = babyStore.babyList.find(b => b.id === id)
     if (baby) {
       formData.name = baby.name
       formData.nickname = baby.nickname || ''
@@ -122,84 +109,92 @@ onMounted(() => {
       formData.birthDate = baby.birthDate
       formData.avatarUrl = baby.avatarUrl || ''
     } else {
-      ElMessage.error('Baby not found')
+      ElMessage.error('找不到该宝宝档案')
       router.push('/baby/list')
     }
+    loading.value = false
   }
 })
 
-const goBack = () => router.back()
-
 const handleUploadAvatar = () => {
-    ElMessage.info('Avatar upload mock: success')
+    // Mock upload
+    ElMessage.success('头像上传成功')
     formData.avatarUrl = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
 }
 
 const submitForm = async () => {
   if (!formRef.value) return
-  await formRef.value.validate((valid, fields) => {
+  await formRef.value.validate(async (valid) => {
     if (valid) {
       submitting.value = true
-      // Simulate API call
-      setTimeout(() => {
+      try {
         if (isEdit.value) {
-          babyStore.updateBaby(route.params.id as string, formData)
-          ElMessage.success('Baby updated successfully')
+          await babyStore.updateBaby(route.params.id as string, formData)
+          ElMessage.success('资料已更新')
         } else {
-          babyStore.addBaby(formData)
-          ElMessage.success('Baby created successfully')
+          await babyStore.addBaby(formData)
+          ElMessage.success('宝宝添加成功')
         }
-        submitting.value = false
         router.push('/baby/list')
-      }, 500)
-    } else {
-      console.log('error submit!', fields)
+      } catch (e) {
+        ElMessage.error('保存失败')
+      } finally {
+        submitting.value = false
+      }
     }
   })
 }
 
-const inviteUrl = ref('')
-
-const generateInvite = async () => {
-    try {
-        const res = await babyApi.inviteBaby(route.params.id as string)
-        inviteUrl.value = res.url
-        ElMessage.success('Invitation link generated!')
-    } catch (e) {
-        ElMessage.error('Failed to generate invite')
-    }
-}
-
-const copyInvite = () => {
-    navigator.clipboard.writeText(inviteUrl.value)
-    ElMessage.success('Link copied to clipboard')
+const handleDelete = () => {
+  ElMessageBox.confirm('确定要删除此档案吗？', '警告', {
+    confirmButtonText: '删除',
+    confirmButtonClass: 'el-button--danger',
+    type: 'warning'
+  }).then(async () => {
+    await babyStore.deleteBaby(route.params.id as string)
+    ElMessage.success('已删除')
+    router.push('/baby/list')
+  })
 }
 </script>
 
 <style scoped lang="scss">
-.baby-edit-page {
-  padding: 20px;
-  max-width: 600px;
-  margin: 0 auto;
-}
-.page-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 20px;
-  h2 {
-      margin-left: 10px;
-  }
+.baby-edit-page { max-width: 500px; margin: 0 auto; padding-bottom: 60px; }
+.page-header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; .title { font-size: 20px; font-weight: 800; color: #2c3e50; } }
+
+.avatar-uploader-section {
+    text-align: center;
+    margin-bottom: 30px;
+    
+    .avatar-uploader {
+        display: inline-block;
+        position: relative;
+        cursor: pointer;
+        
+        .overlay {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            background: var(--el-color-primary);
+            color: #fff;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 3px solid #fff;
+        }
+    }
+    .hint { font-size: 13px; color: #909399; margin-top: 10px; }
 }
 
-.avatar-uploader {
-    text-align: center;
-    cursor: pointer;
-    margin-bottom: 10px;
-    
-    .upload-text {
-        font-size: 12px;
-        color: var(--el-text-color-secondary);
-        margin-top: 5px;
-    }
+.full-radio {
+    width: 100%;
+    display: flex;
+    :deep(.el-radio-button) { flex: 1; .el-radio-button__inner { width: 100%; } }
 }
+
+.submit-wrapper { margin-top: 40px; .submit-btn { width: 100%; height: 50px; font-weight: bold; } }
+.danger-zone { text-align: center; margin-top: 24px; }
 </style>
