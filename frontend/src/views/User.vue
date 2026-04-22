@@ -45,7 +45,7 @@
           <el-card class="menu-card" shadow="never">
              <div class="menu-item" @click="router.push('/baby/list')">
                 <div class="item-left">
-                   <div class="icon-box p1"><el-icon><User /></el-icon></div>
+                   <div class="icon-box p1"><el-icon><UserIcon /></el-icon></div>
                    <span>我的宝宝</span>
                 </div>
                 <el-icon class="arrow"><ArrowRight /></el-icon>
@@ -100,16 +100,16 @@
     </div>
 
     <div class="logout-btn-wrapper">
-       <el-button type="danger" plain block size="large" round @click="handleLogout">退出登录</el-button>
+       <el-button type="danger" plain size="large" round @click="handleLogout">退出登录</el-button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { 
-  User, ArrowRight, Plus, Memo, Setting, InfoFilled, Camera 
+  User as UserIcon, ArrowRight, Plus, Memo, Setting, InfoFilled, Camera 
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/stores/user'
@@ -119,7 +119,7 @@ const router = useRouter()
 const userStore = useUserStore()
 const babyStore = useBabyStore()
 
-const userInfo = computed(() => userStore.userInfo || {})
+const userInfo = computed(() => userStore.userInfo)
 const babyCount = computed(() => babyStore.babyList.length)
 const totalRecords = ref(128) // Mock
 const joinDays = ref(15) // Mock

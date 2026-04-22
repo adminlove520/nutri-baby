@@ -65,9 +65,9 @@ const saveRecord = async () => {
   try {
     await recordStore.addRecord({
         babyId: babyStore.currentBaby.id,
-        type: 'growth',
-        time: form.time.toISOString(),
-        ...form
+        modelType: 'growth',
+        ...form,
+        time: form.time.toISOString()
     })
     ElMessage.success('已保存生长记录')
     router.back()

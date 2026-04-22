@@ -193,6 +193,7 @@ const saveRecord = async () => {
   try {
     const payload: any = {
         babyId: babyStore.currentBaby.id,
+        modelType: 'feeding',
         type: feedingType.value,
         time: recordTime.value.toISOString(),
         remark: remark.value

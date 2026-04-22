@@ -1,6 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import prisma from '../lib/prisma';
-import { getUserFromRequest } from '../lib/auth';
+import prisma from '../../lib/prisma';
+import { getUserFromRequest } from '../../lib/auth';
 
 const safeJSON = (data: any) => {
     return JSON.parse(JSON.stringify(data, (key, value) =>
@@ -12,70 +12,98 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ message: 'Unauthorized' });
 
-    // Determine Record Type from Query (injected by Rewrite)
     const rawType = req.query.type;
     const type = Array.isArray(rawType) ? rawType[0] : rawType;
-    // Types: 'feeding', 'sleep', 'diaper', 'growth'
 
-    if (!type) {
-        return res.status(400).json({ message: 'Record type unspecified' });
-    }
-
-    // Map type to Prisma Model Delegate
-    let model: any;
-    if (type === 'feeding') model = prisma.feedingRecord;
-    else if (type === 'sleep') model = prisma.sleepRecord;
-    else if (type === 'diaper') model = prisma.diaperRecord;
-    else if (type === 'growth') model = prisma.growthRecord;
-    else return res.status(400).json({ message: 'Invalid record type' });
+    if (!type) return res.status(400).json({ message: 'Record type unspecified' });
 
     try {
         if (req.method === 'GET') {
-            const { babyId, startTime, endTime } = req.query;
+            const { babyId, limit = '50' } = req.query;
             if (!babyId) return res.status(400).json({ message: 'Baby ID required' });
 
-            const where: any = { babyId: BigInt(babyId as string) };
-            if (startTime || endTime) {
-                where.time = {};
-                if (startTime) where.time.gte = new Date(Number(startTime));
-                if (endTime) where.time.lte = new Date(Number(endTime));
+            const bId = BigInt(babyId as string);
+            const take = parseInt(limit as string);
+
+            let records = [];
+            if (type === 'feeding') {
+                records = await prisma.feedingRecord.findMany({ where: { babyId: bId }, orderBy: { time: 'desc' }, take });
+            } else if (type === 'sleep') {
+                records = await prisma.sleepRecord.findMany({ where: { babyId: bId }, orderBy: { startTime: 'desc' }, take });
+            } else if (type === 'diaper') {
+                records = await prisma.diaperRecord.findMany({ where: { babyId: bId }, orderBy: { time: 'desc' }, take });
+            } else if (type === 'growth') {
+                records = await prisma.growthRecord.findMany({ where: { babyId: bId }, orderBy: { time: 'desc' }, take });
             }
 
-            const records = await model.findMany({
-                where,
-                orderBy: { time: 'desc' }
-            });
-
-            // Frontend expects { records: [...] } for feeding but check others?
-            // Unified API: return { records: [...] } or array?
-            // Existing frontend for Feeding expects `{ records: [...] }`.
-            // Let's standardise on `{ records: [...] }` if possible, OR just return array if frontend handles it.
-            // But wait, the previous `feeding-records/index.ts` returned `{ records: response }`.
-            // I should stick to that wrapper for consistency.
             return res.status(200).json({ records: safeJSON(records) });
 
         } else if (req.method === 'POST') {
             const { babyId, time, ...rest } = req.body;
-            if (!babyId || !time) return res.status(400).json({ message: 'Missing fields' });
+            if (!babyId) return res.status(400).json({ message: 'Baby ID required' });
 
-            const data: any = {
-                babyId: BigInt(babyId),
-                time: new Date(time),
-                createdBy: BigInt(user.userId),
-                ...rest
-            };
+            const bId = BigInt(babyId);
+            const uId = BigInt(user.userId);
+            const recordTime = new Date(time || new Date());
 
-            // Clean up unrelated fields if necessary, or trust Prisma to ignore unknown (it throws usually)
-            // So we really should specific fields per type strictly, but for speed 'rest' is used.
-            // Risk: 'duration' passed to diaper record? No, Prisma checks schema.
-            // It's better to be safe.
+            let result;
+            if (type === 'feeding') {
+                const { feedingType, amount, duration, leftBreastMinutes, rightBreastMinutes, foodName, remark } = rest;
+                result = await prisma.feedingRecord.create({
+                    data: {
+                        babyId: bId,
+                        time: recordTime,
+                        feedingType: feedingType || 'breast',
+                        amount: amount ? parseInt(amount) : null,
+                        duration: duration ? parseInt(duration) : null,
+                        detail: { leftBreastMinutes, rightBreastMinutes, foodName, remark },
+                        createdBy: uId
+                    }
+                });
+            } else if (type === 'sleep') {
+                const { startTime, endTime, duration, type: sleepType, remark } = rest;
+                result = await prisma.sleepRecord.create({
+                    data: {
+                        babyId: bId,
+                        startTime: new Date(startTime || recordTime),
+                        endTime: endTime ? new Date(endTime) : null,
+                        duration: duration ? parseInt(duration) : null,
+                        type: sleepType,
+                        createdBy: uId
+                    }
+                });
+            } else if (type === 'diaper') {
+                const { type: diaperType, poopColor, poopTexture, remark, note } = rest;
+                result = await prisma.diaperRecord.create({
+                    data: {
+                        babyId: bId,
+                        time: recordTime,
+                        type: diaperType || 'pee',
+                        poopColor,
+                        poopTexture,
+                        note: note || remark,
+                        createdBy: uId
+                    }
+                });
+            } else if (type === 'growth') {
+                const { height, weight, headCircumference, remark, note } = rest;
+                result = await prisma.growthRecord.create({
+                    data: {
+                        babyId: bId,
+                        time: recordTime,
+                        height: height ? parseFloat(height) : null,
+                        weight: weight ? parseFloat(weight) : null,
+                        headCircumference: headCircumference ? parseFloat(headCircumference) : null,
+                        note: note || remark,
+                        createdBy: uId
+                    }
+                });
+            }
 
-            const record = await model.create({ data });
-            return res.status(201).json(safeJSON(record));
+            return res.status(201).json(safeJSON(result));
         }
 
         return res.status(405).json({ message: 'Method Not Allowed' });
-
     } catch (error) {
         console.error(`Record API Error (${type}):`, error);
         return res.status(500).json({ message: 'Internal Server Error' });

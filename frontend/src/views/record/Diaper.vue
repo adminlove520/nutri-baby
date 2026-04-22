@@ -102,9 +102,9 @@ const saveRecord = async () => {
   try {
     await recordStore.addRecord({
         babyId: babyStore.currentBaby.id,
-        type: 'diaper',
-        time: form.time.toISOString(),
-        ...form
+        modelType: 'diaper',
+        ...form,
+        time: form.time.toISOString()
     })
     ElMessage.success('已保存尿布记录')
     router.back()

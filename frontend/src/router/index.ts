@@ -36,6 +36,11 @@ const routes: Array<RouteRecordRaw> = [
                 component: () => import('../views/baby/Edit.vue'),
             },
             {
+                path: 'baby/invite/:id',
+                name: 'BabyInvite',
+                component: () => import('../views/baby/Invite.vue'),
+            },
+            {
                 path: 'record/feeding',
                 name: 'FeedingRecord',
                 component: () => import('../views/record/Feeding.vue'),
@@ -77,6 +82,15 @@ const routes: Array<RouteRecordRaw> = [
 const router = createRouter({
     history: createWebHistory(),
     routes,
+})
+
+router.beforeEach((to, from, next) => {
+    const token = localStorage.getItem('token')
+    if (to.name !== 'Login' && to.name !== 'JoinFamily' && !token) {
+        next({ name: 'Login' })
+    } else {
+        next()
+    }
 })
 
 export default router

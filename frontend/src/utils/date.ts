@@ -9,7 +9,15 @@ export const formatDate = (date: string | Date, format = 'YYYY-MM-DD HH:mm:ss') 
     return dayjs(date).format(format)
 }
 
+export const formatTime = (date: string | Date, format = 'YYYY-MM-DD HH:mm') => {
+    return dayjs(date).format(format)
+}
+
 export const formatRelativeTime = (date: string | Date) => {
+    return dayjs(date).fromNow()
+}
+
+export const formatRelative = (date: string | Date) => {
     return dayjs(date).fromNow()
 }
 

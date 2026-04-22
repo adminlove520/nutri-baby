@@ -133,9 +133,9 @@ const saveRecord = async () => {
   try {
     await recordStore.addRecord({
         babyId: babyStore.currentBaby.id,
-        type: 'sleep',
-        time: form.startTime.toISOString(),
+        modelType: 'sleep',
         ...form,
+        time: form.startTime.toISOString(),
         startTime: form.startTime.toISOString(),
         endTime: form.endTime.toISOString()
     })
