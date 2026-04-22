@@ -55,3 +55,17 @@ body {
     border-radius: 2px;
   }
 }
+
+/* Fix ElMessage for mobile and stacking */
+.el-message {
+    min-width: 300px !important;
+    max-width: 90% !important;
+    border-radius: 12px !important;
+    padding: 12px 16px !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08) !important;
+    border: none !important;
+}
+
+.el-message--error { background-color: #fef0f0 !important; color: #f56c6c !important; }
+.el-message--success { background-color: #f0f9eb !important; color: #67c23a !important; }
+.el-message--warning { background-color: #fdf6ec !important; color: #e6a23c !important; }

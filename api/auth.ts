@@ -1,6 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import prisma from '../lib/prisma';
-import bcrypt from 'bcryptjs';
+import * as bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { success, error, validate } from '../lib/utils';
 
@@ -83,6 +83,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return error(res, '未知的操作类型');
     } catch (err: any) {
         console.error('Auth API Error:', err);
-        return error(res, '服务器繁忙，请稍后再试', 500);
+        // Extremely detailed error for debugging
+        return res.status(500).json({ 
+            message: `注册失败: ${err.message || '未知错误'}`,
+            error: err.toString(),
+            stack: err.stack,
+            env: {
+                hasPrismaUrl: !!process.env.PRISMA_DATABASE_URL,
+                hasDbUrl: !!process.env.DATABASE_URL
+            }
+        });
     }
 }
