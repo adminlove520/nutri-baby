@@ -58,12 +58,19 @@ body {
 
 /* Fix ElMessage for mobile and stacking */
 .el-message {
-    min-width: 300px !important;
+    min-width: 320px !important;
     max-width: 90% !important;
-    border-radius: 12px !important;
-    padding: 12px 16px !important;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08) !important;
-    border: none !important;
+    border-radius: 16px !important;
+    padding: 16px 20px !important;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12) !important;
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+    backdrop-filter: blur(8px);
+    top: 40px !important;
+}
+
+.el-message__content {
+    font-weight: 600 !important;
+    font-size: 15px !important;
 }
 
 .el-message--error { background-color: #fef0f0 !important; color: #f56c6c !important; }

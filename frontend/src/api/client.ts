@@ -54,7 +54,8 @@ client.interceptors.response.use(
             message: msg,
             type: 'error',
             grouping: true,
-            duration: 3000
+            center: true,
+            duration: 3500
         })
         return Promise.reject(error)
     }
