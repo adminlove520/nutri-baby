@@ -6,7 +6,7 @@ import { VercelResponse } from '@vercel/node';
 export const safeJSON = (data: any) => {
     return JSON.parse(JSON.stringify(data, (key, value) => {
         if (typeof value === 'bigint') return value.toString();
-        if (key === 'password' || key === 'token') return undefined;
+        if (key === 'password') return undefined; // Only filter password, allow token
         return value;
     }));
 };
