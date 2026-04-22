@@ -114,11 +114,37 @@ body {
   padding: 18px 24px !important;
   border: none !important;
   box-shadow: 0 15px 40px rgba(0, 0, 0, 0.12) !important;
-  backdrop-filter: blur(10px);
-  top: 40px !important;
-  bottom: auto !important;
-  left: 50% !important;
-  transform: translateX(-50%) !important;
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  // Remove hardcoded top to allow auto-stacking
+  transition: all 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28) !important;
+
+  .el-message__content {
+    font-weight: 700 !important;
+    font-size: 15px !important;
+  }
+
+  &.el-message--success {
+    background: rgba(136, 212, 152, 0.95) !important;
+    .el-message__content, .el-message__icon { color: white !important; }
+  }
+
+  &.el-message--error {
+    background: rgba(255, 142, 148, 0.95) !important;
+    .el-message__content, .el-message__icon { color: white !important; }
+  }
+
+  &.el-message--warning {
+    background: rgba(255, 208, 119, 0.95) !important;
+    .el-message__content, .el-message__icon { color: white !important; }
+  }
+
+  &.el-message--info {
+    background: rgba(255, 255, 255, 0.95) !important;
+    border: 1px solid rgba(255, 142, 148, 0.1) !important;
+    .el-message__content { color: var(--el-text-color-primary) !important; }
+    .el-message__icon { color: var(--el-color-primary) !important; }
+  }
 }
 
 // Glassmorphism effect for active elements

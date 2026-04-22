@@ -221,12 +221,9 @@ const fetchData = async () => {
         todayStats.value = statsRes.today
         joinDays.value = (userStats as any).joinDays
 
-        // Mock tips for now, can be replaced with real API call
-        todayTips.value = [
-            { id: '1', title: '如何安抚哭闹的宝宝？', type: '护理', priority: 'high', createdAt: new Date().toISOString() },
-            { id: '2', title: '0-6个月宝宝睡眠规律指南', type: '睡眠', priority: 'medium', createdAt: new Date().toISOString() },
-            { id: '3', title: '辅食添加：从第一勺米粉开始', type: '饮食', priority: 'low', createdAt: new Date().toISOString() }
-        ]
+        // Fetch real tips
+        const tipsRes: any = await client.get('/tips', { params: { babyId } })
+        todayTips.value = tipsRes
 
         const pending = vaccineRes
             .filter((v: any) => v.vaccinationStatus === 'pending')

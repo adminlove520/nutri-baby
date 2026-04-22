@@ -47,10 +47,10 @@
           <div class="divider"></div>
           <div class="setting-item">
             <div class="item-info">
-              <span class="label">应用内推送</span>
-              <span class="desc">在首页和消息中心显示提醒</span>
+              <span class="label">每日 AI 育儿锦囊</span>
+              <span class="desc">由 AI 每天为您生成一则科学育儿建议</span>
             </div>
-            <el-switch v-model="settings.inAppNotify" @change="saveSettings" />
+            <el-switch v-model="settings.aiTipsNotify" @change="saveSettings" />
           </div>
         </el-card>
       </div>
@@ -101,6 +101,7 @@ const settings = reactive({
     defaultBabyId: '',
     emailNotify: true,
     inAppNotify: true,
+    aiTipsNotify: true,
     darkMode: false
 })
 

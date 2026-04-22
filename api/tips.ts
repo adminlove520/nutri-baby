@@ -36,17 +36,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // AI Fallback or Force AI
         if (tips.length === 0 || forceAI === 'true') {
             try {
-                const ai = AIFactory.getProvider();
+                const ai = AIFactory.createProvider();
                 const prompt = `你是一位专业的育儿专家。请针对一位 ${babyAgeMonth} 个月大的宝宝（性别：${baby.gender === 'male' ? '男' : '女'}），提供3条科学、具体的每日育儿建议。
                 格式要求为JSON数组：[{"title": "...", "content": "...", "category": "feeding|sleep|development|safety"}]`;
                 
                 const aiResponse = await ai.analyze({
-                    babyInfo: { name: baby.name, birthDate: baby.birthDate, gender: baby.gender },
-                    records: [], // Could pass recent records for more context
-                    prompt
+                    babyProfile: { name: baby.name, birthDate: baby.birthDate, gender: baby.gender },
+                    recentRecords: { feeding: [], sleep: [], growth: [] },
+                    query: prompt
                 });
 
-                const aiTips = JSON.parse(aiResponse.raw);
+                let aiTips = [];
+                try {
+                    aiTips = JSON.parse(aiResponse.insight);
+                } catch (e) {
+                    // If not JSON, try to wrap the insight
+                    aiTips = [{ title: 'AI 育儿建议', content: aiResponse.insight, category: 'general' }];
+                }
+                
                 if (Array.isArray(aiTips)) {
                     tips = aiTips;
                 }

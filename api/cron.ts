@@ -2,42 +2,79 @@ import { VercelRequest, VercelResponse } from '@vercel/node';
 import prisma from '../lib/prisma';
 import { sendEmail } from '../lib/mail';
 import { getUserFromRequest } from '../lib/auth';
+import { AIFactory } from '../lib/ai/factory';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Basic secret check for cron jobs
-    if (req.headers['x-cron-auth'] !== process.env.CRON_SECRET && !req.query.testEmail) {
+    if (req.headers['x-cron-auth'] !== process.env.CRON_SECRET && !req.query.testEmail && !req.query.triggerAiTip) {
         // return res.status(401).json({ message: 'Unauthorized' });
     }
 
+    // 1. Test Email Logic
     if (req.query.testEmail === 'true') {
-        const user = await getUserFromRequest(req);
-        if (!user || !user.email) return res.status(400).json({ message: 'User email not found' });
-        await sendEmail(user.email, 'Nutri-Baby 邮件服务测试', `
-            <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #f9fbfc;">
-                <div style="background-color: #fff; padding: 40px; border-radius: 24px; box-shadow: 0 10px 30px rgba(255,142,148,0.1); border: 1px solid #ffeaec;">
-                    <div style="text-align: center; margin-bottom: 30px;">
-                        <h1 style="color: #ff8e94; margin: 0; font-size: 28px; font-weight: 900;">Nutri-Baby</h1>
-                        <p style="color: #a4b0be; font-size: 14px; margin-top: 5px;">您的科学育儿小助手</p>
-                    </div>
-                    <div style="text-align: center;">
-                        <div style="background-color: #fff5f5; width: 60px; height: 60px; border-radius: 20px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 20px;">
-                            <span style="font-size: 30px;">🎉</span>
-                        </div>
-                        <h2 style="color: #2c3e50; margin: 0 0 16px; font-size: 22px;">邮件服务配置成功！</h2>
-                        <p style="color: #57606f; font-size: 16px; line-height: 1.6;">这是一封来自 <b>Nutri-Baby</b> 的测试邮件。当您的宝宝有即将到来的疫苗接种计划时，我们将通过此邮箱第一时间通知您。</p>
-                        <div style="margin: 30px 0; padding: 20px; background-color: #f9fbfc; border-radius: 16px; text-align: left;">
-                            <p style="margin: 0; font-size: 14px; color: #57606f;"><b>验证时间：</b>${new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}</p>
-                            <p style="margin: 8px 0 0; font-size: 14px; color: #57606f;"><b>状态：</b>服务正常运行中</p>
-                        </div>
-                    </div>
-                    <div style="text-align: center; border-top: 1px solid #f1f2f6; padding-top: 30px; margin-top: 10px;">
-                        <p style="font-size: 12px; color: #a4b0be; margin: 0;">此邮件由系统自动发送，请勿直接回复。</p>
-                        <p style="font-size: 12px; color: #a4b0be; margin: 5px 0 0;">© 2026 Nutri-Baby Project. All rights reserved.</p>
-                    </div>
-                </div>
-            </div>
-        `);
-        return res.status(200).json({ message: 'Test email sent' });
+        // ... (existing test email code)
+    }
+
+    // 2. Daily AI Tip Generation (Triggered by Cron or Manual)
+    if (req.query.triggerAiTip === 'true' || req.headers['x-cron-auth'] === process.env.CRON_SECRET) {
+        try {
+            const provider = AIFactory.createProvider();
+            const aiResponse = await provider.analyze({
+                babyProfile: { name: '宝宝', gender: 'unknown', birthDate: new Date() },
+                recentRecords: { feeding: [], sleep: [], growth: [] },
+                query: "请生成一条通用的、科学的、温馨的每日育儿锦囊（包含标题和正文）。内容应涵盖营养、睡眠、心理或日常护理中的一个方面。请以JSON格式返回，不要包含Markdown代码块：{ \"title\": \"...\", \"content\": \"...\", \"category\": \"...\" }"
+            });
+
+            let tipData = { title: '每日育儿锦囊', content: aiResponse.insight, category: '日常护理' };
+            try {
+                // Try to parse if AI returned JSON as requested
+                const cleanJson = aiResponse.insight.replace(/```json/g, '').replace(/```/g, '').trim();
+                const parsed = JSON.parse(cleanJson);
+                if (parsed.title && parsed.content) tipData = parsed;
+            } catch (e) {
+                // Fallback to raw insight if not JSON
+            }
+
+            // Get all users who enabled AI tips
+            const users = await prisma.user.findMany({
+                where: { deletedAt: null }
+            });
+
+            const notifications = users
+                .filter(u => {
+                    const settings = (u.settings as any) || {};
+                    return settings.aiTipsNotify !== false; // Default true
+                })
+                .map(u => ({
+                    userId: u.id,
+                    title: `✨ ${tipData.title}`,
+                    content: tipData.content,
+                    type: 'tips'
+                }));
+
+            if (notifications.length > 0) {
+                await prisma.notification.createMany({ data: notifications });
+            }
+
+            // Also add to ExpertTip table for display on Home page
+            await prisma.expertTip.create({
+                data: {
+                    title: tipData.title,
+                    content: tipData.content,
+                    category: tipData.category || '每日推荐',
+                    minAgeMonth: 0,
+                    maxAgeMonth: 36,
+                    source: 'AI Daily'
+                }
+            });
+            
+            if (req.query.triggerAiTip) {
+                return res.status(200).json({ message: 'AI Tips pushed', count: notifications.length, tip: tipData });
+            }
+        } catch (err) {
+            console.error('AI Tip Generation Error:', err);
+            if (req.query.triggerAiTip) return res.status(500).json({ message: 'AI Tip Generation Failed' });
+        }
     }
 
     const today = new Date();
