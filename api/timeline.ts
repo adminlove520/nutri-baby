@@ -15,43 +15,60 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const user = await getUserFromRequest(req);
     if (!user) return error(res, 'Unauthorized', 401);
 
-    const { babyId, limit = '50', offset = '0' } = req.query;
+    const { babyId, limit = '50' } = req.query;
     if (!babyId) return error(res, 'Baby ID required', 400);
 
     const bId = BigInt(babyId as string);
     const take = parseInt(limit as string);
-    const skip = parseInt(offset as string);
 
     try {
-        // Fetch records with optimized pagination
         const [feeding, sleep, diaper, growth] = await Promise.all([
-            prisma.feedingRecord.findMany({ 
-                where: { babyId: bId }, 
-                orderBy: { time: 'desc' }, 
-                take: take,
-                include: { creator: { select: { nickname: true, avatarUrl: true } } }
+            prisma.feedingRecord.findMany({
+                where: { babyId: bId },
+                orderBy: { time: 'desc' },
+                take,
+                select: {
+                    id: true, babyId: true, time: true, feedingType: true,
+                    amount: true, duration: true, detail: true,
+                    createdBy: true, createdByName: true, createdByAvatar: true,
+                    creator: { select: { nickname: true, avatarUrl: true } }
+                }
             }),
-            prisma.sleepRecord.findMany({ 
-                where: { babyId: bId }, 
-                orderBy: { startTime: 'desc' }, 
-                take: take,
-                include: { creator: { select: { nickname: true, avatarUrl: true } } }
+            prisma.sleepRecord.findMany({
+                where: { babyId: bId },
+                orderBy: { startTime: 'desc' },
+                take,
+                select: {
+                    id: true, babyId: true, startTime: true, endTime: true,
+                    duration: true, type: true,
+                    createdBy: true, createdByName: true, createdByAvatar: true,
+                    creator: { select: { nickname: true, avatarUrl: true } }
+                }
             }),
-            prisma.diaperRecord.findMany({ 
-                where: { babyId: bId }, 
-                orderBy: { time: 'desc' }, 
-                take: take,
-                include: { creator: { select: { nickname: true, avatarUrl: true } } }
+            prisma.diaperRecord.findMany({
+                where: { babyId: bId },
+                orderBy: { time: 'desc' },
+                take,
+                select: {
+                    id: true, babyId: true, time: true, type: true,
+                    poopColor: true, poopTexture: true, note: true,
+                    createdBy: true, createdByName: true, createdByAvatar: true,
+                    creator: { select: { nickname: true, avatarUrl: true } }
+                }
             }),
-            prisma.growthRecord.findMany({ 
-                where: { babyId: bId }, 
-                orderBy: { time: 'desc' }, 
-                take: take,
-                include: { creator: { select: { nickname: true, avatarUrl: true } } }
+            prisma.growthRecord.findMany({
+                where: { babyId: bId },
+                orderBy: { time: 'desc' },
+                take,
+                select: {
+                    id: true, babyId: true, time: true,
+                    height: true, weight: true, headCircumference: true, note: true,
+                    createdBy: true, createdByName: true, createdByAvatar: true,
+                    creator: { select: { nickname: true, avatarUrl: true } }
+                }
             })
         ]);
 
-        // Normalize for Timeline: { type, time, data }
         const timelineEntries: any[] = [
             ...feeding.map(r => ({ type: 'feeding', time: r.time, data: r })),
             ...sleep.map(r => ({ type: 'sleep', time: r.startTime, data: r })),
@@ -59,11 +76,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             ...growth.map(r => ({ type: 'growth', time: r.time, data: r }))
         ];
 
-        // Sort globally by time descending and take only the needed amount
         timelineEntries.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
         const pagedEntries = timelineEntries.slice(0, take);
 
-        // Calculate total count efficiently
         const [feedingCount, sleepCount, diaperCount, growthCount] = await Promise.all([
             prisma.feedingRecord.count({ where: { babyId: bId } }),
             prisma.sleepRecord.count({ where: { babyId: bId } }),

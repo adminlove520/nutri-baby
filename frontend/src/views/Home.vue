@@ -1,6 +1,5 @@
 <template>
   <div class="home-page">
-    <!-- Vaccine Banner -->
     <el-alert
       v-if="upcomingVaccines.length > 0"
       :title="upcomingVaccines[0]"
@@ -13,13 +12,10 @@
 
     <el-row :gutter="24">
       <el-col :xs="24" :sm="16" :md="17">
-        <!-- AI Insight -->
         <AIInsightCard v-if="babyStore.currentBaby" />
 
-        <!-- Today's Stats Grid -->
         <div class="section-title">今日概览</div>
         <el-row :gutter="16" class="stats-row" v-loading="loading">
-          <!-- Feeding -->
           <el-col :xs="12" :sm="6">
             <el-card shadow="never" class="stat-card stat-primary">
               <div class="stat-icon"><el-icon><Mug /></el-icon></div>
@@ -27,7 +23,6 @@
               <div class="stat-label">总喂养</div>
             </el-card>
           </el-col>
-          <!-- Sleep -->
           <el-col :xs="12" :sm="6">
             <el-card shadow="never" class="stat-card stat-success">
               <div class="stat-icon"><el-icon><Moon /></el-icon></div>
@@ -35,7 +30,6 @@
               <div class="stat-label">总睡眠</div>
             </el-card>
           </el-col>
-          <!-- Diaper -->
           <el-col :xs="12" :sm="6">
             <el-card shadow="never" class="stat-card stat-warning">
               <div class="stat-icon"><el-icon><ToiletPaper /></el-icon></div>
@@ -43,7 +37,6 @@
               <div class="stat-label">换尿布</div>
             </el-card>
           </el-col>
-          <!-- Milk -->
           <el-col :xs="12" :sm="6">
             <el-card shadow="never" class="stat-card stat-info">
               <div class="stat-icon"><el-icon><Pouring /></el-icon></div>
@@ -53,7 +46,6 @@
           </el-col>
         </el-row>
 
-        <!-- Last Feeding -->
         <el-card class="last-feeding-card" shadow="hover" @click="handleFeeding">
             <template #header>
               <div class="card-header">
@@ -76,14 +68,12 @@
             </div>
         </el-card>
 
-        <!-- Daily Tips -->
         <div class="section-title">专家建议</div>
         <DailyTipsCard :tips="todayTips" @tip-click="handleTipClick" />
-        
+
       </el-col>
 
       <el-col :xs="24" :sm="8" :md="7">
-         <!-- Quick Actions -->
          <el-card class="quick-actions" shadow="hover">
             <template #header>
                <div class="card-header">
@@ -110,7 +100,6 @@
             </div>
          </el-card>
 
-         <!-- Growth Summary (Small Chart Preview) -->
          <el-card class="growth-summary-card" shadow="hover" @click="router.push('/statistics')">
             <template #header>
                <div class="card-header">
@@ -167,7 +156,6 @@ interface DailyTips {
     priority: "high" | "medium" | "low";
 }
 
-// Today Stats
 const todayStats = ref({
     feeding: { totalCount: 0, bottleMl: 0, lastFeedingTime: null },
     sleep: { totalMinutes: 0 },
@@ -183,25 +171,23 @@ const fetchData = async () => {
     loading.value = true
     try {
         const babyId = babyStore.currentBaby.id
-        
-        // Fetch stats, vaccines, and tips in parallel
+
         const [statsRes, vaccineRes] = await Promise.all([
             getStatistics(babyId),
             getVaccines(babyId)
         ])
-        
+
         todayStats.value = statsRes.today
-        
-        // Mock tips for now
+
         todayTips.value = [
             { id: '1', title: '母乳喂养建议', description: '坚持按需哺乳，帮助宝宝建立良好的消化系统。', type: 'feeding', priority: 'high' },
             { id: '2', title: '睡眠环境优化', description: '保持室内温度在 22-24 度，营造舒适的睡眠氛围。', type: 'sleep', priority: 'medium' }
         ]
-        
+
         const pending = vaccineRes
             .filter((v: any) => v.vaccinationStatus === 'pending')
             .sort((a: any, b: any) => new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime())
-        
+
         if (pending.length > 0) {
             const next = pending[0]
             upcomingVaccines.value = [`提醒：${next.vaccineName} 即将到期（预计 ${next.scheduledDate.split('T')[0]}）`]
@@ -221,7 +207,6 @@ const formatSleepDuration = (minutes: number) => {
   return h > 0 ? `${h}h${m}m` : `${m}m`
 }
 
-// Actions
 const goToVaccine = () => router.push('/vaccine')
 const handleTipClick = (tip: DailyTips) => console.log('Tip clicked', tip)
 const handleFeeding = () => router.push('/record/feeding')
@@ -235,56 +220,148 @@ watch(() => babyStore.currentBaby?.id, fetchData)
 
 <style scoped lang="scss">
 .home-page { padding-bottom: 40px; }
-.vaccine-banner { 
-    margin-bottom: 24px; 
-    cursor: pointer; 
-    border-radius: 16px; 
-    border: 1px solid #ffd07744;
+
+.vaccine-banner {
+    margin-bottom: 24px;
+    cursor: pointer;
+    border-radius: 16px;
+    border: 1px solid var(--el-color-warning-light-7);
     padding: 12px;
     :deep(.el-alert__title) { font-weight: bold; }
 }
-.section-title { margin: 24px 0 16px; font-weight: 700; font-size: 1.2rem; display: flex; align-items: center; }
+
+.section-title {
+    margin: 24px 0 16px;
+    font-weight: 700;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    color: var(--el-text-color-primary);
+}
 
 .stat-card {
-  margin-bottom: 16px; text-align: center; border-radius: 16px; position: relative; overflow: hidden;
+  margin-bottom: 16px;
+  text-align: center;
+  border-radius: 16px;
+  position: relative;
+  overflow: hidden;
+  background-color: var(--el-fill-color-blank);
+
   .stat-icon { font-size: 20px; margin-bottom: 8px; opacity: 0.8; }
-  .stat-value { font-size: 18px; font-weight: 800; margin-bottom: 4px; }
-  .stat-label { font-size: 12px; color: #909399; }
-  &.stat-primary { background: #fff5f5; .stat-value, .stat-icon { color: #ff8e94; } }
-  &.stat-success { background: #f0f9eb; .stat-value, .stat-icon { color: #88d498; } }
-  &.stat-warning { background: #fdf6ec; .stat-value, .stat-icon { color: #ffd077; } }
-  &.stat-info { background: #f4f4f5; .stat-value, .stat-icon { color: #909399; } }
+  .stat-value { font-size: 18px; font-weight: 800; margin-bottom: 4px; color: var(--el-text-color-primary); }
+  .stat-label { font-size: 12px; color: var(--el-text-color-secondary); }
+
+  &.stat-primary { background: var(--el-color-primary-light-9); .stat-value, .stat-icon { color: var(--el-color-primary); } }
+  &.stat-success { background: var(--el-color-success-light-9); .stat-value, .stat-icon { color: var(--el-color-success); } }
+  &.stat-warning { background: var(--el-color-warning-light-9); .stat-value, .stat-icon { color: var(--el-color-warning); } }
+  &.stat-info { background: var(--el-fill-color-light); .stat-value, .stat-icon { color: var(--el-text-color-secondary); } }
 }
 
-.last-feeding-card { margin-top: 8px; cursor: pointer; .card-header { border-bottom: none; padding-bottom: 0; } }
-.feeding-content {
-  display: flex; align-items: center; padding: 4px 0;
-  .feeding-icon-wrapper { background: var(--el-color-primary-light-9); color: var(--el-color-primary); padding: 12px; border-radius: 14px; margin-right: 16px; }
-  .feeding-info { flex: 1; display: flex; flex-direction: column; .feeding-time { font-weight: 700; font-size: 17px; } .feeding-detail { color: #909399; font-size: 13px; } }
-  .arrow-icon { color: #C0C4CC; }
+.last-feeding-card {
+    margin-top: 8px;
+    cursor: pointer;
+    background-color: var(--el-fill-color-blank);
+
+    .card-header {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
 }
-.empty-state-text { color: #909399; font-size: 14px; text-align: center; padding: 10px 0; }
+
+.feeding-content {
+  display: flex;
+  align-items: center;
+  padding: 4px 0;
+
+  .feeding-icon-wrapper {
+      background: var(--el-color-primary-light-9);
+      color: var(--el-color-primary);
+      padding: 12px;
+      border-radius: 14px;
+      margin-right: 16px;
+  }
+
+  .feeding-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+
+      .feeding-time { font-weight: 700; font-size: 17px; color: var(--el-text-color-primary); }
+      .feeding-detail { color: var(--el-text-color-secondary); font-size: 13px; }
+  }
+
+  .arrow-icon { color: var(--el-text-color-placeholder); }
+}
+
+.empty-state-text {
+    color: var(--el-text-color-secondary);
+    font-size: 14px;
+    text-align: center;
+    padding: 10px 0;
+}
 
 .action-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+
 .action-item {
-    display: flex; flex-direction: column; align-items: center; padding: 16px 8px; background: #fcfcfc; border: 1px solid #f0f0f0; border-radius: 16px; cursor: pointer; transition: all 0.2s;
-    &:hover { background: #fff; border-color: var(--el-color-primary-light-5); transform: translateY(-2px); }
-    .btn-wrapper { 
-        width: 52px; height: 52px; border-radius: 16px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; color: #fff;
-        &.primary { background: linear-gradient(135deg, #ff8e94 0%, #ff6b72 100%); }
-        &.success { background: linear-gradient(135deg, #88d498 0%, #68c37c 100%); }
-        &.warning { background: linear-gradient(135deg, #ffd077 0%, #ffbc3f 100%); }
-        &.info { background: linear-gradient(135deg, #b4b7bc 0%, #909399 100%); }
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px 8px;
+    background: var(--el-fill-color-light);
+    border: 1px solid var(--el-border-color-lighter);
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+        background: var(--el-fill-color-blank);
+        border-color: var(--el-color-primary-light-5);
+        transform: translateY(-2px);
+    }
+
+    .btn-wrapper {
+        width: 52px;
+        height: 52px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 10px;
+        color: #fff;
+
+        &.primary { background: linear-gradient(135deg, var(--el-color-primary) 0%, #ff6b72 100%); }
+        &.success { background: linear-gradient(135deg, var(--el-color-success) 0%, #68c37c 100%); }
+        &.warning { background: linear-gradient(135deg, var(--el-color-warning) 0%, #ffbc3f 100%); }
+        &.info { background: linear-gradient(135deg, var(--el-color-info) 0%, #909399 100%); }
     }
 }
 
 .growth-preview {
-    .data-row { display: flex; justify-content: space-around; margin-top: 10px; }
     .growth-data {
-        display: flex; justify-content: space-around; padding: 10px 0;
-        .data-item { text-align: center; .val { display: block; font-size: 18px; font-weight: 800; color: #2c3e50; } .lab { font-size: 12px; color: #909399; } }
+        display: flex;
+        justify-content: space-around;
+        padding: 10px 0;
+
+        .data-item {
+            text-align: center;
+
+            .val { display: block; font-size: 18px; font-weight: 800; color: var(--el-text-color-primary); }
+            .lab { font-size: 12px; color: var(--el-text-color-secondary); }
+        }
     }
 }
 
-.placeholder-chart { display: flex; align-items: flex-end; justify-content: space-between; height: 60px; padding: 0 10px; .bar { width: 12%; background: var(--el-color-primary-light-7); border-radius: 4px 4px 0 0; } }
+.placeholder-chart {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    height: 60px;
+    padding: 0 10px;
+
+    .bar {
+        width: 12%;
+        background: var(--el-color-primary-light-7);
+        border-radius: 4px 4px 0 0;
+    }
+}
 </style>

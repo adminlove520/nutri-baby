@@ -80,7 +80,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 where: { id: v.id },
                 data: { reminderSent: true, reminderSentAt: new Date() }
             });
-            
+
             // Real Email Push
             if (v.baby.user.email) {
                 try {
@@ -96,8 +96,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     console.error('Failed to send email to', v.baby.user.email, err);
                 }
             }
-            
-            console.log(`[PUSH DONE] ${title}`);
         }
 
         if (notifications.length > 0) {
