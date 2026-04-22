@@ -1,21 +1,6 @@
 {
     "outputDirectory": "frontend/dist",
     "rewrites": [
-        { "source": "/api/auth", "destination": "/api/auth" },
-        { "source": "/api/baby", "destination": "/api/baby" },
-        { "source": "/api/feeding-records", "destination": "/api/record" },
-        { "source": "/api/sleep-records", "destination": "/api/record" },
-        { "source": "/api/diaper-records", "destination": "/api/record" },
-        { "source": "/api/growth-records", "destination": "/api/record" },
-        { "source": "/api/record", "destination": "/api/record" },
-        { "source": "/api/statistics", "destination": "/api/statistics" },
         { "source": "/api/(.*)", "destination": "/api/$1" }
-    ],
-    "functions": {
-        "api/**/*.ts": {
-            "runtime": "edge",
-            "memory": 512,
-            "maxDuration": 10
-        }
-    }
+    ]
 }
