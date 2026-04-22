@@ -4,11 +4,16 @@ import { VercelResponse } from '@vercel/node';
  * Safely serialize data with BigInt support and sensitive field filtering
  */
 export const safeJSON = (data: any) => {
-    return JSON.parse(JSON.stringify(data, (key, value) => {
-        if (typeof value === 'bigint') return value.toString();
-        if (key === 'password') return undefined; // Only filter password, allow token
-        return value;
-    }));
+    try {
+        return JSON.parse(JSON.stringify(data, (key, value) => {
+            if (typeof value === 'bigint') return value.toString();
+            if (key === 'password') return undefined; 
+            return value;
+        }));
+    } catch (e) {
+        console.error('Serialization Error:', e);
+        return { error: 'Serialization Failed' };
+    }
 };
 
 /**

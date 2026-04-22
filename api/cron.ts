@@ -3,6 +3,7 @@ import prisma from '../lib/prisma';
 import { sendEmail } from '../lib/mail';
 import { getUserFromRequest } from '../lib/auth';
 import { AIFactory } from '../lib/ai/factory';
+import { success, error } from '../lib/utils';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Basic secret check for cron jobs
@@ -27,7 +28,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 `
                 <div style="font-family: sans-serif; padding: 20px; color: #333;">
                     <h2 style="color: #ff8e94;">🎉 提醒邮件通道测试成功！</h2>
-                    <p>亲爱的家长，这是一封来自 <b>Nutri-Baby</b> 的系统测试邮件。</p>
+                    <p>亲爱的家长，这是一封来自 <b>Nutri-Baby</b> 的 system 测试邮件。</p>
                     <p>目前您的账号邮件提醒通道已畅通。当您的宝宝有即将到来的疫苗接种、或是系统为您生成了深度育儿分析时，我们都会通过此邮箱及时通知您。</p>
                     <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
                     <p style="font-size: 12px; color: #999;">本邮件由系统自动发出，请勿直接回复。</p>
@@ -35,9 +36,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 `
             );
             return res.status(200).json({ message: 'Test email sent successfully' });
-        } catch (err) {
+        } catch (err: any) {
             console.error('Test Email Failed:', err);
-            return res.status(500).json({ message: 'Failed to send test email' });
+            return res.status(500).json({ message: 'Failed to send test email', error: err.message });
         }
     }
 
@@ -46,7 +47,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         try {
             const provider = AIFactory.createProvider();
             const aiResponse = await provider.analyze({
-                babyProfile: { name: '宝宝', gender: 'unknown', birthDate: new Date() },
+                babyProfile: { name: '宝宝', gender: 'unknown', birthDate: new Date(), month: 0 },
                 recentRecords: { feeding: [], sleep: [], growth: [] },
                 query: "请生成一条通用的、科学的、温馨的每日育儿锦囊（包含标题和正文）。内容应涵盖营养、睡眠、心理或日常护理中的一个方面。请以JSON格式返回，不要包含Markdown代码块：{ \"title\": \"...\", \"content\": \"...\", \"category\": \"...\" }"
             });
@@ -56,7 +57,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 // Try to parse if AI returned JSON as requested
                 const cleanJson = aiResponse.insight.replace(/```json/g, '').replace(/```/g, '').trim();
                 const parsed = JSON.parse(cleanJson);
-                if (parsed.title && parsed.content) tipData = parsed;
+                if (parsed.title && (parsed.content || parsed.description)) {
+                    tipData = {
+                        title: parsed.title,
+                        content: parsed.content || parsed.description,
+                        category: parsed.category || '日常护理'
+                    };
+                }
             } catch (e) {
                 // Fallback to raw insight if not JSON
             }
@@ -66,7 +73,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 where: { deletedAt: null }
             });
 
-            const notifications = users
+            const notificationsData = users
                 .filter(u => {
                     const settings = (u.settings as any) || {};
                     return settings.aiTipsNotify !== false; // Default true
@@ -78,8 +85,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     type: 'tips'
                 }));
 
-            if (notifications.length > 0) {
-                await prisma.notification.createMany({ data: notifications });
+            if (notificationsData.length > 0) {
+                await prisma.notification.createMany({ data: notificationsData });
             }
 
             // Also add to ExpertTip table for display on Home page
@@ -95,11 +102,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             });
             
             if (req.query.triggerAiTip) {
-                return res.status(200).json({ message: 'AI Tips pushed', count: notifications.length, tip: tipData });
+                return success(res, { message: 'AI Tips pushed', count: notificationsData.length, tip: tipData });
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error('AI Tip Generation Error:', err);
-            if (req.query.triggerAiTip) return res.status(500).json({ message: 'AI Tip Generation Failed' });
+            if (req.query.triggerAiTip) return res.status(500).json({ 
+                message: 'AI Tip Generation Failed', 
+                error: err.message,
+                details: err.toString()
+            });
         }
     }
 

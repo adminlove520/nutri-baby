@@ -68,11 +68,20 @@ ${babyInfo}
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(`MiniMax API Error: ${JSON.stringify(errorData)}`);
+                const errorText = await response.text();
+                let errorData;
+                try {
+                    errorData = JSON.parse(errorText);
+                } catch (e) {
+                    errorData = errorText;
+                }
+                throw new Error(`MiniMax API Error (${response.status}): ${typeof errorData === 'object' ? JSON.stringify(errorData) : errorData}`);
             }
 
             const data = await response.json();
+            if (!data.choices || data.choices.length === 0) {
+                throw new Error(`MiniMax API returned no choices: ${JSON.stringify(data)}`);
+            }
             const content = data.choices[0].message.content;
 
             // 尝试解析 JSON

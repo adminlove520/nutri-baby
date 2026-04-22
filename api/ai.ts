@@ -2,6 +2,7 @@ import { VercelRequest, VercelResponse } from '@vercel/node';
 import prisma from '../lib/prisma';
 import { getUserFromRequest, hasBabyPermission } from '../lib/auth';
 import { AIFactory } from '../lib/ai/factory';
+import { success, error } from '../lib/utils';
 
 // POST /api/ai/analyze
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -79,15 +80,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             query: babyProfile ? query : `(用户尚未添加宝宝或未选择宝宝，请提供通用的育儿或接种建议) ${query || ''}`
         });
 
-        // Ensure result doesn't contain BigInts (AI should return plain objects anyway)
-        return res.status(200).json(result);
+        return success(res, result);
 
     } catch (err: any) {
         console.error('AI Analyze Error:', err);
         return res.status(500).json({ 
             message: 'Internal Server Error', 
             error: err.message,
-            stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+            details: err.toString()
         });
     }
 }
