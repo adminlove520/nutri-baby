@@ -25,3 +25,20 @@ export async function getUserFromRequest(req: VercelRequest) {
         return null;
     }
 }
+
+export async function hasBabyPermission(userId: string | bigint, babyId: string | bigint) {
+    const uId = BigInt(userId);
+    const bId = BigInt(babyId);
+
+    const baby = await prisma.baby.findFirst({
+        where: {
+            id: bId,
+            OR: [
+                { userId: uId },
+                { collaborators: { some: { userId: uId } } }
+            ]
+        }
+    });
+
+    return !!baby;
+}

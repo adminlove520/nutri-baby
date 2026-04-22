@@ -2,9 +2,12 @@
     "name": "nutri-baby-web",
     "version": "1.0.0",
     "private": true,
+    "workspaces": [
+        "frontend"
+    ],
     "scripts": {
         "dev": "vercel dev",
-        "build": "cd frontend && npm install && npm run build",
+        "build": "prisma generate && npm run build --workspace=frontend",
         "postinstall": "prisma generate"
     },
     "dependencies": {

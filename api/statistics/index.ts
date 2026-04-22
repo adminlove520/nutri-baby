@@ -1,6 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import prisma from '../../lib/prisma';
-import { getUserFromRequest } from '../../lib/auth';
+import { getUserFromRequest, hasBabyPermission } from '../../lib/auth';
 
 const safeJSON = (data: any) => {
     return JSON.parse(JSON.stringify(data, (key, value) =>
@@ -18,6 +18,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!babyId) return res.status(400).json({ message: 'Baby ID required' });
 
     const bId = BigInt(babyId as string);
+    if (!(await hasBabyPermission(user.userId, bId))) return res.status(403).json({ message: 'Forbidden' });
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 

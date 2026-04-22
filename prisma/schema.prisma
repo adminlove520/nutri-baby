@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
@@ -163,9 +164,9 @@ model GrowthRecord {
   createdBy         BigInt    @map("created_by")
   createdByName     String?   @map("created_by_name")
   createdByAvatar   String?   @map("created_by_avatar")
-  createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
-  deletedAt         DateTime? @map("deleted_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
 
   baby              Baby      @relation(fields: [babyId], references: [id])
   creator           User      @relation(fields: [createdBy], references: [id])

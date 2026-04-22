@@ -1,6 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import prisma from '../../lib/prisma';
-import { getUserFromRequest } from '../../lib/auth';
+import { getUserFromRequest, hasBabyPermission } from '../../lib/auth';
 
 const safeJSON = (data: any) => {
     return JSON.parse(JSON.stringify(data, (key, value) =>
@@ -18,6 +18,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!babyId) return res.status(400).json({ message: 'Baby ID required' });
 
     const bId = BigInt(babyId as string);
+    if (!(await hasBabyPermission(user.userId, bId))) return res.status(403).json({ message: 'Forbidden' });
+
     const days = parseInt(range as string);
 
     const startDate = new Date();
@@ -66,7 +68,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         sleepRecords.forEach(r => {
             const key = r.startTime.toISOString().split('T')[0];
             if (dailySleep[key] !== undefined) {
-                const dur = r.duration ? r.duration / 60 : (r.endTime ? (r.endTime.getTime() - r.startTime.getTime()) / 60000 : 0);
+                const dur = r.duration ? r.duration : (r.endTime ? Math.floor((r.endTime.getTime() - r.startTime.getTime()) / 60000) : 0);
                 dailySleep[key] += dur;
             }
         });

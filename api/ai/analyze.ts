@@ -1,6 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import prisma from '../../lib/prisma';
-import { getUserFromRequest } from '../../lib/auth';
+import { getUserFromRequest, hasBabyPermission } from '../../lib/auth';
 import { AIFactory } from '../../lib/ai/factory';
 
 // POST /api/ai/analyze
@@ -22,6 +22,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     try {
         const id = BigInt(babyId);
+        if (!(await hasBabyPermission(user.userId, id))) return res.status(403).json({ message: 'Forbidden' });
 
         // 1. Gather Context Data
         const baby = await prisma.baby.findFirst({

@@ -21,7 +21,7 @@
               <div class="avatar-wrapper">
                  <el-avatar :size="72" :src="baby.avatarUrl || 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'" />
                  <div class="gender-icon" :class="baby.gender">
-                    <el-icon :size="12"><component :is="baby.gender === 'male' ? Female : Female" /></el-icon>
+                    <el-icon :size="12"><component :is="baby.gender === 'male' ? Male : Female" /></el-icon>
                  </div>
               </div>
               <div class="info-wrapper">
@@ -62,7 +62,7 @@ import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useBabyStore } from '@/stores/baby'
 import { calculateAge } from '@/utils/date'
-import { Plus, Edit, Delete, Share, Female } from '@element-plus/icons-vue'
+import { Plus, Edit, Delete, Share, Female, Male } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 
 const router = useRouter()

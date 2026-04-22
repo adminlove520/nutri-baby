@@ -14,8 +14,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     try {
         if (req.method === 'GET') {
+            const uId = BigInt(user.userId);
             const babies = await prisma.baby.findMany({
-                where: { userId: BigInt(user.userId) },
+                where: {
+                    OR: [
+                        { userId: uId },
+                        { collaborators: { some: { userId: uId } } }
+                    ]
+                },
                 orderBy: { createdAt: 'desc' }
             });
             return res.status(200).json(safeJSON(babies));
