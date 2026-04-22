@@ -6,10 +6,16 @@ import App from './App.vue'
 import router from './router'
 import i18n from './i18n'
 import 'element-plus/theme-chalk/dark/css-vars.css'
+import { useThemeStore } from './stores/theme'
 
 const app = createApp(App)
+const pinia = createPinia()
 
-app.use(createPinia())
+app.use(pinia)
+
+const themeStore = useThemeStore()
+themeStore.initTheme()
+
 app.use(router)
 app.use(i18n)
 

@@ -1,6 +1,6 @@
 // BabyCare Theme Variables
 :root {
-  --el-color-primary: #ff8e94; // Gentle Pink
+  --el-color-primary: #ff8e94;
   --el-color-primary-light-3: #ffb1b5;
   --el-color-primary-light-5: #ffc7ca;
   --el-color-primary-light-7: #ffdee0;
@@ -8,10 +8,20 @@
   --el-color-primary-light-9: #fff4f5;
   --el-color-primary-dark-2: #cc7276;
 
-  --el-color-success: #88d498; // Soft Green
-  --el-color-warning: #ffd077; // Soft Yellow
+  --el-color-success: #88d498;
+  --el-color-warning: #ffd077;
   --el-color-danger: #ffb1b5;
   --el-color-info: #909399;
+
+  --el-bg-color: #ffffff;
+  --el-bg-color-page: #f7f7f7;
+  --el-text-color-primary: #303133;
+  --el-text-color-regular: #606266;
+  --el-text-color-secondary: #909399;
+  --el-border-color: #ebepex;
+  --el-border-color-light: #f0f0f0;
+  --el-border-color-lighter: #fafafa;
+  --el-fill-color-blank: #ffffff;
 
   --app-bg-color: #fcf9f9;
   --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
@@ -21,6 +31,20 @@
 body {
   background-color: var(--app-bg-color);
   color: #333;
+}
+
+.dark {
+  --el-bg-color: #1a1a1a;
+  --el-bg-color-page: #121212;
+  --el-text-color-primary: #ffffff;
+  --el-text-color-regular: #e0e0e0;
+  --el-text-color-secondary: #a0a0a0;
+  --el-border-color: #363636;
+  --el-border-color-light: #2a2a2a;
+  --el-border-color-lighter: #222222;
+  --el-fill-color-blank: #1a1a1a;
+  --app-bg-color: #121212;
+  --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .el-card {
@@ -34,6 +58,10 @@ body {
   }
 }
 
+.dark .el-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3) !important;
+}
+
 .el-button {
   border-radius: 10px !important;
 }
@@ -42,10 +70,10 @@ body {
   margin: 24px 0 16px;
   font-weight: 700;
   font-size: 1.2rem;
-  color: #2c3e50;
+  color: var(--el-text-color-primary);
   display: flex;
   align-items: center;
-  
+
   &::before {
     content: '';
     width: 4px;
@@ -56,23 +84,48 @@ body {
   }
 }
 
-/* Fix ElMessage for mobile and stacking */
 .el-message {
-    min-width: 320px !important;
-    max-width: 90% !important;
-    border-radius: 16px !important;
-    padding: 16px 20px !important;
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12) !important;
-    border: 1px solid rgba(255, 255, 255, 0.5) !important;
-    backdrop-filter: blur(8px);
-    top: 40px !important;
+  min-width: 320px !important;
+  max-width: 90% !important;
+  border-radius: 16px !important;
+  padding: 16px 20px !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12) !important;
+  border: 1px solid rgba(255, 255, 255, 0.5) !important;
+  backdrop-filter: blur(8px);
+  top: 40px !important;
 }
 
 .el-message__content {
-    font-weight: 600 !important;
-    font-size: 15px !important;
+  font-weight: 600 !important;
+  font-size: 15px !important;
 }
 
-.el-message--error { background-color: #fef0f0 !important; color: #f56c6c !important; }
-.el-message--success { background-color: #f0f9eb !important; color: #67c23a !important; }
-.el-message--warning { background-color: #fdf6ec !important; color: #e6a23c !important; }
+.el-message--error {
+  background-color: var(--el-color-danger-light-9, #fef0f0) !important;
+  color: var(--el-color-danger, #f56c6c) !important;
+}
+
+.el-message--success {
+  background-color: var(--el-color-success-lighter, #f0f9eb) !important;
+  color: var(--el-color-success, #67c23a) !important;
+}
+
+.el-message--warning {
+  background-color: var(--el-color-warning-lighter, #fdf6ec) !important;
+  color: var(--el-color-warning, #e6a23c) !important;
+}
+
+.dark .el-message--error {
+  background-color: rgba(245, 108, 108, 0.2) !important;
+  color: #f56c6c !important;
+}
+
+.dark .el-message--success {
+  background-color: rgba(103, 194, 58, 0.2) !important;
+  color: #67c23a !important;
+}
+
+.dark .el-message--warning {
+  background-color: rgba(230, 162, 60, 0.2) !important;
+  color: #e6a23c !important;
+}

@@ -66,6 +66,11 @@
               </div>
            </div>
            <div class="header-right">
+              <el-tooltip content="切换深色模式" placement="bottom">
+                <el-button class="theme-toggle-btn" circle @click="toggleTheme">
+                  <el-icon :size="20"><component :is="themeStore.isDark ? 'Sunny' : 'Moon'" /></el-icon>
+                </el-button>
+              </el-tooltip>
               <el-badge :is-dot="hasUnread" class="notification-badge" @click="router.push('/notifications')">
                 <el-icon :size="20"><Bell /></el-icon>
               </el-badge>
@@ -131,10 +136,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { House, Timer, PieChart, User as UserIcon, Setting, ArrowDown, Plus, Bell } from '@element-plus/icons-vue'
+import { House, Timer, PieChart, User as UserIcon, Setting, ArrowDown, Plus, Bell, Sunny, Moon } from '@element-plus/icons-vue'
 import 'element-plus/theme-chalk/display.css'
 import { useBabyStore } from '@/stores/baby'
 import { useUserStore } from '@/stores/user'
+import { useThemeStore } from '@/stores/theme'
 import { ElMessage } from 'element-plus'
 import client from '@/api/client'
 
@@ -142,8 +148,13 @@ const route = useRoute()
 const router = useRouter()
 const babyStore = useBabyStore()
 const userStore = useUserStore()
+const themeStore = useThemeStore()
 const activeRoute = computed(() => route.path)
 const hasUnread = ref(false)
+
+const toggleTheme = () => {
+  themeStore.toggleTheme()
+}
 
 const fetchUnread = async () => {
     try {
@@ -197,8 +208,8 @@ watch(() => route.path, () => {
 
 /* Sidebar (Desktop) */
 .app-sidebar {
-  background-color: #fff;
-  border-right: 1px solid #f0f0f0;
+  background-color: var(--el-fill-color-blank);
+  border-right: 1px solid var(--el-border-color-light);
   display: flex;
   flex-direction: column;
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.02);
@@ -208,7 +219,7 @@ watch(() => route.path, () => {
     display: flex;
     align-items: center;
     justify-content: center;
-    border-bottom: 1px solid #f9f9f9;
+    border-bottom: 1px solid var(--el-border-color-lighter);
     font-size: 20px;
     font-weight: 800;
     color: var(--el-color-primary);
@@ -242,9 +253,9 @@ watch(() => route.path, () => {
 /* Header */
 .app-header {
   height: 64px;
-  background-color: rgba(255, 255, 255, 0.8);
+  background-color: var(--el-fill-color-blank);
   backdrop-filter: blur(10px);
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--el-border-color-light);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -264,15 +275,15 @@ watch(() => route.path, () => {
       align-items: center;
       cursor: pointer;
       font-weight: 800;
-      color: #303133;
-      background: #fdf6ec;
+      color: var(--el-text-color-primary);
+      background: var(--el-color-warning-lighter, #fdf6ec);
       padding: 6px 16px;
       border-radius: 20px;
       font-size: 14px;
-      border: 1px solid #ffd07744;
+      border: 1px solid var(--el-color-warning-light-7, #ffd07744);
       
       &:hover {
-          background: #fdf2e1;
+          background: var(--el-color-warning-light-8, #fdf2e1);
       }
   }
 
@@ -288,9 +299,17 @@ watch(() => route.path, () => {
      gap: 16px;
      margin-left: auto;
 
+     .theme-toggle-btn {
+       background: transparent;
+       border: 1px solid var(--el-border-color-light);
+       &:hover {
+         background: var(--el-fill-color-light);
+       }
+     }
+
      .notification-badge {
         cursor: pointer;
-        color: #606266;
+        color: var(--el-text-color-regular);
         padding-top: 4px;
         &:hover { color: var(--el-color-primary); }
      }
@@ -305,14 +324,14 @@ watch(() => route.path, () => {
      transition: background 0.2s;
 
      &:hover {
-       background: #f5f7fa;
+       background: var(--el-fill-color-light);
      }
      
      .username {
         margin-left: 10px;
         font-size: 14px;
         font-weight: 500;
-        color: #606266;
+        color: var(--el-text-color-regular);
      }
   }
 }
@@ -342,9 +361,9 @@ watch(() => route.path, () => {
   height: auto;
   padding: 0;
   z-index: 100;
-  background-color: rgba(255, 255, 255, 0.95);
+  background-color: var(--el-fill-color-blank);
   backdrop-filter: blur(10px);
-  border-top: 1px solid var(--el-color-primary-light-8);
+  border-top: 1px solid var(--el-border-color-light);
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.04);
 }
 
@@ -365,6 +384,7 @@ watch(() => route.path, () => {
     line-height: 1;
     padding: 0;
     border-bottom: none !important;
+    color: var(--el-text-color-regular);
     
     &.is-active {
        background-color: transparent !important;
