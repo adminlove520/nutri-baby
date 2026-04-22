@@ -2,16 +2,26 @@ import { PrismaClient } from '@prisma/client'
 import { withAccelerate } from '@prisma/extension-accelerate'
 
 const prismaClientSingleton = () => {
-    let url = process.env.PRISMA_DATABASE_URL || process.env.DATABASE_URL;
+    const accelerateUrl = process.env.PRISMA_DATABASE_URL;
+    const directUrl = process.env.DATABASE_URL;
     
-    // Fix: Prisma Accelerate often requires 'prisma://' protocol instead of 'prisma+postgres://'
-    if (url && url.startsWith('prisma+postgres://')) {
-        url = url.replace('prisma+postgres://', 'prisma://');
+    let url = accelerateUrl || directUrl;
+    
+    if (url && (url.startsWith('prisma://') || url.startsWith('prisma+postgres://'))) {
+        // If it starts with prisma+postgres://, try converting to prisma:// as some extension versions are strict
+        const formattedUrl = url.startsWith('prisma+postgres://') 
+            ? url.replace('prisma+postgres://', 'prisma://') 
+            : url;
+            
+        return new PrismaClient({
+            datasourceUrl: formattedUrl,
+        }).$extends(withAccelerate());
     }
-
+    
+    // Fallback: Direct connection without accelerate extension
     return new PrismaClient({
         datasourceUrl: url,
-    }).$extends(withAccelerate())
+    });
 }
 
 declare global {
