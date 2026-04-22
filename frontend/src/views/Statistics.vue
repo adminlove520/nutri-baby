@@ -2,10 +2,10 @@
   <div class="statistics-page">
     <div class="page-header">
       <div class="header-left">
-        <h2 class="title">数据统计</h2>
-        <p class="subtitle">洞察宝宝的成长趋势</p>
+        <h2 class="title">成长洞察</h2>
+        <p class="subtitle">通过数据可视化，掌握宝宝发育动态</p>
       </div>
-      <el-select v-model="range" size="large" class="range-select">
+      <el-select v-model="range" size="large" class="range-select" effect="light">
         <el-option label="最近 7 天" value="7" />
         <el-option label="最近 30 天" value="30" />
         <el-option label="最近 90 天" value="90" />
@@ -13,13 +13,41 @@
     </div>
 
     <div v-loading="loading" class="stats-content">
-      <!-- Feeding & Sleep -->
-      <el-row :gutter="24">
+      <!-- Summary Info Cards -->
+      <el-row :gutter="16" class="summary-grid">
+         <el-col :xs="12" :sm="6">
+            <div class="summary-card c1">
+               <div class="val">{{ summary.avgFeeding }}<small>ml</small></div>
+               <div class="lab">日均奶量</div>
+            </div>
+         </el-col>
+         <el-col :xs="12" :sm="6">
+            <div class="summary-card c2">
+               <div class="val">{{ summary.avgSleep }}<small>h</small></div>
+               <div class="lab">日均睡眠</div>
+            </div>
+         </el-col>
+         <el-col :xs="12" :sm="6">
+            <div class="summary-card c3">
+               <div class="val">{{ summary.weightGain > 0 ? '+' : '' }}{{ summary.weightGain }}<small>kg</small></div>
+               <div class="lab">体重增长</div>
+            </div>
+         </el-col>
+         <el-col :xs="12" :sm="6">
+            <div class="summary-card c4">
+               <div class="val">{{ summary.heightGain > 0 ? '+' : '' }}{{ summary.heightGain }}<small>cm</small></div>
+               <div class="lab">身高增长</div>
+            </div>
+         </el-col>
+      </el-row>
+
+      <!-- Feeding & Sleep Charts -->
+      <el-row :gutter="20" class="chart-row">
         <el-col :xs="24" :md="12">
           <el-card class="chart-card" shadow="hover">
             <template #header>
               <div class="card-header">
-                <span class="card-title"><el-icon><Mug /></el-icon> 奶量趋势</span>
+                <span class="card-title"><div class="dot d1"></div> 奶量摄入趋势</span>
               </div>
             </template>
             <div class="chart-container">
@@ -31,7 +59,7 @@
           <el-card class="chart-card" shadow="hover">
             <template #header>
               <div class="card-header">
-                <span class="card-title"><el-icon><Moon /></el-icon> 睡眠趋势</span>
+                <span class="card-title"><div class="dot d2"></div> 每日睡眠时长</span>
               </div>
             </template>
             <div class="chart-container">
@@ -41,15 +69,15 @@
         </el-col>
       </el-row>
 
-      <!-- Growth -->
-      <el-card class="chart-card growth-card" shadow="hover">
+      <!-- Growth Curves -->
+      <el-card class="chart-card growth-main-card" shadow="hover">
         <template #header>
           <div class="card-header">
-            <span class="card-title"><el-icon><TrendCharts /></el-icon> 生长曲线</span>
+            <span class="card-title"><div class="dot d3"></div> WHO 生长基准对比</span>
             <div class="header-right">
-              <el-radio-group v-model="growthMode" size="small">
-                <el-radio-button label="height">身高</el-radio-button>
-                <el-radio-button label="weight">体重</el-radio-button>
+              <el-radio-group v-model="growthMode" size="small" class="custom-radio">
+                <el-radio-button label="height">身高曲线</el-radio-button>
+                <el-radio-button label="weight">体重曲线</el-radio-button>
               </el-radio-group>
             </div>
           </div>
@@ -57,55 +85,30 @@
         <div class="chart-container tall">
            <v-chart class="chart" :option="growthChartOption" autoresize />
         </div>
+        <div class="growth-tip">
+           <el-icon><InfoFilled /></el-icon>
+           <span>虚线为 WHO 标准中位数，阴影区域为 P3-P97 正常发育范围。</span>
+        </div>
       </el-card>
-
-      <!-- Summary Info -->
-      <div class="section-title">本周期汇总</div>
-      <el-row :gutter="24" class="summary-row">
-         <el-col :xs="12" :sm="6">
-            <div class="summary-item">
-               <div class="val">{{ summary.avgFeeding }} ml</div>
-               <div class="lab">日均奶量</div>
-            </div>
-         </el-col>
-         <el-col :xs="12" :sm="6">
-            <div class="summary-item">
-               <div class="val">{{ summary.avgSleep }} h</div>
-               <div class="lab">日均睡眠</div>
-            </div>
-         </el-col>
-         <el-col :xs="12" :sm="6">
-            <div class="summary-item">
-               <div class="val">{{ summary.weightGain }} kg</div>
-               <div class="lab">体重增长</div>
-            </div>
-         </el-col>
-         <el-col :xs="12" :sm="6">
-            <div class="summary-item">
-               <div class="val">{{ summary.heightGain }} cm</div>
-               <div class="lab">身高增长</div>
-            </div>
-         </el-col>
-      </el-row>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, watch, computed, reactive } from 'vue'
-import { Mug, Moon, TrendCharts } from '@element-plus/icons-vue'
+import { InfoFilled } from '@element-plus/icons-vue'
 import VChart from 'vue-echarts'
-import axios from 'axios'
+import client from '@/api/client'
 import { useBabyStore } from '@/stores/baby'
 import { ElMessage } from 'element-plus'
 
-// 按需导入echarts组件
+// Echarts imports
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { BarChart, LineChart } from 'echarts/charts'
-import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
+import { GridComponent, TooltipComponent, LegendComponent, TitleComponent } from 'echarts/components'
 
-use([CanvasRenderer, BarChart, LineChart, GridComponent, TooltipComponent, LegendComponent])
+use([CanvasRenderer, BarChart, LineChart, GridComponent, TooltipComponent, LegendComponent, TitleComponent])
 
 const babyStore = useBabyStore()
 const loading = ref(false)
@@ -131,37 +134,38 @@ const fetchData = async () => {
 
   loading.value = true
   try {
-    const token = localStorage.getItem('token')
-    const res = await axios.get('/api/statistics/charts', {
-      params: { babyId: babyStore.currentBaby.id, range: range.value },
-      headers: { Authorization: `Bearer ${token}` }
+    const res: any = await client.get('/statistics/charts', {
+      params: { babyId: babyStore.currentBaby.id, range: range.value }
     })
     
-    chartData.feeding = res.data.feeding
-    chartData.sleep = res.data.sleep
-    chartData.growth = res.data.growth
-    chartData.standards = res.data.standards
+    chartData.feeding = res.feeding
+    chartData.sleep = res.sleep
+    chartData.growth = res.growth
+    chartData.standards = res.standards
 
-    // Calculate Summary
-    const feedingSum = chartData.feeding.reduce((acc, curr) => acc + curr.amount, 0)
-    summary.avgFeeding = Math.round(feedingSum / parseInt(range.value))
+    // Stats Calculation
+    if (chartData.feeding.length > 0) {
+      const feedingSum = chartData.feeding.reduce((acc, curr) => acc + curr.amount, 0)
+      summary.avgFeeding = Math.round(feedingSum / chartData.feeding.length)
+    }
     
-    const sleepSum = chartData.sleep.reduce((acc, curr) => acc + curr.hours, 0)
-    summary.avgSleep = parseFloat((sleepSum / parseInt(range.value)).toFixed(1))
+    if (chartData.sleep.length > 0) {
+      const sleepSum = chartData.sleep.reduce((acc, curr) => acc + curr.hours, 0)
+      summary.avgSleep = parseFloat((sleepSum / chartData.sleep.length).toFixed(1))
+    }
 
     if (chartData.growth.length >= 2) {
-       const first = chartData.growth[0]
-       const last = chartData.growth[chartData.growth.length - 1]
+       const sorted = [...chartData.growth].sort((a, b) => a.month - b.month)
+       const first = sorted[0]
+       const last = sorted[sorted.length - 1]
        summary.weightGain = parseFloat((last.weight - first.weight).toFixed(2))
        summary.heightGain = parseFloat((last.height - first.height).toFixed(1))
     } else {
        summary.weightGain = 0
        summary.heightGain = 0
     }
-
   } catch (e) {
-    console.error(e)
-    ElMessage.error('无法加载统计数据')
+    ElMessage.error('无法同步最新数据')
   } finally {
     loading.value = false
   }
@@ -173,21 +177,26 @@ const feedingChartOption = computed(() => ({
   xAxis: {
     type: 'category',
     data: chartData.feeding.map(i => i.date.split('-').slice(1).join('/')),
-    axisLabel: { color: '#909399', fontSize: 11 }
+    axisLine: { lineStyle: { color: '#f0f0f0' } },
+    axisLabel: { color: '#a4b0be', fontSize: 11 }
   },
-  yAxis: { type: 'value', axisLabel: { color: '#909399' }, splitLine: { lineStyle: { type: 'dashed', color: '#f0f0f0' } } },
+  yAxis: { 
+    type: 'value', 
+    axisLabel: { color: '#a4b0be' }, 
+    splitLine: { lineStyle: { type: 'dashed', color: '#f1f2f6' } } 
+  },
   series: [{
     name: '奶量 (ml)',
     type: 'bar',
     data: chartData.feeding.map(i => i.amount),
     itemStyle: { 
-      borderRadius: [4, 4, 0, 0],
+      borderRadius: [6, 6, 0, 0],
       color: {
         type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
-        colorStops: [{ offset: 0, color: '#ffb1b5' }, { offset: 1, color: '#ff8e94' }]
+        colorStops: [{ offset: 0, color: '#ff8e94' }, { offset: 1, color: '#ffdee0' }]
       }
     },
-    barWidth: '40%'
+    barWidth: '35%'
   }]
 }))
 
@@ -197,70 +206,77 @@ const sleepChartOption = computed(() => ({
   xAxis: {
     type: 'category',
     data: chartData.sleep.map(i => i.date.split('-').slice(1).join('/')),
-    axisLabel: { color: '#909399', fontSize: 11 }
+    axisLine: { lineStyle: { color: '#f0f0f0' } },
+    axisLabel: { color: '#a4b0be', fontSize: 11 }
   },
-  yAxis: { type: 'value', axisLabel: { color: '#909399' }, splitLine: { lineStyle: { type: 'dashed', color: '#f0f0f0' } } },
+  yAxis: { 
+    type: 'value', 
+    axisLabel: { color: '#a4b0be' }, 
+    splitLine: { lineStyle: { type: 'dashed', color: '#f1f2f6' } } 
+  },
   series: [{
     name: '睡眠 (h)',
     type: 'line',
     smooth: true,
     data: chartData.sleep.map(i => i.hours),
     itemStyle: { color: '#88d498' },
+    lineStyle: { width: 3 },
     areaStyle: {
       color: {
         type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
-        colorStops: [{ offset: 0, color: 'rgba(136, 212, 152, 0.3)' }, { offset: 1, color: 'rgba(136, 212, 152, 0)' }]
+        colorStops: [{ offset: 0, color: 'rgba(136, 212, 152, 0.25)' }, { offset: 1, color: 'rgba(136, 212, 152, 0)' }]
       }
     },
-    symbolSize: 6
+    symbol: 'circle',
+    symbolSize: 8
   }]
 }))
 
 const growthChartOption = computed(() => {
   const isHeight = growthMode.value === 'height'
   const typeKey = isHeight ? 'height' : 'weight'
-  
-  // Filter standards by type
   const relevantStandards = chartData.standards.filter(s => s.type === typeKey)
   
-  // X-axis will be age in months
-  const maxMonth = Math.max(
-    ...chartData.growth.map(i => i.month || 0),
-    ...relevantStandards.map(i => i.month)
-  )
-  
-  const months = Array.from({ length: Math.min(maxMonth + 1, 13) }, (_, i) => i)
+  const maxMonthInRecord = chartData.growth.length > 0 ? Math.max(...chartData.growth.map(i => i.month)) : 0
+  const months = Array.from({ length: Math.max(maxMonthInRecord + 2, 7) }, (_, i) => i)
 
   return {
     tooltip: { trigger: 'axis' },
-    legend: { bottom: 0, icon: 'circle' },
-    grid: { top: 40, left: 10, right: 10, bottom: 40, containLabel: true },
+    legend: { bottom: 10, icon: 'roundRect', textStyle: { color: '#57606f', fontWeight: 600 } },
+    grid: { top: 30, left: 10, right: 20, bottom: 60, containLabel: true },
     xAxis: {
       type: 'category',
       name: '月龄',
       data: months,
-      axisLabel: { color: '#909399', fontSize: 11 }
+      axisLabel: { color: '#a4b0be', fontSize: 11 },
+      axisLine: { lineStyle: { color: '#f0f0f0' } }
     },
-    yAxis: { type: 'value', axisLabel: { color: '#909399' }, scale: true, name: isHeight ? 'cm' : 'kg' },
+    yAxis: { 
+      type: 'value', 
+      scale: true, 
+      name: isHeight ? 'cm' : 'kg',
+      axisLabel: { color: '#a4b0be' },
+      splitLine: { lineStyle: { type: 'dashed', color: '#f1f2f6' } }
+    },
     series: [
       {
-        name: 'WHO P50 (中位数)',
+        name: 'WHO 标准 (P50)',
         type: 'line',
         smooth: true,
         data: months.map(m => relevantStandards.find(s => s.month === m)?.p50),
-        lineStyle: { type: 'dashed', width: 2, color: '#909399' },
+        lineStyle: { type: 'dashed', width: 2, color: '#ced6e0' },
         symbol: 'none',
         z: 1
       },
       {
-        name: 'WHO P3-P97 (参考范围)',
+        name: '参考发育区间 (P3-P97)',
         type: 'line',
         stack: 'range',
         smooth: true,
         data: months.map(m => relevantStandards.find(s => s.month === m)?.p3),
         lineStyle: { opacity: 0 },
         symbol: 'none',
-        areaStyle: { color: 'rgba(200, 200, 200, 0.1)' },
+        areaStyle: { color: 'rgba(164, 176, 190, 0.1)' },
         z: 0
       },
       {
@@ -274,11 +290,11 @@ const growthChartOption = computed(() => {
         }),
         lineStyle: { opacity: 0 },
         symbol: 'none',
-        areaStyle: { color: 'rgba(200, 200, 200, 0.1)' },
+        areaStyle: { color: 'rgba(164, 176, 190, 0.1)' },
         z: 0
       },
       {
-        name: '宝宝数据',
+        name: '宝宝实测数据',
         type: 'line',
         smooth: true,
         data: months.map(m => {
@@ -286,8 +302,9 @@ const growthChartOption = computed(() => {
            return record ? (isHeight ? record.height : record.weight) : null
         }),
         itemStyle: { color: isHeight ? '#ff8e94' : '#ffd077' },
+        symbol: 'circle',
         symbolSize: 10,
-        lineStyle: { width: 4 },
+        lineStyle: { width: 5, shadowBlur: 10, shadowColor: isHeight ? 'rgba(255, 142, 148, 0.3)' : 'rgba(255, 208, 119, 0.3)' },
         connectNulls: true,
         z: 10
       }
@@ -300,51 +317,80 @@ watch([range, () => babyStore.currentBaby?.id], fetchData)
 </script>
 
 <style scoped lang="scss">
-.statistics-page {
-  padding-bottom: 60px;
-}
+.statistics-page { padding: 10px 16px 40px; }
 
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  margin-bottom: 30px;
+  margin-bottom: 32px;
   
-  .title { font-size: 24px; font-weight: 800; color: #2c3e50; margin-bottom: 4px; }
-  .subtitle { font-size: 14px; color: #909399; }
-  .range-select { width: 130px; }
+  .title { font-size: 26px; font-weight: 900; color: var(--el-text-color-primary); margin: 0 0 4px; }
+  .subtitle { font-size: 14px; color: var(--el-text-color-secondary); font-weight: 500; }
+  .range-select { width: 140px; :deep(.el-input__wrapper) { border-radius: 12px; } }
+}
+
+.summary-grid {
+  margin-bottom: 24px;
+}
+
+.summary-card {
+  background: white;
+  padding: 24px 16px;
+  border-radius: 24px;
+  text-align: center;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.02);
+  margin-bottom: 16px;
+  border: 1px solid var(--el-border-color-lighter);
+  
+  .val { font-size: 22px; font-weight: 900; margin-bottom: 4px; display: block; small { font-size: 12px; margin-left: 2px; opacity: 0.7; } }
+  .lab { font-size: 11px; color: var(--el-text-color-secondary); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+  
+  &.c1 .val { color: var(--el-color-primary); }
+  &.c2 .val { color: var(--el-color-success); }
+  &.c3 .val { color: var(--el-color-warning); }
+  &.c4 .val { color: #409eff; }
 }
 
 .chart-card {
   margin-bottom: 24px;
+  border-radius: 24px !important;
   .card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    .card-title { font-weight: 700; display: flex; align-items: center; gap: 8px; }
+    .card-title { font-weight: 800; font-size: 16px; display: flex; align-items: center; gap: 10px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; &.d1 { background: var(--el-color-primary); } &.d2 { background: var(--el-color-success); } &.d3 { background: var(--el-color-warning); } }
   }
 }
 
 .chart-container {
-  height: 260px;
-  &.tall { height: 360px; }
+  height: 280px;
+  &.tall { height: 420px; }
 }
 
 .chart { width: 100%; height: 100%; }
 
-.summary-row {
-  margin-top: 16px;
+.growth-main-card {
+  margin-top: 10px;
 }
 
-.summary-item {
-   background: #fff;
-   padding: 20px 10px;
-   border-radius: 16px;
-   text-align: center;
-   box-shadow: var(--card-shadow);
-   margin-bottom: 16px;
-   
-   .val { font-size: 18px; font-weight: 800; color: var(--el-color-primary); margin-bottom: 4px; }
-   .lab { font-size: 12px; color: #909399; }
+.custom-radio {
+  :deep(.el-radio-button__inner) { border-radius: 10px; border: none; background: #f1f2f6; margin-left: 4px; }
+  :deep(.el-radio-button:first-child .el-radio-button__inner) { border-radius: 10px; border-left: none; }
+  :deep(.el-radio-button__original-radio:checked + .el-radio-button__inner) { background: var(--el-color-primary); box-shadow: 0 4px 12px rgba(255, 142, 148, 0.3); }
+}
+
+.growth-tip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 12px 16px;
+  background: #f9fbfc;
+  border-radius: 14px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  .el-icon { font-size: 16px; color: var(--el-color-info); }
 }
 </style>

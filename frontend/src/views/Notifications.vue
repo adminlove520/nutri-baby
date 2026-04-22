@@ -1,14 +1,20 @@
 <template>
   <div class="notifications-page" v-loading="loading">
     <div class="page-header">
-       <el-button link :icon="Back" @click="router.back()">返回</el-button>
-       <h2 class="title">站内信</h2>
-       <el-button v-if="notifications.some(n => !n.isRead)" link type="primary" @click="markAllAsRead">
-         全部已读
-       </el-button>
+       <div class="header-left">
+          <el-button link :icon="ArrowLeft" @click="router.back()" class="back-btn"></el-button>
+          <h2 class="title">站内信</h2>
+       </div>
+       <div class="header-right">
+          <el-button v-if="notifications.some(n => !n.isRead)" link type="primary" @click="markAllAsRead" class="read-all-btn">
+            全部已读
+          </el-button>
+       </div>
     </div>
 
-    <el-empty v-if="notifications.length === 0" description="暂无通知消息" />
+    <div v-if="notifications.length === 0" class="empty-notif">
+       <el-empty :image-size="120" description="暂时没有新的消息哦" />
+    </div>
 
     <div class="notification-list" v-else>
       <div 
@@ -18,19 +24,19 @@
         :class="{ unread: !n.isRead }"
         @click="markAsRead(n)"
       >
-        <div class="item-icon" :class="n.type">
+        <div class="item-icon-wrap" :class="n.type">
           <el-icon v-if="n.type === 'vaccine'"><FirstAidKit /></el-icon>
           <el-icon v-else-if="n.type === 'system'"><Bell /></el-icon>
           <el-icon v-else><InfoFilled /></el-icon>
         </div>
-        <div class="item-body">
-           <div class="item-header">
-              <span class="item-title">{{ n.title }}</span>
-              <span class="item-time">{{ formatDate(n.createdAt) }}</span>
-           </div>
-           <div class="item-content">{{ n.content }}</div>
+        <div class="item-main">
+            <div class="item-top">
+               <span class="item-title">{{ n.title }}</span>
+               <span class="item-date">{{ formatRelativeDate(n.createdAt) }}</span>
+            </div>
+            <div class="item-desc">{{ n.content }}</div>
+            <div v-if="!n.isRead" class="unread-badge">未读</div>
         </div>
-        <div v-if="!n.isRead" class="unread-dot"></div>
       </div>
     </div>
   </div>
@@ -39,9 +45,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Back, FirstAidKit, Bell, InfoFilled } from '@element-plus/icons-vue'
-import axios from 'axios'
+import { ArrowLeft, FirstAidKit, Bell, InfoFilled } from '@element-plus/icons-vue'
+import client from '@/api/client'
 import { ElMessage } from 'element-plus'
+import { formatRelative } from '@/utils/date'
 
 const router = useRouter()
 const loading = ref(false)
@@ -50,13 +57,10 @@ const notifications = ref<any[]>([])
 const fetchNotifications = async () => {
     loading.value = true
     try {
-        const token = localStorage.getItem('token')
-        const res = await axios.get('/api/notifications', {
-            headers: { Authorization: `Bearer ${token}` }
-        })
-        notifications.value = res.data
+        const res: any = await client.get('/notifications')
+        notifications.value = res
     } catch (e) {
-        ElMessage.error('加载通知失败')
+        // Error handled globally
     } finally {
         loading.value = false
     }
@@ -65,10 +69,7 @@ const fetchNotifications = async () => {
 const markAsRead = async (n: any) => {
     if (n.isRead) return
     try {
-        const token = localStorage.getItem('token')
-        await axios.post('/api/notifications', { ids: [n.id] }, {
-            headers: { Authorization: `Bearer ${token}` }
-        })
+        await client.post('/notifications', { ids: [n.id] })
         n.isRead = true
     } catch (e) {}
 }
@@ -77,18 +78,14 @@ const markAllAsRead = async () => {
     const unreadIds = notifications.value.filter(n => !n.isRead).map(n => n.id)
     if (unreadIds.length === 0) return
     try {
-        const token = localStorage.getItem('token')
-        await axios.post('/api/notifications', { ids: unreadIds }, {
-            headers: { Authorization: `Bearer ${token}` }
-        })
+        await client.post('/notifications', { ids: unreadIds })
         notifications.value.forEach(n => n.isRead = true)
-        ElMessage.success('已全部标记为已读')
+        ElMessage.success('已标记全部消息为已读')
     } catch (e) {}
 }
 
-const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr)
-    return `${date.getMonth() + 1}-${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`
+const formatRelativeDate = (dateStr: string) => {
+    return formatRelative(dateStr)
 }
 
 onMounted(fetchNotifications)
@@ -96,93 +93,108 @@ onMounted(fetchNotifications)
 
 <style scoped lang="scss">
 .notifications-page {
+  padding: 10px 16px 60px;
   max-width: 800px;
   margin: 0 auto;
-  padding-bottom: 40px;
 }
 
 .page-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
-  gap: 12px;
   
-  .title { flex: 1; font-size: 20px; font-weight: 800; color: #2c3e50; }
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    .back-btn { font-size: 20px; color: var(--el-text-color-primary); }
+    .title { font-size: 22px; font-weight: 800; color: var(--el-text-color-primary); margin: 0; }
+  }
+  
+  .read-all-btn { font-weight: 700; font-size: 14px; }
 }
 
 .notification-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
 .notification-item {
   display: flex;
   align-items: flex-start;
-  padding: 16px;
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  padding: 20px;
+  background: white;
+  border-radius: 24px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.02);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s;
   position: relative;
-  border: 1px solid transparent;
+  border: 1px solid var(--el-border-color-lighter);
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.04);
+    border-color: var(--el-color-primary-light-7);
   }
 
   &.unread {
-    background: #fff9f9;
-    border-color: #ff8e9433;
+    background: linear-gradient(to right, #fff9f9, #fff);
+    border-left: 4px solid var(--el-color-primary);
   }
 
-  .item-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 12px;
+  .item-icon-wrap {
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-right: 16px;
-    font-size: 20px;
+    margin-right: 18px;
+    font-size: 22px;
     flex-shrink: 0;
 
-    &.vaccine { background: #fef0f0; color: #f56c6c; }
-    &.system { background: #f0f9eb; color: #67c23a; }
+    &.vaccine { background: #fef0f0; color: #ff8e94; }
+    &.system { background: #f0f9eb; color: #88d498; }
     &.tips { background: #ecf5ff; color: #409eff; }
   }
 
-  .item-body {
+  .item-main {
     flex: 1;
     min-width: 0;
+    position: relative;
   }
 
-  .item-header {
+  .item-top {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 4px;
+    align-items: flex-start;
+    margin-bottom: 6px;
     
-    .item-title { font-weight: 700; font-size: 15px; color: #303133; }
-    .item-time { font-size: 12px; color: #909399; }
+    .item-title { font-weight: 800; font-size: 16px; color: var(--el-text-color-primary); }
+    .item-date { font-size: 11px; color: var(--el-text-color-secondary); font-weight: 500; }
   }
 
-  .item-content {
-    font-size: 13px;
-    color: #606266;
-    line-height: 1.5;
+  .item-desc {
+    font-size: 14px;
+    color: var(--el-text-color-regular);
+    line-height: 1.6;
+    margin-bottom: 8px;
   }
+  
+  .unread-badge {
+    display: inline-block;
+    font-size: 10px;
+    background: var(--el-color-primary);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 8px;
+    font-weight: 700;
+  }
+}
 
-  .unread-dot {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    width: 8px;
-    height: 8px;
-    background: #f56c6c;
-    border-radius: 50%;
-  }
+.empty-notif {
+  padding-top: 60px;
 }
 </style>

@@ -1,130 +1,162 @@
 <template>
   <div class="home-page">
-    <el-alert
-      v-if="upcomingVaccines.length > 0"
-      :title="upcomingVaccines[0]"
-      type="warning"
-      show-icon
-      :closable="false"
-      class="vaccine-banner"
-      @click="goToVaccine"
-    />
+    <!-- Welcome Header -->
+    <div class="welcome-header">
+       <div class="welcome-text">
+          <h1>{{ greeting }}, {{ userInfo.nickname || '新家长' }} 👋</h1>
+          <p v-if="babyStore.currentBaby">宝宝 <b>{{ babyStore.currentBaby.name }}</b> 已经陪伴您 {{ joinDays }} 天了</p>
+          <p v-else>欢迎加入 Nutri-Baby，开启科学育儿之旅</p>
+       </div>
+       <div class="header-actions">
+          <el-badge :is-dot="hasNewNotifications">
+             <el-button circle :icon="Bell" @click="router.push('/notifications')"></el-button>
+          </el-badge>
+       </div>
+    </div>
 
-    <el-row :gutter="24">
-      <el-col :xs="24" :sm="16" :md="17">
-        <AIInsightCard v-if="babyStore.currentBaby" />
+    <!-- Important Alerts -->
+    <transition name="el-zoom-in-top">
+      <div v-if="upcomingVaccines.length > 0" class="vaccine-alert-card" @click="goToVaccine">
+         <div class="alert-icon"><el-icon><WarningFilled /></el-icon></div>
+         <div class="alert-body">
+            <div class="alert-title">疫苗接种预警</div>
+            <div class="alert-desc">{{ upcomingVaccines[0] }}</div>
+         </div>
+         <el-icon class="alert-arrow"><ArrowRight /></el-icon>
+      </div>
+    </transition>
 
-        <div class="section-title">今日概览</div>
-        <el-row :gutter="16" class="stats-row" v-loading="loading">
-          <el-col :xs="12" :sm="6">
-            <el-card shadow="never" class="stat-card stat-primary">
-              <div class="stat-icon"><el-icon><Mug /></el-icon></div>
-              <div class="stat-value">{{ todayStats.feeding.totalCount }} 次</div>
-              <div class="stat-label">总喂养</div>
-            </el-card>
+    <el-row :gutter="24" class="main-content">
+      <el-col :xs="24" :sm="15" :md="16" :lg="17">
+        <!-- AI Insight -->
+        <AIInsightCard v-if="babyStore.currentBaby" class="mb-24" />
+
+        <!-- Daily Statistics -->
+        <div class="section-header">
+           <div class="section-title">今日概览</div>
+           <el-button link type="primary" @click="router.push('/statistics')">详情数据</el-button>
+        </div>
+        
+        <el-row :gutter="16" class="stats-grid" v-loading="loading">
+          <el-col :xs="12" :span="6">
+            <div class="stat-card-new p1">
+              <div class="stat-inner">
+                <el-icon class="icon"><Mug /></el-icon>
+                <div class="stat-info">
+                   <span class="val">{{ todayStats.feeding.totalCount }} <small>次</small></span>
+                   <span class="lab">总喂养</span>
+                </div>
+              </div>
+            </div>
           </el-col>
-          <el-col :xs="12" :sm="6">
-            <el-card shadow="never" class="stat-card stat-success">
-              <div class="stat-icon"><el-icon><Moon /></el-icon></div>
-              <div class="stat-value">{{ formatSleepDuration(todayStats.sleep.totalMinutes) }}</div>
-              <div class="stat-label">总睡眠</div>
-            </el-card>
+          <el-col :xs="12" :span="6">
+            <div class="stat-card-new p2">
+              <div class="stat-inner">
+                <el-icon class="icon"><Moon /></el-icon>
+                <div class="stat-info">
+                   <span class="val">{{ formatSleepDuration(todayStats.sleep.totalMinutes) }}</span>
+                   <span class="lab">总睡眠</span>
+                </div>
+              </div>
+            </div>
           </el-col>
-          <el-col :xs="12" :sm="6">
-            <el-card shadow="never" class="stat-card stat-warning">
-              <div class="stat-icon"><el-icon><ToiletPaper /></el-icon></div>
-              <div class="stat-value">{{ todayStats.diaper.totalCount }} 次</div>
-              <div class="stat-label">换尿布</div>
-            </el-card>
+          <el-col :xs="12" :span="6">
+            <div class="stat-card-new p3">
+              <div class="stat-inner">
+                <el-icon class="icon"><ToiletPaper /></el-icon>
+                <div class="stat-info">
+                   <span class="val">{{ todayStats.diaper.totalCount }} <small>次</small></span>
+                   <span class="lab">换尿布</span>
+                </div>
+              </div>
+            </div>
           </el-col>
-          <el-col :xs="12" :sm="6">
-            <el-card shadow="never" class="stat-card stat-info">
-              <div class="stat-icon"><el-icon><Pouring /></el-icon></div>
-              <div class="stat-value">{{ todayStats.feeding.bottleMl }} ml</div>
-              <div class="stat-label">瓶喂奶量</div>
-            </el-card>
+          <el-col :xs="12" :span="6">
+            <div class="stat-card-new p4">
+              <div class="stat-inner">
+                <el-icon class="icon"><Pouring /></el-icon>
+                <div class="stat-info">
+                   <span class="val">{{ todayStats.feeding.bottleMl }} <small>ml</small></span>
+                   <span class="lab">瓶喂奶量</span>
+                </div>
+              </div>
+            </div>
           </el-col>
         </el-row>
 
-        <el-card class="last-feeding-card" shadow="hover" @click="handleFeeding">
-            <template #header>
-              <div class="card-header">
-                <span class="card-title">最近喂养</span>
-                <el-button link type="primary">去记录</el-button>
+        <!-- Last Feeding -->
+        <el-card class="compact-card clickable" shadow="hover" @click="handleFeeding">
+            <div class="compact-row">
+              <div class="icon-box-rounded p-bg">
+                <el-icon :size="20"><Mug /></el-icon>
               </div>
-            </template>
-            <div class="feeding-content" v-if="todayStats.feeding.lastFeedingTime">
-              <div class="feeding-icon-wrapper">
-                <el-icon :size="24"><Mug /></el-icon>
+              <div class="compact-body">
+                <div class="label">最近喂养</div>
+                <div class="value" v-if="todayStats.feeding.lastFeedingTime">{{ formatRelative(todayStats.feeding.lastFeedingTime) }}</div>
+                <div class="value placeholder" v-else>今日暂无喂养记录</div>
               </div>
-              <div class="feeding-info">
-                <span class="feeding-time">{{ formatRelative(todayStats.feeding.lastFeedingTime) }}</span>
-                <span class="feeding-detail">喂哺宝宝</span>
-              </div>
-              <el-icon class="arrow-icon"><ArrowRight /></el-icon>
-            </div>
-            <div class="empty-state-text" v-else>
-               今日暂无喂养记录
+              <el-icon class="arrow"><ArrowRight /></el-icon>
             </div>
         </el-card>
 
-        <div class="section-title">专家建议</div>
+        <!-- Expert Advice -->
+        <div class="section-header mt-32">
+           <div class="section-title">育儿锦囊</div>
+        </div>
         <DailyTipsCard :tips="todayTips" @tip-click="handleTipClick" />
-
       </el-col>
 
-      <el-col :xs="24" :sm="8" :md="7">
-         <el-card class="quick-actions" shadow="hover">
+      <el-col :xs="24" :sm="9" :md="8" :lg="7">
+         <!-- Quick Actions -->
+         <el-card class="side-card" shadow="hover">
             <template #header>
-               <div class="card-header">
-                 <span class="card-title">快速记录</span>
+               <div class="side-header">
+                 <span class="title">快速记录</span>
                </div>
             </template>
-            <div class="action-grid">
-               <div class="action-item" @click="handleFeeding">
-                 <div class="btn-wrapper primary"><el-icon :size="24"><Mug /></el-icon></div>
+            <div class="action-buttons">
+               <div class="action-btn p1" @click="handleFeeding">
+                 <el-icon><Mug /></el-icon>
                  <span>喂养</span>
                </div>
-               <div class="action-item" @click="handleSleep">
-                 <div class="btn-wrapper success"><el-icon :size="24"><Moon /></el-icon></div>
+               <div class="action-btn p2" @click="handleSleep">
+                 <el-icon><Moon /></el-icon>
                  <span>睡眠</span>
                </div>
-               <div class="action-item" @click="handleDiaper">
-                 <div class="btn-wrapper warning"><el-icon :size="24"><ToiletPaper /></el-icon></div>
+               <div class="action-btn p3" @click="handleDiaper">
+                 <el-icon><ToiletPaper /></el-icon>
                  <span>尿布</span>
                </div>
-               <div class="action-item" @click="handleGrowth">
-                 <div class="btn-wrapper info"><el-icon :size="24"><TrendCharts /></el-icon></div>
+               <div class="action-btn p4" @click="handleGrowth">
+                 <el-icon><TrendCharts /></el-icon>
                  <span>生长</span>
                </div>
             </div>
          </el-card>
 
-         <el-card class="growth-summary-card" shadow="hover" @click="router.push('/statistics')">
+         <!-- Growth Preview -->
+         <el-card class="side-card growth-card clickable" shadow="hover" @click="router.push('/statistics')">
             <template #header>
-               <div class="card-header">
-                 <span class="card-title">生长曲线</span>
+               <div class="side-header">
+                 <span class="title">生长评估</span>
                  <el-icon><ArrowRight /></el-icon>
                </div>
             </template>
-            <div class="growth-preview">
-                <p class="preview-text">记录身高体重，查看宝宝成长曲线趋势。</p>
+            <div class="growth-box">
                 <div class="growth-data" v-if="todayStats.growth.latestHeight">
-                   <div class="data-item">
-                      <span class="val">{{ todayStats.growth.latestHeight }}cm</span>
-                      <span class="lab">身高</span>
+                   <div class="g-item">
+                      <span class="v">{{ todayStats.growth.latestHeight }}<small>cm</small></span>
+                      <span class="l">最新身高</span>
                    </div>
-                   <div class="data-item">
-                      <span class="val">{{ todayStats.growth.latestWeight }}kg</span>
-                      <span class="lab">体重</span>
+                   <div class="g-divider"></div>
+                   <div class="g-item">
+                      <span class="v">{{ todayStats.growth.latestWeight }}<small>kg</small></span>
+                      <span class="l">最新体重</span>
                    </div>
                 </div>
-                <div class="placeholder-chart" v-else>
-                    <div class="bar" style="height: 40%"></div>
-                    <div class="bar" style="height: 60%"></div>
-                    <div class="bar" style="height: 55%"></div>
-                    <div class="bar" style="height: 80%"></div>
-                    <div class="bar" style="height: 75%"></div>
+                <div class="placeholder-box" v-else>
+                    <img src="https://sc02.alicdn.com/kf/S7180e037f00445d4b584a2f89b243379C.png" class="empty-img" />
+                    <p>记录身高体重查看曲线</p>
                 </div>
             </div>
          </el-card>
@@ -134,27 +166,35 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Mug, Moon, ToiletPaper, TrendCharts, ArrowRight, Pouring } from '@element-plus/icons-vue'
+import { 
+  Mug, Moon, ToiletPaper, TrendCharts, ArrowRight, Pouring, 
+  Bell, WarningFilled 
+} from '@element-plus/icons-vue'
 import DailyTipsCard from '@/components/DailyTipsCard.vue'
 import AIInsightCard from './components/AIInsightCard.vue'
 import { formatRelative } from '@/utils/date'
 import { useBabyStore } from '@/stores/baby'
+import { useUserStore } from '@/stores/user'
 import { getStatistics } from '@/api/statistics'
 import { getVaccines } from '@/api/baby'
 
 const router = useRouter()
 const babyStore = useBabyStore()
+const userStore = useUserStore()
 const loading = ref(false)
+const joinDays = ref(0)
+const hasNewNotifications = ref(false)
 
-interface DailyTips {
-    id: string;
-    title: string;
-    description: string;
-    type: string;
-    priority: "high" | "medium" | "low";
-}
+const userInfo = computed(() => userStore.userInfo)
+const greeting = computed(() => {
+    const hour = new Date().getHours()
+    if (hour < 6) return '凌晨好'
+    if (hour < 12) return '早上好'
+    if (hour < 18) return '下午好'
+    return '晚上好'
+})
 
 const todayStats = ref({
     feeding: { totalCount: 0, bottleMl: 0, lastFeedingTime: null },
@@ -164,7 +204,7 @@ const todayStats = ref({
 })
 
 const upcomingVaccines = ref<string[]>([])
-const todayTips = ref<DailyTips[]>([])
+const todayTips = ref<any[]>([])
 
 const fetchData = async () => {
     if (!babyStore.currentBaby?.id) return
@@ -172,16 +212,20 @@ const fetchData = async () => {
     try {
         const babyId = babyStore.currentBaby.id
 
-        const [statsRes, vaccineRes] = await Promise.all([
+        const [statsRes, vaccineRes, userStats] = await Promise.all([
             getStatistics(babyId),
-            getVaccines(babyId)
+            getVaccines(babyId),
+            client.get('/user/stats')
         ])
 
         todayStats.value = statsRes.today
+        joinDays.value = (userStats as any).joinDays
 
+        // Mock tips for now, can be replaced with real API call
         todayTips.value = [
-            { id: '1', title: '母乳喂养建议', description: '坚持按需哺乳，帮助宝宝建立良好的消化系统。', type: 'feeding', priority: 'high' },
-            { id: '2', title: '睡眠环境优化', description: '保持室内温度在 22-24 度，营造舒适的睡眠氛围。', type: 'sleep', priority: 'medium' }
+            { id: '1', title: '如何安抚哭闹的宝宝？', type: '护理', priority: 'high', createdAt: new Date().toISOString() },
+            { id: '2', title: '0-6个月宝宝睡眠规律指南', type: '睡眠', priority: 'medium', createdAt: new Date().toISOString() },
+            { id: '3', title: '辅食添加：从第一勺米粉开始', type: '饮食', priority: 'low', createdAt: new Date().toISOString() }
         ]
 
         const pending = vaccineRes
@@ -190,25 +234,31 @@ const fetchData = async () => {
 
         if (pending.length > 0) {
             const next = pending[0]
-            upcomingVaccines.value = [`提醒：${next.vaccineName} 即将到期（预计 ${next.scheduledDate.split('T')[0]}）`]
+            upcomingVaccines.value = [`宝宝接种提醒：${next.vaccineName}（预计接种：${next.scheduledDate.split('T')[0]}）`]
         } else {
             upcomingVaccines.value = []
         }
+        
+        // Check notifications
+        const notifs: any = await client.get('/notifications?unreadOnly=true')
+        hasNewNotifications.value = notifs.length > 0
     } catch (e) {
-        // Global interceptor handles this
+        // Handled globally
     } finally {
         loading.value = false
     }
 }
 
+import client from '@/api/client'
+
 const formatSleepDuration = (minutes: number) => {
   const h = Math.floor(minutes / 60)
   const m = minutes % 60
-  return h > 0 ? `${h}h${m}m` : `${m}m`
+  return h > 0 ? `${h}h ${m}m` : `${m}m`
 }
 
 const goToVaccine = () => router.push('/vaccine')
-const handleTipClick = (tip: DailyTips) => console.log('Tip clicked', tip)
+const handleTipClick = (tip: any) => ElMessage.info(`锦囊详情：${tip.title}`)
 const handleFeeding = () => router.push('/record/feeding')
 const handleSleep = () => router.push('/record/sleep')
 const handleDiaper = () => router.push('/record/diaper')
@@ -219,149 +269,193 @@ watch(() => babyStore.currentBaby?.id, fetchData)
 </script>
 
 <style scoped lang="scss">
-.home-page { padding-bottom: 40px; }
+.home-page { padding-bottom: 20px; }
 
-.vaccine-banner {
-    margin-bottom: 24px;
-    cursor: pointer;
-    border-radius: 16px;
-    border: 1px solid var(--el-color-warning-light-7);
-    padding: 12px;
-    :deep(.el-alert__title) { font-weight: bold; }
+.welcome-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 30px;
+  
+  .welcome-text {
+    h1 { font-size: 26px; font-weight: 900; margin: 0 0 6px; color: var(--el-text-color-primary); }
+    p { margin: 0; color: var(--el-text-color-secondary); font-size: 14px; b { color: var(--el-color-primary); } }
+  }
 }
 
-.section-title {
-    margin: 24px 0 16px;
-    font-weight: 700;
-    font-size: 1.2rem;
-    display: flex;
-    align-items: center;
-    color: var(--el-text-color-primary);
-}
-
-.stat-card {
-  margin-bottom: 16px;
-  text-align: center;
-  border-radius: 16px;
-  position: relative;
-  overflow: hidden;
-  background-color: var(--el-fill-color-blank);
-
-  .stat-icon { font-size: 20px; margin-bottom: 8px; opacity: 0.8; }
-  .stat-value { font-size: 18px; font-weight: 800; margin-bottom: 4px; color: var(--el-text-color-primary); }
-  .stat-label { font-size: 12px; color: var(--el-text-color-secondary); }
-
-  &.stat-primary { background: var(--el-color-primary-light-9); .stat-value, .stat-icon { color: var(--el-color-primary); } }
-  &.stat-success { background: var(--el-color-success-light-9); .stat-value, .stat-icon { color: var(--el-color-success); } }
-  &.stat-warning { background: var(--el-color-warning-light-9); .stat-value, .stat-icon { color: var(--el-color-warning); } }
-  &.stat-info { background: var(--el-fill-color-light); .stat-value, .stat-icon { color: var(--el-text-color-secondary); } }
-}
-
-.last-feeding-card {
-    margin-top: 8px;
-    cursor: pointer;
-    background-color: var(--el-fill-color-blank);
-
-    .card-header {
-        border-bottom: none;
-        padding-bottom: 0;
-    }
-}
-
-.feeding-content {
+.vaccine-alert-card {
+  background: linear-gradient(90deg, #ffeff0 0%, #fff 100%);
+  border-radius: 20px;
+  padding: 16px 20px;
   display: flex;
   align-items: center;
-  padding: 4px 0;
-
-  .feeding-icon-wrapper {
-      background: var(--el-color-primary-light-9);
-      color: var(--el-color-primary);
-      padding: 12px;
-      border-radius: 14px;
-      margin-right: 16px;
+  margin-bottom: 32px;
+  cursor: pointer;
+  border: 1px solid var(--el-color-primary-light-8);
+  box-shadow: 0 10px 20px rgba(255, 142, 148, 0.05);
+  transition: all 0.3s;
+  
+  &:hover { transform: translateY(-2px); box-shadow: 0 12px 24px rgba(255, 142, 148, 0.1); }
+  
+  .alert-icon {
+    width: 44px;
+    height: 44px;
+    background: var(--el-color-primary);
+    color: white;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    margin-right: 16px;
   }
+  
+  .alert-body {
+    flex: 1;
+    .alert-title { font-weight: 800; font-size: 16px; color: var(--el-color-primary); margin-bottom: 2px; }
+    .alert-desc { font-size: 13px; color: var(--el-text-color-regular); }
+  }
+  
+  .alert-arrow { color: var(--el-color-primary-light-3); font-size: 18px; }
+}
 
-  .feeding-info {
-      flex: 1;
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  
+  .section-title { margin: 0; font-weight: 800; font-size: 1.3rem; }
+}
+
+.stats-grid {
+  margin-bottom: 24px;
+}
+
+.stat-card-new {
+  background: white;
+  border-radius: 24px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.02);
+  border: 1px solid var(--el-border-color-lighter);
+  
+  .stat-inner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    
+    .icon { font-size: 24px; }
+    
+    .stat-info {
       display: flex;
       flex-direction: column;
-
-      .feeding-time { font-weight: 700; font-size: 17px; color: var(--el-text-color-primary); }
-      .feeding-detail { color: var(--el-text-color-secondary); font-size: 13px; }
+      .val { font-size: 18px; font-weight: 800; color: var(--el-text-color-primary); small { font-size: 12px; font-weight: 600; } }
+      .lab { font-size: 11px; color: var(--el-text-color-secondary); font-weight: 600; }
+    }
   }
-
-  .arrow-icon { color: var(--el-text-color-placeholder); }
+  
+  &.p1 { .icon { color: var(--el-color-primary); } }
+  &.p2 { .icon { color: var(--el-color-success); } }
+  &.p3 { .icon { color: var(--el-color-warning); } }
+  &.p4 { .icon { color: #409eff; } }
 }
 
-.empty-state-text {
-    color: var(--el-text-color-secondary);
-    font-size: 14px;
-    text-align: center;
-    padding: 10px 0;
+.compact-card {
+  border-radius: 20px !important;
+  margin-bottom: 24px;
+  :deep(.el-card__body) { padding: 16px 20px; }
 }
 
-.action-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+.compact-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  
+  .icon-box-rounded {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    &.p-bg { background: var(--el-color-primary-light-9); color: var(--el-color-primary); }
+  }
+  
+  .compact-body {
+    flex: 1;
+    .label { font-size: 11px; font-weight: 700; color: var(--el-text-color-secondary); text-transform: uppercase; margin-bottom: 2px; }
+    .value { font-size: 16px; font-weight: 700; color: var(--el-text-color-primary); &.placeholder { opacity: 0.5; font-size: 14px; } }
+  }
+  
+  .arrow { color: var(--el-border-color); font-size: 14px; }
+}
 
-.action-item {
+.side-card {
+  border-radius: 24px !important;
+  margin-bottom: 24px;
+  
+  .side-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    .title { font-weight: 800; font-size: 16px; }
+  }
+}
+
+.action-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  
+  .action-btn {
     display: flex;
     flex-direction: column;
     align-items: center;
+    gap: 8px;
     padding: 16px 8px;
-    background: var(--el-fill-color-light);
-    border: 1px solid var(--el-border-color-lighter);
-    border-radius: 16px;
+    border-radius: 18px;
     cursor: pointer;
     transition: all 0.2s;
-
-    &:hover {
-        background: var(--el-fill-color-blank);
-        border-color: var(--el-color-primary-light-5);
-        transform: translateY(-2px);
-    }
-
-    .btn-wrapper {
-        width: 52px;
-        height: 52px;
-        border-radius: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-bottom: 10px;
-        color: #fff;
-
-        &.primary { background: linear-gradient(135deg, var(--el-color-primary) 0%, #ff6b72 100%); }
-        &.success { background: linear-gradient(135deg, var(--el-color-success) 0%, #68c37c 100%); }
-        &.warning { background: linear-gradient(135deg, var(--el-color-warning) 0%, #ffbc3f 100%); }
-        &.info { background: linear-gradient(135deg, var(--el-color-info) 0%, #909399 100%); }
-    }
+    background: #fcfcfc;
+    border: 1px solid var(--el-border-color-lighter);
+    
+    .el-icon { font-size: 24px; }
+    span { font-size: 13px; font-weight: 700; color: var(--el-text-color-regular); }
+    
+    &:active { transform: scale(0.95); }
+    
+    &.p1 { .el-icon { color: var(--el-color-primary); } }
+    &.p2 { .el-icon { color: var(--el-color-success); } }
+    &.p3 { .el-icon { color: var(--el-color-warning); } }
+    &.p4 { .el-icon { color: #409eff; } }
+  }
 }
 
-.growth-preview {
-    .growth-data {
-        display: flex;
-        justify-content: space-around;
-        padding: 10px 0;
-
-        .data-item {
-            text-align: center;
-
-            .val { display: block; font-size: 18px; font-weight: 800; color: var(--el-text-color-primary); }
-            .lab { font-size: 12px; color: var(--el-text-color-secondary); }
-        }
-    }
-}
-
-.placeholder-chart {
+.growth-box {
+  .growth-data {
     display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    height: 60px;
-    padding: 0 10px;
-
-    .bar {
-        width: 12%;
-        background: var(--el-color-primary-light-7);
-        border-radius: 4px 4px 0 0;
+    align-items: center;
+    justify-content: space-around;
+    padding: 10px 0;
+    
+    .g-item {
+      text-align: center;
+      .v { display: block; font-size: 18px; font-weight: 800; color: var(--el-text-color-primary); small { font-size: 11px; margin-left: 2px; } }
+      .l { font-size: 11px; color: var(--el-text-color-secondary); font-weight: 600; }
     }
+    .g-divider { width: 1px; height: 20px; background: var(--el-border-color-light); }
+  }
+  
+  .placeholder-box {
+    text-align: center;
+    padding: 10px 0;
+    .empty-img { width: 100px; margin-bottom: 8px; opacity: 0.6; }
+    p { font-size: 12px; color: var(--el-text-color-secondary); margin: 0; }
+  }
 }
+
+.mb-24 { margin-bottom: 24px; }
+.mt-32 { margin-top: 32px; }
+.clickable { cursor: pointer; }
 </style>

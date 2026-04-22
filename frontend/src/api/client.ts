@@ -26,6 +26,8 @@ client.interceptors.request.use(
 )
 
 // Response Interceptor: Global Error Handling
+let isRelogging = false
+
 client.interceptors.response.use(
     response => {
         return response.data
@@ -41,8 +43,19 @@ client.interceptors.response.use(
                 // Unauthorized - clear session and redirect to login
                 localStorage.removeItem('token')
                 localStorage.removeItem('user_info')
-                router.push('/login')
-                msg = '登录已失效，请重新登录'
+                
+                if (!isRelogging) {
+                    isRelogging = true
+                    ElMessage({
+                        message: '登录已失效，请重新登录',
+                        type: 'error',
+                        grouping: true,
+                        duration: 3000,
+                        onClose: () => { isRelogging = false }
+                    })
+                    router.push('/login')
+                }
+                return Promise.reject(error)
             } else if (status === 403) {
                 msg = '您没有执行此操作的权限'
             } else if (status === 404) {

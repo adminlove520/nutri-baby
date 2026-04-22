@@ -5,126 +5,130 @@
     </div>
 
     <!-- User Profile Card -->
-    <el-card class="profile-card" shadow="hover">
-       <div class="profile-body">
-          <div class="avatar-section" @click="triggerUpload">
-             <el-avatar :size="80" :src="userInfo.avatarUrl || 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'" />
-             <div class="edit-btn">
+    <el-card class="profile-card" shadow="always">
+       <div class="profile-content">
+          <div class="avatar-wrapper" @click="triggerUpload">
+             <el-avatar :size="84" :src="userInfo.avatarUrl || 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'" class="main-avatar" />
+             <div class="camera-overlay">
                 <el-icon><Camera /></el-icon>
              </div>
              <input type="file" ref="fileInput" class="hidden-input" @change="handleFileUpload" accept="image/*" />
           </div>
-          <div class="info-section">
-             <div class="nickname-row">
+          <div class="user-info">
+             <div class="name-box">
                 <span class="nickname">{{ userInfo.nickname || '新用户' }}</span>
-                <el-button link :icon="Edit" @click="openEditDialog" style="color: white; margin-left: 8px;"></el-button>
+                <el-button link :icon="Edit" @click="openEditDialog" class="edit-icon-btn"></el-button>
              </div>
-             <div class="phone-text">{{ userInfo.phone || userInfo.email || '未绑定账号' }}</div>
+             <div class="account-id">{{ userInfo.phone || userInfo.email || '未绑定账号' }}</div>
           </div>
        </div>
        
-       <el-row class="stat-bar" :gutter="20">
-          <el-col :span="8" class="stat-item">
-             <div class="val">{{ babyCount }}</div>
-             <div class="lab">守护宝宝</div>
-          </el-col>
-          <el-col :span="8" class="stat-item">
-             <div class="val">{{ totalRecords }}</div>
-             <div class="lab">记录条数</div>
-          </el-col>
-          <el-col :span="8" class="stat-item">
-             <div class="val">{{ joinDays }}</div>
-             <div class="lab">加入天数</div>
-          </el-col>
-       </el-row>
+       <div class="stat-grid">
+          <div class="stat-box">
+             <span class="stat-val">{{ babyCount }}</span>
+             <span class="stat-label">守护宝宝</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-box">
+             <span class="stat-val">{{ totalRecords }}</span>
+             <span class="stat-label">记录总数</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-box">
+             <span class="stat-val">{{ joinDays }}</span>
+             <span class="stat-label">加入天数</span>
+          </div>
+       </div>
     </el-card>
 
     <!-- Menu List -->
-    <div class="menu-groups">
-       <div class="menu-group">
-          <div class="group-title">宝宝管理</div>
-          <el-card class="menu-card" shadow="never">
-             <div class="menu-item" @click="router.push('/baby/list')">
-                <div class="item-left">
-                   <div class="icon-box p1"><el-icon><UserIcon /></el-icon></div>
-                   <span>我的宝宝</span>
+    <div class="menu-sections">
+       <div class="menu-section">
+          <h3 class="section-label">宝宝管理</h3>
+          <el-card class="action-card" shadow="never">
+             <div class="action-item" @click="router.push('/baby/list')">
+                <div class="action-left">
+                   <div class="icon-wrap color-1"><el-icon><UserIcon /></el-icon></div>
+                   <span>宝宝档案</span>
                 </div>
-                <el-icon class="arrow"><ArrowRight /></el-icon>
+                <el-icon class="arrow-icon"><ArrowRight /></el-icon>
              </div>
-             <el-divider />
-             <div class="menu-item" @click="router.push('/baby/edit')">
-                <div class="item-left">
-                   <div class="icon-box p2"><el-icon><Plus /></el-icon></div>
+             <div class="action-divider"></div>
+             <div class="action-item" @click="router.push('/baby/edit')">
+                <div class="action-left">
+                   <div class="icon-wrap color-2"><el-icon><Plus /></el-icon></div>
                    <span>添加宝宝</span>
                 </div>
-                <el-icon class="arrow"><ArrowRight /></el-icon>
+                <el-icon class="arrow-icon"><ArrowRight /></el-icon>
              </div>
           </el-card>
        </div>
 
-       <div class="menu-group">
-          <div class="group-title">工具与服务</div>
-          <el-card class="menu-card" shadow="never">
-             <div class="menu-item" @click="router.push('/vaccine')">
-                <div class="item-left">
-                   <div class="icon-box s1"><el-icon><Memo /></el-icon></div>
-                   <span>疫苗接种计划</span>
+       <div class="menu-section">
+          <h3 class="section-label">功能与服务</h3>
+          <el-card class="action-card" shadow="never">
+             <div class="action-item" @click="router.push('/vaccine')">
+                <div class="action-left">
+                   <div class="icon-wrap color-3"><el-icon><Memo /></el-icon></div>
+                   <span>疫苗接种助手</span>
                 </div>
-                <el-icon class="arrow"><ArrowRight /></el-icon>
+                <el-icon class="arrow-icon"><ArrowRight /></el-icon>
              </div>
-             <el-divider />
-             <div class="menu-item" @click="sendTestEmail">
-                <div class="item-left">
-                   <div class="icon-box s3"><el-icon><Message /></el-icon></div>
-                   <span>发送测试邮件</span>
+             <div class="action-divider"></div>
+             <div class="action-item" @click="sendTestEmail">
+                <div class="action-left">
+                   <div class="icon-wrap color-5"><el-icon><Message /></el-icon></div>
+                   <span>提醒邮件测试</span>
                 </div>
-                <el-icon class="arrow"><ArrowRight /></el-icon>
+                <el-icon class="arrow-icon"><ArrowRight /></el-icon>
              </div>
-             <el-divider />
-             <div class="menu-item" @click="showComingSoon">
-                <div class="item-left">
-                   <div class="icon-box s2"><el-icon><Setting /></el-icon></div>
-                   <span>系统设置</span>
+             <div class="action-divider"></div>
+             <div class="action-item" @click="router.push('/settings')">
+                <div class="action-left">
+                   <div class="icon-wrap color-4"><el-icon><Setting /></el-icon></div>
+                   <span>系统偏好设置</span>
                 </div>
-                <el-icon class="arrow"><ArrowRight /></el-icon>
+                <el-icon class="arrow-icon"><ArrowRight /></el-icon>
              </div>
           </el-card>
        </div>
 
-       <div class="menu-group">
-          <div class="group-title">关于</div>
-          <el-card class="menu-card" shadow="never">
-             <div class="menu-item" @click="showAbout">
-                <div class="item-left">
-                   <div class="icon-box a1"><el-icon><InfoFilled /></el-icon></div>
+       <div class="menu-section">
+          <h3 class="section-label">更多</h3>
+          <el-card class="action-card" shadow="never">
+             <div class="action-item" @click="router.push('/about')">
+                <div class="action-left">
+                   <div class="icon-wrap color-6"><el-icon><InfoFilled /></el-icon></div>
                    <span>关于 Nutri-Baby</span>
                 </div>
-                <div class="item-right">
-                   <span class="version">v1.2.0</span>
-                   <el-icon class="arrow"><ArrowRight /></el-icon>
+                <div class="action-right">
+                   <span class="version-tag">v1.2.0</span>
+                   <el-icon class="arrow-icon"><ArrowRight /></el-icon>
                 </div>
              </div>
           </el-card>
        </div>
     </div>
 
-    <div class="logout-btn-wrapper">
-       <el-button type="danger" plain size="large" round @click="handleLogout">退出登录</el-button>
+    <div class="bottom-actions">
+       <el-button type="danger" plain class="full-width-btn" @click="handleLogout">退出当前账号</el-button>
     </div>
 
     <!-- Edit Profile Dialog -->
-    <el-dialog v-model="editDialogVisible" title="修改个人信息" width="90%" class="custom-dialog">
+    <el-dialog v-model="editDialogVisible" title="个人信息设置" width="90%" class="rounded-dialog">
        <el-form :model="editForm" label-position="top">
-          <el-form-item label="昵称">
-             <el-input v-model="editForm.nickname" placeholder="请输入昵称" />
+          <el-form-item label="显示昵称">
+             <el-input v-model="editForm.nickname" placeholder="想让我们怎么称呼您？" />
           </el-form-item>
-          <el-form-item label="绑定邮箱 (用于接收疫苗提醒)">
-             <el-input v-model="editForm.email" placeholder="请输入邮箱地址" />
+          <el-form-item label="提醒邮箱">
+             <el-input v-model="editForm.email" placeholder="用于接收疫苗接种通知" />
           </el-form-item>
        </el-form>
        <template #footer>
-          <el-button @click="editDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="saveProfile" :loading="saving">保存修改</el-button>
+          <div class="dialog-footer">
+            <el-button @click="editDialogVisible = false" round>取消</el-button>
+            <el-button type="primary" @click="saveProfile" :loading="saving" round>保存更改</el-button>
+          </div>
        </template>
     </el-dialog>
   </div>
@@ -165,9 +169,9 @@ const saveProfile = async () => {
     if (!editForm.nickname) return ElMessage.warning('昵称不能为空')
     saving.value = true
     try {
-        const res = await client.post('/user/update', editForm)
+        const res: any = await client.post('/user/update', editForm)
         userStore.setUserInfo(res)
-        ElMessage.success('信息已更新')
+        ElMessage.success('信息更新成功')
         editDialogVisible.value = false
     } catch (e) {
         // Error handled globally
@@ -185,20 +189,19 @@ const handleFileUpload = async (event: Event) => {
     const file = target.files?.[0]
     if (!file) return
 
-    if (file.size > 2 * 1024 * 1024) return ElMessage.warning('图片大小不能超过 2MB')
+    if (file.size > 2 * 1024 * 1024) return ElMessage.warning('图片不能超过 2MB')
 
-    const loading = ElMessage({ message: '正在上传...', duration: 0 })
+    const loading = ElMessage({ message: '正在同步头像...', duration: 0, type: 'info' })
     try {
         const res: any = await client.post(`/upload?filename=${encodeURIComponent(file.name)}`, file, {
             headers: { 'Content-Type': file.type }
         })
         
         const avatarUrl = res.url
-        // Update user profile with new avatar
         await client.post('/user/update', { avatarUrl })
         
         userStore.setUserInfo({ avatarUrl })
-        ElMessage.success('头像更新成功')
+        ElMessage.success('头像已焕新')
     } catch (e) {
         // Error handled globally
     } finally {
@@ -225,186 +228,208 @@ onMounted(() => {
     fetchStats()
 })
 
-const showComingSoon = () => ElMessage.info('该功能正在开发中，敬请期待')
+const showComingSoon = () => ElMessage.info('敬请期待，该功能正在加速开发中')
 
 const sendTestEmail = async () => {
-    if (!userInfo.value.email) return ElMessage.warning('请先绑定邮箱')
+    if (!userInfo.value.email) return ElMessage.warning('请先在个人资料中绑定邮箱')
     try {
-        await ElMessageBox.confirm(`系统将向 ${userInfo.value.email} 发送一封测试邮件，是否继续？`, '发送测试', {
+        await ElMessageBox.confirm(`系统将向 ${userInfo.value.email} 发送测试邮件，确认继续？`, '发送测试', {
             confirmButtonText: '确定',
             cancelButtonText: '取消',
-            type: 'info'
+            type: 'info',
+            roundButton: true
         })
         await client.post('/cron?testEmail=true')
-        ElMessage.success('测试邮件已发送，请检查收件箱')
+        ElMessage.success('邮件已发出，请注意查收')
     } catch (e) {
-        // Error handled globally or ignored if cancelled
+        // Cancelled or error
     }
 }
 
-const showAbout = () => {
-    ElMessageBox.alert(
-        'Nutri-Baby 是一款为新手爸妈设计的育儿助手。通过科学的记录与 AI 分析，帮助您更好地呵护宝宝成长。',
-        '关于我们',
-        { confirmButtonText: '知道了' }
-    )
-}
-
 const handleLogout = () => {
-    ElMessageBox.confirm('确定要退出登录吗？', '提示', {
-        confirmButtonText: '退出',
+    ElMessageBox.confirm('确定要退出当前账号吗？', '安全登出', {
+        confirmButtonText: '确定退出',
         cancelButtonText: '取消',
-        type: 'warning'
+        type: 'warning',
+        roundButton: true
     }).then(() => {
         userStore.logout()
         router.push('/login')
-        ElMessage.success('已安全退出')
+        ElMessage.success('已安全登出系统')
     }).catch(() => {})
 }
 </script>
 
 <style scoped lang="scss">
 .user-page {
-  padding-bottom: 80px;
+  padding: 10px 16px 100px;
 }
 
 .page-header {
-  margin-bottom: 24px;
-  .title { font-size: 24px; font-weight: 800; color: #2c3e50; }
+  margin: 10px 0 20px;
+  .title { font-size: 24px; font-weight: 800; color: var(--el-text-color-primary); }
 }
 
 .profile-card {
-  margin-bottom: 30px;
+  border-radius: 28px !important;
   background: linear-gradient(135deg, #ff8e94 0%, #ffb1b5 100%);
-  color: #fff;
   border: none !important;
+  color: white;
+  padding: 6px;
+  margin-bottom: 24px;
   
-  .profile-body {
-     display: flex;
-     align-items: center;
-     padding: 10px 0 20px;
-  }
-  
-  .avatar-section {
-     position: relative;
-     margin-right: 20px;
-     cursor: pointer;
-
-     .hidden-input {
-        display: none;
-     }
-     
-     .edit-btn {
-        position: absolute;
-        bottom: 0;
-        right: 0;
-        background: rgba(0,0,0,0.3);
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 14px;
-        backdrop-filter: blur(4px);
-     }
-  }
-  
-  .info-section {
-     .nickname-row {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin-bottom: 6px;
-        
-        .nickname { font-size: 20px; font-weight: 800; }
-        .el-tag { background: rgba(255,255,255,0.2); border: none; color: #fff; }
-     }
-     .phone-text { font-size: 14px; opacity: 0.9; }
-  }
-  
-  .stat-bar {
-      border-top: 1px solid rgba(255,255,255,0.2);
-      padding-top: 20px;
-      
-      .stat-item {
-          text-align: center;
-          .val { font-size: 18px; font-weight: 800; margin-bottom: 2px; }
-          .lab { font-size: 11px; opacity: 0.8; }
-          
-          &:not(:last-child) { border-right: 1px solid rgba(255,255,255,0.2); }
-      }
-  }
+  :deep(.el-card__body) { padding: 24px; }
 }
 
-.menu-group {
+.profile-content {
+  display: flex;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.avatar-wrapper {
+  position: relative;
+  margin-right: 20px;
+  cursor: pointer;
+  
+  .main-avatar {
+    border: 4px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+  }
+  
+  .camera-overlay {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    background: rgba(0, 0, 0, 0.3);
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+    font-size: 14px;
+  }
+  
+  .hidden-input { display: none; }
+}
+
+.user-info {
+  .name-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+    
+    .nickname { font-size: 22px; font-weight: 900; }
+    .edit-icon-btn { color: white; opacity: 0.8; padding: 0; height: auto; }
+  }
+  .account-id { font-size: 14px; opacity: 0.85; }
+}
+
+.stat-grid {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  
+  .stat-box {
+    flex: 1;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    
+    .stat-val { font-size: 20px; font-weight: 800; margin-bottom: 2px; }
+    .stat-label { font-size: 11px; opacity: 0.8; font-weight: 600; }
+  }
+  
+  .stat-divider { width: 1px; height: 24px; background: rgba(255, 255, 255, 0.2); }
+}
+
+.menu-sections {
+  .menu-section {
     margin-bottom: 24px;
     
-    .group-title {
-        font-size: 14px;
-        font-weight: 700;
-        color: #909399;
-        margin-bottom: 12px;
-        margin-left: 4px;
+    .section-label {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--el-text-color-secondary);
+      margin: 0 0 10px 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
+  }
 }
 
-.menu-card {
-    border-radius: 20px !important;
-    overflow: hidden;
-    :deep(.el-card__body) { padding: 0; }
-    
-    .el-divider { margin: 0; opacity: 0.5; }
+.action-card {
+  border-radius: 24px !important;
+  overflow: hidden;
+  :deep(.el-card__body) { padding: 0; }
 }
 
-.menu-item {
+.action-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  &:active { background-color: #f7f8fa; }
+  
+  .action-left {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    padding: 16px 20px;
-    cursor: pointer;
-    transition: background 0.2s;
+    gap: 16px;
+    font-weight: 600;
+    color: var(--el-text-color-primary);
     
-    &:hover { background: #fcfcfc; }
-    
-    .item-left {
-        display: flex;
-        align-items: center;
-        gap: 14px;
-        font-weight: 500;
-        color: #303133;
-        
-        .icon-box {
-            width: 32px;
-            height: 32px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #fff;
-            
-            &.p1 { background-color: #ff8e94; }
-            &.p2 { background-color: #ffc7ca; }
-            &.s1 { background-color: #88d498; }
-            &.s2 { background-color: #ffd077; }
-            &.s3 { background-color: #409eff; }
-            &.a1 { background-color: #909399; }
-        }
+    .icon-wrap {
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 18px;
+      
+      &.color-1 { background: #ff8e94; }
+      &.color-2 { background: #ffb1b5; }
+      &.color-3 { background: #88d498; }
+      &.color-4 { background: #ffd077; }
+      &.color-5 { background: #409eff; }
+      &.color-6 { background: #909399; }
     }
-    
-    .item-right {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        .version { font-size: 12px; color: #C0C4CC; }
-    }
-    
-    .arrow { color: #C0C4CC; font-size: 14px; }
+  }
+  
+  .action-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    .version-tag { font-size: 12px; color: var(--el-text-color-secondary); font-weight: 500; }
+  }
+  
+  .arrow-icon { color: var(--el-border-color); font-size: 14px; }
 }
 
-.logout-btn-wrapper {
-    margin-top: 40px;
-    padding: 0 10px;
-    .el-button { width: 100%; height: 50px; font-weight: bold; }
+.action-divider { height: 1px; background: var(--el-border-color-light); margin: 0 20px; }
+
+.bottom-actions {
+  margin-top: 20px;
+  .full-width-btn { width: 100%; height: 52px; border-radius: 16px; font-weight: 700; border: none; background: white; }
+}
+
+.rounded-dialog {
+  :deep(.el-dialog) { border-radius: 28px !important; }
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 10px;
 }
 </style>

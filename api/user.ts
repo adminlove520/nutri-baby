@@ -18,10 +18,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         if (req.method === 'POST' && action === 'update') {
-            const { nickname, avatarUrl, email } = req.body;
+            const { nickname, avatarUrl, email, settings } = req.body;
             const updatedUser = await prisma.user.update({
                 where: { id: uId },
-                data: { nickname, avatarUrl, email }
+                data: { nickname, avatarUrl, email, settings }
             });
             return success(res, updatedUser);
         }

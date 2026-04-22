@@ -1,66 +1,73 @@
 <template>
   <div class="baby-edit-page">
     <div class="page-header">
-      <el-button link :icon="Back" @click="router.back()">返回</el-button>
-      <h2 class="title">{{ isEdit ? '修改资料' : '添加宝宝' }}</h2>
+      <el-button link :icon="ArrowLeft" @click="router.back()" class="back-btn"></el-button>
+      <h2 class="title">{{ isEdit ? '修改宝宝档案' : '迎接新生命' }}</h2>
     </div>
 
-    <el-card class="form-card" shadow="hover">
+    <el-card class="form-card" shadow="always">
       <el-form 
         ref="formRef" 
         :model="formData" 
         :rules="rules" 
         label-position="top"
         v-loading="loading"
+        class="custom-form"
       >
-        <div class="avatar-uploader-section">
-          <div class="avatar-uploader" @click="triggerUpload">
-            <el-avatar :size="100" :src="formData.avatarUrl || 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'" />
-            <div class="overlay"><el-icon><Camera /></el-icon></div>
+        <div class="avatar-uploader-wrap">
+          <div class="avatar-box" @click="triggerUpload">
+            <el-avatar :size="110" :src="formData.avatarUrl || 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'" class="baby-avatar" />
+            <div class="camera-btn"><el-icon><Camera /></el-icon></div>
           </div>
           <input type="file" ref="fileInput" class="hidden-input" @change="handleFileUpload" accept="image/*" />
-          <p class="hint">点击更换头像</p>
+          <p class="upload-hint">上传宝宝萌照</p>
         </div>
 
         <el-form-item label="宝宝姓名" prop="name">
           <el-input v-model="formData.name" placeholder="请输入宝宝真实姓名" size="large" />
         </el-form-item>
 
-        <el-form-item label="小名/昵称" prop="nickname">
-          <el-input v-model="formData.nickname" placeholder="例如：皮皮、心心" size="large" />
+        <el-form-item label="可爱小名" prop="nickname">
+          <el-input v-model="formData.nickname" placeholder="例如：糯米、饭团" size="large" />
         </el-form-item>
 
-        <el-form-item label="性别" prop="gender">
-          <el-radio-group v-model="formData.gender" size="large" class="full-radio">
-            <el-radio-button label="male">小王子 (男)</el-radio-button>
-            <el-radio-button label="female">小公主 (女)</el-radio-button>
-          </el-radio-group>
+        <el-form-item label="宝宝性别" prop="gender">
+          <div class="gender-selector">
+             <div class="gender-option male" :class="{ active: formData.gender === 'male' }" @click="formData.gender = 'male'">
+                <div class="icon-circle">♂</div>
+                <span>小王子</span>
+             </div>
+             <div class="gender-option female" :class="{ active: formData.gender === 'female' }" @click="formData.gender = 'female'">
+                <div class="icon-circle">♀</div>
+                <span>小公主</span>
+             </div>
+          </div>
         </el-form-item>
 
         <el-form-item label="出生日期" prop="birthDate">
           <el-date-picker
             v-model="formData.birthDate"
             type="date"
-            placeholder="请选择日期"
+            placeholder="请选择宝宝生日"
             format="YYYY-MM-DD"
             value-format="YYYY-MM-DD"
             style="width: 100%"
             size="large"
             :editable="false"
+            class="custom-date-picker"
           />
         </el-form-item>
 
-        <div class="submit-wrapper">
-          <el-button type="primary" size="large" round @click="submitForm" :loading="submitting" class="submit-btn">
-            {{ isEdit ? '保存修改' : '确认添加' }}
+        <div class="action-footer">
+          <el-button type="primary" size="large" round @click="submitForm" :loading="submitting" class="submit-button">
+            {{ isEdit ? '保存所有修改' : '开启守护旅程' }}
           </el-button>
         </div>
       </el-form>
     </el-card>
 
-    <!-- Dangerous Zone -->
-    <div v-if="isEdit" class="danger-zone">
-       <el-button link type="danger" @click="handleDelete">删除此宝宝档案</el-button>
+    <div v-if="isEdit" class="danger-area">
+       <el-button link type="danger" @click="handleDelete" class="delete-link">删除宝宝档案</el-button>
     </div>
   </div>
 </template>
@@ -69,9 +76,9 @@
 import { ref, onMounted, computed, reactive } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useBabyStore } from '@/stores/baby'
-import { Back, Camera } from '@element-plus/icons-vue'
+import { ArrowLeft, Camera } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
-import axios from 'axios'
+import client from '@/api/client'
 
 const route = useRoute()
 const router = useRouter()
@@ -91,31 +98,24 @@ const formData = reactive({
   avatarUrl: ''
 })
 
-const triggerUpload = () => {
-    fileInput.value?.click()
-}
+const triggerUpload = () => fileInput.value?.click()
 
 const handleFileUpload = async (event: Event) => {
     const target = event.target as HTMLInputElement
     const file = target.files?.[0]
     if (!file) return
 
-    if (file.size > 2 * 1024 * 1024) return ElMessage.warning('图片大小不能超过 2MB')
+    if (file.size > 2 * 1024 * 1024) return ElMessage.warning('图片不能超过 2MB')
 
-    const uploadLoading = ElMessage({ message: '正在上传...', duration: 0 })
+    const uploadLoading = ElMessage({ message: '正在处理照片...', duration: 0, type: 'info' })
     try {
-        const token = localStorage.getItem('token')
-        const res = await axios.post(`/api/upload?filename=${encodeURIComponent(file.name)}`, file, {
-            headers: { 
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': file.type
-            }
+        const res: any = await client.post(`/upload?filename=${encodeURIComponent(file.name)}`, file, {
+            headers: { 'Content-Type': file.type }
         })
-        formData.avatarUrl = res.data.url
-        ElMessage.success('上传成功')
+        formData.avatarUrl = res.url
+        ElMessage.success('头像已上传')
     } catch (e) {
-        console.error('Upload Error:', e)
-        ElMessage.error('上传失败')
+        // Error handled globally
     } finally {
         uploadLoading.close()
     }
@@ -131,7 +131,6 @@ onMounted(async () => {
   if (isEdit.value) {
     loading.value = true
     const id = route.params.id as string
-    // Ensure list is loaded
     if (babyStore.babyList.length === 0) await babyStore.fetchBabies()
     
     const baby = babyStore.babyList.find(b => b.id === id)
@@ -142,7 +141,7 @@ onMounted(async () => {
       formData.birthDate = baby.birthDate
       formData.avatarUrl = baby.avatarUrl || ''
     } else {
-      ElMessage.error('找不到该宝宝档案')
+      ElMessage.error('无法定位档案')
       router.push('/baby/list')
     }
     loading.value = false
@@ -157,14 +156,14 @@ const submitForm = async () => {
       try {
         if (isEdit.value) {
           await babyStore.updateBaby(route.params.id as string, formData)
-          ElMessage.success('资料已更新')
+          ElMessage.success('档案更新成功')
         } else {
           await babyStore.addBaby(formData)
-          ElMessage.success('宝宝添加成功')
+          ElMessage.success('欢迎新成员！宝宝添加成功')
         }
         router.push('/baby/list')
       } catch (e) {
-        ElMessage.error('保存失败')
+        // Handled
       } finally {
         submitting.value = false
       }
@@ -173,59 +172,119 @@ const submitForm = async () => {
 }
 
 const handleDelete = () => {
-  ElMessageBox.confirm('确定要删除此档案吗？', '警告', {
-    confirmButtonText: '删除',
+  ElMessageBox.confirm('档案一旦删除将无法恢复，确认继续？', '严重警告', {
+    confirmButtonText: '确定删除',
+    cancelButtonText: '取消',
     confirmButtonClass: 'el-button--danger',
-    type: 'warning'
+    type: 'error',
+    roundButton: true
   }).then(async () => {
     await babyStore.deleteBaby(route.params.id as string)
-    ElMessage.success('已删除')
+    ElMessage.success('档案已永久移除')
     router.push('/baby/list')
-  })
+  }).catch(() => {})
 }
 </script>
 
 <style scoped lang="scss">
-.baby-edit-page { max-width: 500px; margin: 0 auto; padding-bottom: 60px; }
-.page-header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; .title { font-size: 20px; font-weight: 800; color: #2c3e50; } }
+.baby-edit-page { max-width: 540px; margin: 0 auto; padding: 10px 16px 60px; }
 
-.avatar-uploader-section {
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  .back-btn { font-size: 20px; color: var(--el-text-color-primary); }
+  .title { font-size: 22px; font-weight: 800; color: var(--el-text-color-primary); margin: 0; }
+}
+
+.form-card {
+  border-radius: 28px !important;
+  :deep(.el-card__body) { padding: 32px 24px; }
+}
+
+.avatar-uploader-wrap {
     text-align: center;
-    margin-bottom: 30px;
+    margin-bottom: 32px;
     
-    .avatar-uploader {
+    .avatar-box {
         display: inline-block;
         position: relative;
         cursor: pointer;
+        
+        .baby-avatar {
+          border: 4px solid var(--el-color-primary-light-9);
+          box-shadow: 0 10px 25px rgba(255, 142, 148, 0.15);
+        }
+        
+        .camera-btn {
+          position: absolute;
+          bottom: 5px;
+          right: 5px;
+          background: var(--el-color-primary);
+          color: white;
+          width: 30px;
+          height: 30px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 3px solid white;
+        }
     }
     
-    .hidden-input {
-        display: none;
-    }
-        
-    .avatar-uploader .overlay {
-            position: absolute;
-            bottom: 0;
-            right: 0;
-            background: var(--el-color-primary);
-            color: #fff;
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 3px solid #fff;
-        }
-        .hint { font-size: 13px; color: #909399; margin-top: 10px; }
-    }
-
-.full-radio {
-    width: 100%;
-    display: flex;
-    :deep(.el-radio-button) { flex: 1; .el-radio-button__inner { width: 100%; } }
+    .hidden-input { display: none; }
+    .upload-hint { font-size: 13px; color: var(--el-text-color-secondary); margin-top: 12px; font-weight: 600; }
 }
 
-.submit-wrapper { margin-top: 40px; .submit-btn { width: 100%; height: 50px; font-weight: bold; } }
-.danger-zone { text-align: center; margin-top: 24px; }
+.gender-selector {
+  display: flex;
+  gap: 16px;
+  margin-top: 4px;
+  
+  .gender-option {
+    flex: 1;
+    height: 64px;
+    border-radius: 16px;
+    background: #f1f2f6;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 2px solid transparent;
+    
+    .icon-circle { font-size: 18px; font-weight: 900; margin-bottom: 2px; }
+    span { font-size: 12px; font-weight: 700; }
+    
+    &.male { color: #409eff; &.active { background: #eaf4ff; border-color: #409eff; transform: scale(1.02); } }
+    &.female { color: #ff8e94; &.active { background: #fff5f5; border-color: #ff8e94; transform: scale(1.02); } }
+  }
+}
+
+.custom-form {
+  :deep(.el-form-item__label) {
+    font-weight: 800;
+    font-size: 14px;
+    color: var(--el-text-color-primary);
+    padding-bottom: 8px;
+  }
+  
+  :deep(.el-input__wrapper) {
+    border-radius: 14px;
+    padding: 4px 12px;
+  }
+}
+
+.custom-date-picker {
+  :deep(.el-input__wrapper) { width: 100%; box-sizing: border-box; }
+}
+
+.action-footer {
+  margin-top: 48px;
+  .submit-button { width: 100%; height: 54px; font-size: 16px; font-weight: 800; background: linear-gradient(90deg, #ff8e94 0%, #ffb1b5 100%); border: none; box-shadow: 0 10px 20px rgba(255, 142, 148, 0.2); }
+}
+
+.danger-area { text-align: center; margin-top: 32px; .delete-link { font-weight: 600; opacity: 0.6; &:hover { opacity: 1; } } }
 </style>
