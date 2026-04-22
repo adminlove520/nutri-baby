@@ -12,9 +12,11 @@
     },
     "dependencies": {
         "@prisma/client": "^5.10.2",
+        "@types/nodemailer": "^8.0.0",
         "@vercel/blob": "^2.3.3",
         "bcryptjs": "^3.0.3",
-        "jsonwebtoken": "^9.0.3"
+        "jsonwebtoken": "^9.0.3",
+        "nodemailer": "^8.0.5"
     },
     "devDependencies": {
         "@types/bcryptjs": "^2.4.6",

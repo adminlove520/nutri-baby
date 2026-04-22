@@ -1,7 +1,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import prisma from '../../lib/prisma';
-import { getUserFromRequest, hasBabyPermission } from '../../lib/auth';
-import { AIFactory } from '../../lib/ai/factory';
+import prisma from '../lib/prisma';
+import { getUserFromRequest, hasBabyPermission } from '../lib/auth';
+import { AIFactory } from '../lib/ai/factory';
 
 // POST /api/ai/analyze
 export default async function handler(req: VercelRequest, res: VercelResponse) {

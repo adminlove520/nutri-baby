@@ -1,6 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import prisma from '../../lib/prisma';
-import { getUserFromRequest, hasBabyPermission } from '../../lib/auth';
+import prisma from '../lib/prisma';
+import { getUserFromRequest, hasBabyPermission } from '../lib/auth';
 
 const safeJSON = (data: any) => {
     return JSON.parse(JSON.stringify(data, (key, value) =>
@@ -111,8 +111,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             const rId = BigInt(id as string);
             
-            // Security: We should check if the record belongs to a baby the user has access to
-            // For simplicity, we find the record first
             let record;
             if (type === 'feeding') record = await prisma.feedingRecord.findUnique({ where: { id: rId } });
             else if (type === 'sleep') record = await prisma.sleepRecord.findUnique({ where: { id: rId } });

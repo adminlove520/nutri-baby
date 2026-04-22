@@ -1,11 +1,23 @@
 {
     "outputDirectory": "frontend/dist",
     "rewrites": [
-        { "source": "/api/feeding-records", "destination": "/api/record/feeding" },
-        { "source": "/api/sleep-records", "destination": "/api/record/sleep" },
-        { "source": "/api/diaper-records", "destination": "/api/record/diaper" },
-        { "source": "/api/growth-records", "destination": "/api/record/growth" },
-        { "source": "/api/auth/login_credential", "destination": "/api/auth/login" },
+        { "source": "/api/auth/login", "destination": "/api/auth?action=login" },
+        { "source": "/api/auth/register", "destination": "/api/auth?action=register" },
+        { "source": "/api/baby/vaccines", "destination": "/api/baby?action=vaccines" },
+        { "source": "/api/baby/invite", "destination": "/api/baby?action=invite" },
+        { "source": "/api/baby/join", "destination": "/api/baby?action=join" },
+        { "source": "/api/statistics/charts", "destination": "/api/statistics?type=charts" },
+        { "source": "/api/user/stats", "destination": "/api/user?action=stats" },
+        { "source": "/api/user/update", "destination": "/api/user?action=update" },
+        { "source": "/api/tips/daily", "destination": "/api/tips" },
+        { "source": "/api/ai/analyze", "destination": "/api/ai" },
+        { "source": "/api/cron/reminders", "destination": "/api/cron" },
+        { "source": "/api/record/:type", "destination": "/api/record?type=:type" },
+        { "source": "/api/feeding-records", "destination": "/api/record?type=feeding" },
+        { "source": "/api/sleep-records", "destination": "/api/record?type=sleep" },
+        { "source": "/api/diaper-records", "destination": "/api/record?type=diaper" },
+        { "source": "/api/growth-records", "destination": "/api/record?type=growth" },
+        { "source": "/api/auth/login_credential", "destination": "/api/auth?action=login" },
         { "source": "/api/(.*)", "destination": "/api/$1" }
     ]
 }

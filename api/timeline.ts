@@ -1,6 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import prisma from '../../lib/prisma';
-import { getUserFromRequest } from '../../lib/auth';
+import prisma from '../lib/prisma';
+import { getUserFromRequest } from '../lib/auth';
 
 const safeJSON = (data: any) => {
     return JSON.parse(JSON.stringify(data, (key, value) =>

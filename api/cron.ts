@@ -1,5 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import prisma from '../../lib/prisma';
+import prisma from '../lib/prisma';
+import { sendEmail } from '../lib/mail';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Basic secret check for cron jobs
@@ -65,8 +66,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 data: { reminderSent: true, reminderSentAt: new Date() }
             });
             
-            // Log for Email Push (Mock)
-            console.log(`[EMAIL PUSH] Sent to ${v.baby.user.email || 'N/A'}: ${title}`);
+            // Real Email Push
+            if (v.baby.user.email) {
+                try {
+                    await sendEmail(v.baby.user.email, title, `
+                        <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+                            <h2 style="color: #ff8e94;">${title}</h2>
+                            <p>${content}</p>
+                            <hr />
+                            <p style="font-size: 12px; color: #999;">此邮件由 Nutri-Baby 系统自动发送，请勿直接回复。</p>
+                        </div>
+                    `);
+                } catch (err) {
+                    console.error('Failed to send email to', v.baby.user.email, err);
+                }
+            }
+            
+            console.log(`[PUSH DONE] ${title}`);
         }
 
         if (notifications.length > 0) {

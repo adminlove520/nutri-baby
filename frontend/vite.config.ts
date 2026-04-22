@@ -21,6 +21,13 @@ export default defineConfig({
       '@': path.resolve(__dirname, 'src'),
     },
   },
+  css: {
+    preprocessorOptions: {
+      scss: {
+        api: 'modern',
+      },
+    },
+  },
   build: {
     chunkSizeWarningLimit: 1000, // Increase limit slightly
     rollupOptions: {
