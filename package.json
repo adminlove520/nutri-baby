@@ -8,6 +8,8 @@
     "scripts": {
         "dev": "vercel dev",
         "build": "prisma generate && npm run build --workspace=frontend",
+        "db:push": "prisma db push",
+        "db:seed": "prisma db seed",
         "postinstall": "prisma generate"
     },
     "dependencies": {
@@ -27,7 +29,7 @@
         "prisma": "^5.10.2",
         "ts-node": "^10.9.2",
         "typescript": "^5.8.2",
-        "vercel": "^33.5.1"
+        "vercel": "^52.0.0"
     },
     "prisma": {
         "seed": "ts-node prisma/seed.ts"
