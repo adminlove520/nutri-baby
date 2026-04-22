@@ -217,9 +217,8 @@ const handleDelete = () => {
             justify-content: center;
             border: 3px solid #fff;
         }
+        .hint { font-size: 13px; color: #909399; margin-top: 10px; }
     }
-    .hint { font-size: 13px; color: #909399; margin-top: 10px; }
-}
 
 .full-radio {
     width: 100%;
