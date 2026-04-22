@@ -165,7 +165,7 @@ const saveProfile = async () => {
     if (!editForm.nickname) return ElMessage.warning('昵称不能为空')
     saving.value = true
     try {
-        const res = await client.post('/user?action=update', editForm)
+        const res = await client.post('/user/update', editForm)
         userStore.setUserInfo(res)
         ElMessage.success('信息已更新')
         editDialogVisible.value = false
@@ -195,7 +195,7 @@ const handleFileUpload = async (event: Event) => {
         
         const avatarUrl = res.url
         // Update user profile with new avatar
-        await client.post('/user?action=update', { avatarUrl })
+        await client.post('/user/update', { avatarUrl })
         
         userStore.setUserInfo({ avatarUrl })
         ElMessage.success('头像更新成功')
@@ -212,7 +212,7 @@ const joinDays = ref(0)
 
 const fetchStats = async () => {
     try {
-        const res: any = await client.get('/user?action=stats')
+        const res: any = await client.get('/user/stats')
         babyCount.value = res.babyCount
         totalRecords.value = res.totalRecords
         joinDays.value = res.joinDays

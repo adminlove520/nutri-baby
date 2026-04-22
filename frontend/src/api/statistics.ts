@@ -5,5 +5,5 @@ export const getStatistics = async (babyId: string) => {
 }
 
 export const getGrowthStandards = async (type: string, gender: string) => {
-    return client.get('/statistics?action=standards', { params: { type, gender } })
+    return client.get('/statistics/standards', { params: { type, gender } })
 }

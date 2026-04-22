@@ -4,12 +4,15 @@
     "rewrites": [
         { "source": "/api/auth/login", "destination": "/api/auth?action=login" },
         { "source": "/api/auth/register", "destination": "/api/auth?action=register" },
-        { "source": "/api/baby/vaccines", "destination": "/api/baby?action=vaccines" },
-        { "source": "/api/baby/invite", "destination": "/api/baby?action=invite" },
+        { "source": "/api/auth/login_credential", "destination": "/api/auth?action=login" },
+        { "source": "/api/baby/:babyId/vaccines", "destination": "/api/baby?action=vaccines&babyId=:babyId" },
+        { "source": "/api/baby/:babyId/invite", "destination": "/api/baby?action=invite&babyId=:babyId" },
         { "source": "/api/baby/join", "destination": "/api/baby?action=join" },
         { "source": "/api/statistics/charts", "destination": "/api/statistics?type=charts" },
+        { "source": "/api/statistics/standards", "destination": "/api/statistics?action=standards" },
         { "source": "/api/user/stats", "destination": "/api/user?action=stats" },
         { "source": "/api/user/update", "destination": "/api/user?action=update" },
+        { "source": "/api/user/info", "destination": "/api/user?action=info" },
         { "source": "/api/tips/daily", "destination": "/api/tips" },
         { "source": "/api/ai/analyze", "destination": "/api/ai" },
         { "source": "/api/cron/reminders", "destination": "/api/cron" },
@@ -18,7 +21,6 @@
         { "source": "/api/sleep-records", "destination": "/api/record?type=sleep" },
         { "source": "/api/diaper-records", "destination": "/api/record?type=diaper" },
         { "source": "/api/growth-records", "destination": "/api/record?type=growth" },
-        { "source": "/api/auth/login_credential", "destination": "/api/auth?action=login" },
         { "source": "/api/baby/:babyId", "destination": "/api/baby?babyId=:babyId" },
         { "source": "/api/(.*)", "destination": "/api/$1" }
     ]

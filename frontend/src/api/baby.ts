@@ -18,17 +18,17 @@ export const deleteBaby = async (id: string) => {
 }
 
 export const getVaccines = async (babyId: string) => {
-    return client.get(`/baby?action=vaccines&babyId=${babyId}`)
+    return client.get(`/baby/${babyId}/vaccines`)
 }
 
 export const updateVaccine = async (babyId: string, data: any) => {
-    return client.post(`/baby?action=vaccines&babyId=${babyId}`, data)
+    return client.post(`/baby/${babyId}/vaccines`, data)
 }
 
 export const getInviteToken = async (babyId: string) => {
-    return client.get(`/baby?action=invite&babyId=${babyId}`)
+    return client.get(`/baby/${babyId}/invite`)
 }
 
 export const joinTeam = async (token: string, role: string) => {
-    return client.post('/baby?action=join', { token, role })
+    return client.post('/baby/join', { token, role })
 }
