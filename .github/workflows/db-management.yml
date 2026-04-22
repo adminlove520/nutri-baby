@@ -1,0 +1,65 @@
+name: Database Management
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: '选择操作类型 (backup: 备份, reset_data: 清空业务数据, push_force: 强制同步结构)'
+        required: true
+        default: 'backup'
+        type: choice
+        options:
+          - backup
+          - reset_data
+          - push_force
+
+jobs:
+  db-ops:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: |
+          npm install
+          npx prisma generate
+
+      - name: Backup Database
+        if: ${{ github.event.inputs.action == 'backup' }}
+        env:
+          DATABASE_URL: ${{ secrets.POSTGRES_PRISMA_URL }}
+        run: |
+          sudo apt-get install -y postgresql-client
+          # 解析 URL 提取连接信息进行备份 (pg_dump)
+          pg_dump "$DATABASE_URL" > db_backup_$(date +%Y%m%d_%H%M%S).sql
+          echo "备份完成。"
+
+      - name: Reset Data (Truncate)
+        if: ${{ github.event.inputs.action == 'reset_data' }}
+        env:
+          DATABASE_URL: ${{ secrets.POSTGRES_PRISMA_URL }}
+        run: |
+          echo "正在安全清空业务数据，保留表结构..."
+          npx ts-node scripts/db-clean.ts
+
+      - name: Force Push Schema
+        if: ${{ github.event.inputs.action == 'push_force' }}
+        env:
+          DATABASE_URL: ${{ secrets.POSTGRES_PRISMA_URL }}
+        run: |
+          echo "正在强制重置并同步数据库结构 (注意：这将清空所有表和数据！)"
+          npx prisma db push --force-reset --accept-data-loss
+
+      - name: Upload Backup Artifact
+        if: ${{ github.event.inputs.action == 'backup' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: database-backups
+          path: "*.sql"
+          retention-days: 7
