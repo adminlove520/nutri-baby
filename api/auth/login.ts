@@ -20,40 +20,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (phone && password) {
             // Credential Login
             const user = await prisma.user.findUnique({ where: { phone } });
-            if (!user || !user.password) return res.status(401).json({ message: 'Invalid credentials' });
+            if (!user || !user.password) {
+                return res.status(401).json({ message: '手机号或密码错误' });
+            }
 
             const isValid = await bcrypt.compare(password, user.password);
-            if (!isValid) return res.status(401).json({ message: 'Invalid credentials' });
+            if (!isValid) {
+                return res.status(401).json({ message: '手机号或密码错误' });
+            }
 
-            await prisma.user.update({ where: { id: user.id }, data: { lastLoginTime: new Date() } });
+            await prisma.user.update({ 
+                where: { id: user.id }, 
+                data: { lastLoginTime: new Date() } 
+            });
 
             const token = jwt.sign({ userId: user.id.toString(), phone: user.phone }, JWT_SECRET, { expiresIn: '7d' });
             return res.status(200).json({ token, userInfo: safeJSON(user) });
         } else if (code) {
-            // Code/Wechat Login
-            let openid = code.startsWith('mock-') ? code : 'wechat-openid-' + Math.random().toString(36).substring(7);
-            let user = await prisma.user.findUnique({ where: { openid } });
-
-            if (!user) {
-                user = await prisma.user.create({
-                    data: {
-                        openid,
-                        nickname: 'New User',
-                        avatarUrl: 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png',
-                        lastLoginTime: new Date(),
-                    },
-                });
-            } else {
-                await prisma.user.update({ where: { id: user.id }, data: { lastLoginTime: new Date() } });
-            }
-
-            const token = jwt.sign({ userId: user.id.toString(), openid: user.openid }, JWT_SECRET, { expiresIn: '7d' });
-            return res.status(200).json({ token, userInfo: safeJSON(user) });
+            // Wechat Login (Placeholder for real implementation)
+            // For now, if we don't have real wechat config, return error
+            return res.status(400).json({ message: '微信登录暂未配置' });
         } else {
-            return res.status(400).json({ message: 'Missing login credentials' });
+            return res.status(400).json({ message: '请提供手机号和密码' });
         }
     } catch (error) {
         console.error('Login Error:', error);
-        return res.status(500).json({ message: 'Internal Server Error' });
+        return res.status(500).json({ message: '服务器内部错误' });
     }
 }

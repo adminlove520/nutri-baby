@@ -26,7 +26,7 @@
             <span>数据统计</span>
           </el-menu-item>
            <el-menu-item index="/baby/list">
-            <el-icon><User /></el-icon>
+            <el-icon><UserIcon /></el-icon>
             <span>宝宝管理</span>
           </el-menu-item>
           <el-menu-item index="/user">
@@ -39,19 +39,42 @@
       <el-container>
         <!-- Header -->
         <el-header class="app-header">
-           <div class="header-left hidden-sm-and-up">
-              <span class="mobile-logo">Nutri-Baby</span>
+           <div class="header-left">
+              <span class="mobile-logo hidden-sm-and-up">Nutri-Baby</span>
+              <div class="baby-selector" v-if="babyStore.babyList.length > 0">
+                 <el-dropdown @command="handleBabyChange">
+                   <span class="el-dropdown-link current-baby">
+                     {{ babyStore.currentBaby?.name || '选择宝宝' }}
+                     <el-icon class="el-icon--right"><arrow-down /></el-icon>
+                   </span>
+                   <template #dropdown>
+                     <el-dropdown-menu>
+                       <el-dropdown-item 
+                         v-for="baby in babyStore.babyList" 
+                         :key="baby.id" 
+                         :command="baby.id"
+                         :disabled="baby.id === babyStore.currentBaby?.id"
+                       >
+                         {{ baby.name }}
+                       </el-dropdown-item>
+                       <el-dropdown-item divided command="add">
+                         <el-icon><Plus /></el-icon> 添加宝宝
+                       </el-dropdown-item>
+                     </el-dropdown-menu>
+                   </template>
+                 </el-dropdown>
+              </div>
            </div>
            <div class="header-right">
-              <el-dropdown>
+              <el-dropdown @command="handleUserAction">
                 <span class="el-dropdown-link user-profile">
-                   <el-avatar :size="32" src="https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png" />
-                   <span class="username hidden-xs-only">User</span>
+                   <el-avatar :size="32" :src="userStore.userInfo.avatarUrl || 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'" />
+                   <span class="username hidden-xs-only">{{ userStore.userInfo.nickname }}</span>
                 </span>
                 <template #dropdown>
                   <el-dropdown-menu>
-                    <el-dropdown-item>个人设置</el-dropdown-item>
-                    <el-dropdown-item divided>退出登录</el-dropdown-item>
+                    <el-dropdown-item command="profile">个人设置</el-dropdown-item>
+                    <el-dropdown-item divided command="logout">退出登录</el-dropdown-item>
                   </el-dropdown-menu>
                 </template>
               </el-dropdown>
@@ -91,7 +114,7 @@
               <span>统计</span>
             </el-menu-item>
             <el-menu-item index="/user">
-              <el-icon><User /></el-icon>
+              <el-icon><UserIcon /></el-icon>
               <span>我的</span>
             </el-menu-item>
           </el-menu>
@@ -104,17 +127,42 @@
 
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
-import { House, Timer, PieChart, User, Setting } from '@element-plus/icons-vue'
-import 'element-plus/theme-chalk/display.css' // Important for hidden classes
+import { useRoute, useRouter } from 'vue-router'
+import { House, Timer, PieChart, User as UserIcon, Setting, ArrowDown, Plus } from '@element-plus/icons-vue'
+import 'element-plus/theme-chalk/display.css'
 import { useBabyStore } from '@/stores/baby'
+import { useUserStore } from '@/stores/user'
+import { ElMessage } from 'element-plus'
 
 const route = useRoute()
+const router = useRouter()
 const babyStore = useBabyStore()
+const userStore = useUserStore()
 const activeRoute = computed(() => route.path)
 
+const handleBabyChange = (command: string) => {
+    if (command === 'add') {
+        router.push('/baby/edit')
+    } else {
+        babyStore.setCurrentBaby(command)
+        ElMessage.success(`已切换至: ${babyStore.currentBaby?.name}`)
+    }
+}
+
+const handleUserAction = (command: string) => {
+    if (command === 'logout') {
+        userStore.logout()
+        router.push('/login')
+        ElMessage.success('已退出登录')
+    } else if (command === 'profile') {
+        router.push('/user')
+    }
+}
+
 onMounted(() => {
-    babyStore.fetchBabies()
+    if (userStore.isLoggedIn) {
+        babyStore.fetchBabies()
+    }
 })
 </script>
 
@@ -188,6 +236,29 @@ onMounted(() => {
   top: 0;
   z-index: 10;
   
+  .header-left {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+  }
+
+  .current-baby {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      font-weight: 800;
+      color: #303133;
+      background: #fdf6ec;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      border: 1px solid #ffd07744;
+      
+      &:hover {
+          background: #fdf2e1;
+      }
+  }
+
   .mobile-logo {
      font-weight: 800;
      font-size: 20px;
@@ -226,13 +297,12 @@ onMounted(() => {
   
   .content-wrapper {
      padding: 24px;
-     max-width: 1200px; /* PC Content Limit */
+     max-width: 1200px;
      margin: 0 auto;
      
-     /* Mobile Adjustments */
      @media (max-width: 768px) {
         padding: 16px;
-        padding-bottom: 100px; /* Space for footer */
+        padding-bottom: 100px;
      }
   }
 }

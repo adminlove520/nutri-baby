@@ -27,7 +27,12 @@
               </div>
               <div class="record-details">
                 <div class="record-title">
-                  <span class="type-label">{{ getTypeName(entry.type) }}</span>
+                  <div class="title-left">
+                    <span class="type-label">{{ getTypeName(entry.type) }}</span>
+                    <span class="creator-tag" v-if="entry.data.creator">
+                      by {{ entry.data.creator.nickname }}
+                    </span>
+                  </div>
                   <span class="time-ago">{{ formatRelative(entry.time) }}</span>
                 </div>
                 <div class="record-content">
@@ -43,21 +48,21 @@
                    <p v-else-if="entry.type === 'growth'">
                      {{ getGrowthText(entry.data) }}
                    </p>
-                   <div class="remark" v-if="entry.data.remark">
-                     <el-icon><ChatDotRound /></el-icon> {{ entry.data.remark }}
+                   <div class="remark" v-if="entry.data.remark || entry.data.note">
+                     <el-icon><ChatDotRound /></el-icon> {{ entry.data.remark || entry.data.note }}
                    </div>
                 </div>
               </div>
               <div class="card-actions">
-                 <el-dropdown trigger="click">
-                    <el-icon class="more-icon"><MoreFilled /></el-icon>
-                    <template #dropdown>
-                       <el-dropdown-menu>
-                          <el-dropdown-item :icon="Edit">编辑</el-dropdown-item>
-                          <el-dropdown-item :icon="Delete" @click="handleDelete(entry)">删除</el-dropdown-item>
-                       </el-dropdown-menu>
-                    </template>
-                 </el-dropdown>
+                  <el-dropdown trigger="click">
+                     <el-icon class="more-icon"><MoreFilled /></el-icon>
+                     <template #dropdown>
+                        <el-dropdown-menu>
+                           <el-dropdown-item :icon="Edit" @click="handleEdit(entry)">编辑</el-dropdown-item>
+                           <el-dropdown-item :icon="Delete" @click="handleDelete(entry)" class="delete-item">删除</el-dropdown-item>
+                        </el-dropdown-menu>
+                     </template>
+                  </el-dropdown>
               </div>
             </div>
           </el-card>
@@ -163,12 +168,13 @@ const getTypeName = (type: string) => {
 
 const getFeedingText = (data: any) => {
   let text = ''
+  const detail = data.detail || {}
   if (data.feedingType === 'breast') {
-    text = `母乳喂养 ${data.leftBreastMinutes || 0}m(左) / ${data.rightBreastMinutes || 0}m(右)`
+    text = `母乳喂养 ${detail.leftBreastMinutes || 0}m(左) / ${detail.rightBreastMinutes || 0}m(右)`
   } else if (data.feedingType === 'bottle') {
-    text = `瓶喂 ${data.milkType === 'formula' ? '奶粉' : '母乳'} ${data.amount}ml`
+    text = `瓶喂 ${detail.milkType === 'formula' ? '奶粉' : '母乳'} ${data.amount}ml`
   } else {
-    text = `辅食: ${data.foodName || '未填写'}`
+    text = `辅食: ${detail.foodName || '未填写'}`
   }
   return text
 }
@@ -193,14 +199,28 @@ const getGrowthText = (data: any) => {
   return parts.join(' / ')
 }
 
+const handleEdit = (entry: any) => {
+    router.push(`/record/${entry.type}?id=${entry.data.id}`)
+}
+
 const handleDelete = (entry: any) => {
   ElMessageBox.confirm('确定要删除这条记录吗？', '提醒', {
-    confirmButtonText: '删除',
+    confirmButtonText: '确认删除',
     cancelButtonText: '取消',
+    confirmButtonClass: 'el-button--danger',
     type: 'warning'
-  }).then(() => {
-    // TODO: Call actual delete API
-    ElMessage.success('删除成功（模拟）')
+  }).then(async () => {
+    try {
+        const token = localStorage.getItem('token')
+        await axios.delete(`/api/record/${entry.type}`, {
+            params: { id: entry.data.id },
+            headers: { Authorization: `Bearer ${token}` }
+        })
+        ElMessage.success('已删除记录')
+        fetchTimeline(true)
+    } catch (e) {
+        ElMessage.error('删除失败')
+    }
   }).catch(() => {})
 }
 
@@ -276,10 +296,24 @@ watch(() => babyStore.currentBaby?.id, () => {
     align-items: center;
     margin-bottom: 8px;
     
+    .title-left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
     .type-label {
       font-weight: 700;
       font-size: 16px;
       color: #303133;
+    }
+
+    .creator-tag {
+        font-size: 11px;
+        background: #f0f2f5;
+        padding: 2px 6px;
+        border-radius: 4px;
+        color: #909399;
     }
     
     .time-ago {
@@ -312,6 +346,10 @@ watch(() => babyStore.currentBaby?.id, () => {
     cursor: pointer;
     &:hover { color: var(--el-color-primary); }
   }
+}
+
+.delete-item {
+    color: var(--el-color-danger);
 }
 
 .load-more {

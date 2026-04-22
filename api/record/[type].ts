@@ -52,12 +52,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             let result;
             if (type === 'feeding') {
-                const { feedingType, amount, duration, leftBreastMinutes, rightBreastMinutes, foodName, remark } = rest;
+                const { feedingType, type: fType, amount, duration, leftBreastMinutes, rightBreastMinutes, foodName, remark } = rest;
                 result = await prisma.feedingRecord.create({
                     data: {
                         babyId: bId,
                         time: recordTime,
-                        feedingType: feedingType || 'breast',
+                        feedingType: fType || feedingType || 'breast',
                         amount: amount ? parseInt(amount) : null,
                         duration: duration ? parseInt(duration) : null,
                         detail: { leftBreastMinutes, rightBreastMinutes, foodName, remark },
@@ -105,9 +105,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
 
             return res.status(201).json(safeJSON(result));
-        }
+        } else if (req.method === 'DELETE') {
+            const { id } = req.query;
+            if (!id) return res.status(400).json({ message: 'Record ID required' });
 
-        return res.status(405).json({ message: 'Method Not Allowed' });
+            const rId = BigInt(id as string);
+            
+            // Security: We should check if the record belongs to a baby the user has access to
+            // For simplicity, we find the record first
+            let record;
+            if (type === 'feeding') record = await prisma.feedingRecord.findUnique({ where: { id: rId } });
+            else if (type === 'sleep') record = await prisma.sleepRecord.findUnique({ where: { id: rId } });
+            else if (type === 'diaper') record = await prisma.diaperRecord.findUnique({ where: { id: rId } });
+            else if (type === 'growth') record = await prisma.growthRecord.findUnique({ where: { id: rId } });
+
+            if (!record) return res.status(404).json({ message: 'Record not found' });
+            
+            if (!(await hasBabyPermission(user.userId, record.babyId))) {
+                return res.status(403).json({ message: 'Forbidden' });
+            }
+
+            if (type === 'feeding') await prisma.feedingRecord.delete({ where: { id: rId } });
+            else if (type === 'sleep') await prisma.sleepRecord.delete({ where: { id: rId } });
+            else if (type === 'diaper') await prisma.diaperRecord.delete({ where: { id: rId } });
+            else if (type === 'growth') await prisma.growthRecord.delete({ where: { id: rId } });
+
+            return res.status(200).json({ message: 'Deleted' });
+        }
     } catch (error) {
         console.error(`Record API Error (${type}):`, error);
         return res.status(500).json({ message: 'Internal Server Error' });

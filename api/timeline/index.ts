@@ -25,10 +25,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // Fetch all types of records
         // For Timeline, we need to normalize them or just fetch and combine
         const [feeding, sleep, diaper, growth] = await Promise.all([
-            prisma.feedingRecord.findMany({ where: { babyId: bId }, orderBy: { time: 'desc' }, take: take + skip }),
-            prisma.sleepRecord.findMany({ where: { babyId: bId }, orderBy: { startTime: 'desc' }, take: take + skip }),
-            prisma.diaperRecord.findMany({ where: { babyId: bId }, orderBy: { time: 'desc' }, take: take + skip }),
-            prisma.growthRecord.findMany({ where: { babyId: bId }, orderBy: { time: 'desc' }, take: take + skip })
+            prisma.feedingRecord.findMany({ 
+                where: { babyId: bId }, 
+                orderBy: { time: 'desc' }, 
+                take: take + skip,
+                include: { creator: { select: { nickname: true, avatarUrl: true } } }
+            }),
+            prisma.sleepRecord.findMany({ 
+                where: { babyId: bId }, 
+                orderBy: { startTime: 'desc' }, 
+                take: take + skip,
+                include: { creator: { select: { nickname: true, avatarUrl: true } } }
+            }),
+            prisma.diaperRecord.findMany({ 
+                where: { babyId: bId }, 
+                orderBy: { time: 'desc' }, 
+                take: take + skip,
+                include: { creator: { select: { nickname: true, avatarUrl: true } } }
+            }),
+            prisma.growthRecord.findMany({ 
+                where: { babyId: bId }, 
+                orderBy: { time: 'desc' }, 
+                take: take + skip,
+                include: { creator: { select: { nickname: true, avatarUrl: true } } }
+            })
         ]);
 
         // Normalize for Timeline: { type, time, data }

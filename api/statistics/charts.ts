@@ -78,9 +78,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             sleep: Object.entries(dailySleep).map(([date, minutes]) => ({ date, hours: parseFloat((minutes / 60).toFixed(1)) })),
             growth: growthRecords.map(r => ({
                 date: r.time.toISOString().split('T')[0],
-                height: r.height,
-                weight: r.weight,
-                head: r.headCircumference
+                height: r.height ? Number(r.height) : null,
+                weight: r.weight ? Number(r.weight) : null,
+                head: r.headCircumference ? Number(r.headCircumference) : null
             }))
         }));
 

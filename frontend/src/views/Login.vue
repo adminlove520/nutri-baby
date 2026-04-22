@@ -13,33 +13,6 @@
       </div>
 
       <el-tabs v-model="activeTab" class="login-tabs">
-        <el-tab-pane label="验证码登录" name="code">
-           <div class="login-form">
-              <el-button 
-                type="primary" 
-                size="large" 
-                round 
-                class="wechat-btn" 
-                @click="handleWechatLogin"
-                :loading="loading"
-              >
-                微信一键登录
-              </el-button>
-              <div class="divider">
-                <span>或使用模拟登录</span>
-              </div>
-              <el-button 
-                plain 
-                size="large" 
-                round 
-                class="mock-btn" 
-                @click="handleMockLogin"
-              >
-                开发者模拟入口
-              </el-button>
-           </div>
-        </el-tab-pane>
-        
         <el-tab-pane label="账号登录" name="password">
            <el-form :model="loginForm" class="login-form">
               <el-form-item>
@@ -58,6 +31,7 @@
                   prefix-icon="Lock" 
                   size="large"
                   show-password
+                  @keyup.enter="handlePasswordLogin"
                 />
               </el-form-item>
               <el-button 
@@ -77,7 +51,7 @@
            </el-form>
         </el-tab-pane>
 
-        <el-tab-pane label="注册" name="register">
+        <el-tab-pane label="新用户注册" name="register">
             <el-form :model="registerForm" class="login-form">
               <el-form-item>
                 <el-input v-model="registerForm.nickname" placeholder="您的昵称" prefix-icon="User" size="large" />
@@ -86,7 +60,7 @@
                 <el-input v-model="registerForm.phone" placeholder="手机号" prefix-icon="Iphone" size="large" />
               </el-form-item>
               <el-form-item>
-                <el-input v-model="registerForm.password" type="password" placeholder="设置密码" prefix-icon="Lock" size="large" show-password />
+                <el-input v-model="registerForm.password" type="password" placeholder="设置密码" prefix-icon="Lock" size="large" show-password @keyup.enter="handleRegister" />
               </el-form-item>
               <el-button type="primary" size="large" round class="submit-btn" @click="handleRegister" :loading="loading">确认注册</el-button>
               <div class="form-footer">
@@ -108,32 +82,15 @@ import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
+import { User, Iphone, Lock } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const userStore = useUserStore()
 const loading = ref(false)
-const activeTab = ref('code')
+const activeTab = ref('password')
 
 const loginForm = reactive({ phone: '', password: '' })
 const registerForm = reactive({ phone: '', password: '', nickname: '' })
-
-const handleWechatLogin = () => {
-    ElMessage.info('正在唤起微信登录...')
-    // handleMockLogin()
-}
-
-const handleMockLogin = async () => {
-    loading.value = true
-    try {
-        await userStore.login('mock-user-' + Math.random().toString(36).slice(2, 6))
-        ElMessage.success('登录成功')
-        router.push('/')
-    } catch (e) {
-        ElMessage.error('登录失败')
-    } finally {
-        loading.value = false
-    }
-}
 
 const handlePasswordLogin = async () => {
     if (!loginForm.phone || !loginForm.password) return ElMessage.warning('请输入账号密码')
@@ -142,8 +99,9 @@ const handlePasswordLogin = async () => {
         await userStore.loginCredential(loginForm.phone, loginForm.password)
         ElMessage.success('欢迎回来')
         router.push('/')
-    } catch (e) {
-        ElMessage.error('账号或密码错误')
+    } catch (e: any) {
+        const msg = e.response?.data?.message || '账号或密码错误'
+        ElMessage.error(msg)
     } finally {
         loading.value = false
     }
@@ -151,13 +109,17 @@ const handlePasswordLogin = async () => {
 
 const handleRegister = async () => {
     if (!registerForm.phone || !registerForm.password) return ElMessage.warning('请填写完整信息')
+    if (registerForm.phone.length !== 11) return ElMessage.warning('请输入正确的11位手机号')
+    if (registerForm.password.length < 6) return ElMessage.warning('密码至少需要6位')
+    
     loading.value = true
     try {
         await userStore.register(registerForm.phone, registerForm.password, registerForm.nickname)
-        ElMessage.success('注册成功，已自动登录')
+        ElMessage.success('注册成功')
         router.push('/')
-    } catch (e) {
-        ElMessage.error('注册失败，该号码可能已被注册')
+    } catch (e: any) {
+        const msg = e.response?.data?.message || '注册失败，该号码可能已被注册'
+        ElMessage.error(msg)
     } finally {
         loading.value = false
     }
@@ -246,50 +208,6 @@ const handleRegister = async () => {
 
 .login-form {
     padding: 10px 0;
-}
-
-.wechat-btn {
-    width: 100%;
-    height: 54px;
-    background: linear-gradient(135deg, #07c160 0%, #06ae56 100%);
-    border: none;
-    font-weight: 700;
-    font-size: 16px;
-    margin-bottom: 20px;
-    
-    &:hover { background: #06ad56; }
-}
-
-.divider {
-    text-align: center;
-    position: relative;
-    margin: 20px 0;
-    
-    &::before {
-        content: '';
-        position: absolute;
-        top: 50%;
-        left: 0;
-        right: 0;
-        height: 1px;
-        background: #f0f0f0;
-        z-index: 1;
-    }
-    
-    span {
-        background: #fff;
-        padding: 0 15px;
-        color: #C0C4CC;
-        font-size: 13px;
-        position: relative;
-        z-index: 2;
-    }
-}
-
-.mock-btn {
-    width: 100%;
-    height: 50px;
-    border-color: #f0f0f0;
 }
 
 .submit-btn {

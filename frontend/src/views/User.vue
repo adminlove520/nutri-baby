@@ -106,12 +106,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { 
   User as UserIcon, ArrowRight, Plus, Memo, Setting, InfoFilled, Camera 
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import axios from 'axios'
 import { useUserStore } from '@/stores/user'
 import { useBabyStore } from '@/stores/baby'
 
@@ -120,9 +121,27 @@ const userStore = useUserStore()
 const babyStore = useBabyStore()
 
 const userInfo = computed(() => userStore.userInfo)
-const babyCount = computed(() => babyStore.babyList.length)
-const totalRecords = ref(128) // Mock
-const joinDays = ref(15) // Mock
+const babyCount = ref(0)
+const totalRecords = ref(0)
+const joinDays = ref(0)
+
+const fetchStats = async () => {
+    try {
+        const token = localStorage.getItem('token')
+        const res = await axios.get('/api/user/stats', {
+            headers: { Authorization: `Bearer ${token}` }
+        })
+        babyCount.value = res.data.babyCount
+        totalRecords.value = res.data.totalRecords
+        joinDays.value = res.data.joinDays
+    } catch (e) {
+        console.error('Failed to fetch stats', e)
+    }
+}
+
+onMounted(() => {
+    fetchStats()
+})
 
 const showComingSoon = () => ElMessage.info('该功能正在开发中，敬请期待')
 
