@@ -40,27 +40,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         prisma.feedingRecord.findMany({
                             where: { babyId: id, time: { gte: sevenDaysAgo } },
                             orderBy: { time: 'desc' },
-                            take: 10
+                            take: 5 // 从 10 减少到 5
                         }),
                         prisma.sleepRecord.findMany({
                             where: { babyId: id, startTime: { gte: sevenDaysAgo } },
                             orderBy: { startTime: 'desc' },
-                            take: 10
+                            take: 5 // 从 10 减少到 5
                         }),
                         prisma.growthRecord.findMany({
                             where: { babyId: id, time: { gte: sevenDaysAgo } },
                             orderBy: { time: 'desc' },
-                            take: 5
+                            take: 3 // 从 5 减少到 3
                         }),
                         prisma.medicationRecord.findMany({
                             where: { babyId: id, time: { gte: sevenDaysAgo } },
                             orderBy: { time: 'desc' },
-                            take: 5
+                            take: 3 // 从 5 减少到 3
                         }),
                         prisma.healthRecord.findMany({
                             where: { babyId: id, time: { gte: sevenDaysAgo } },
                             orderBy: { time: 'desc' },
-                            take: 5
+                            take: 3 // 从 5 减少到 3
                         })
                     ]);
 
