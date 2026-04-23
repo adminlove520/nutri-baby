@@ -68,6 +68,10 @@
               <el-icon><ChatDotRound /></el-icon>
               <span>{{ item._count?.comments || 0 }}</span>
             </div>
+            <div class="action-item" @click="openShare(item)">
+              <el-icon><Share /></el-icon>
+              <span>分享</span>
+            </div>
           </div>
 
           <div v-if="item.comments && item.comments.length > 0" class="feed-comments">
@@ -190,16 +194,49 @@
         </el-input>
       </div>
     </el-dialog>
+
+    <el-dialog v-model="showShareDialog" title="分享至" width="320px" class="share-dialog" destroy-on-close>
+      <div class="share-content">
+        <div class="share-card" v-if="shareData">
+          <el-image :src="shareData.album?.url" fit="cover" class="share-img" />
+          <div class="share-info">
+            <div class="share-baby">{{ shareData.album?.babyName }}</div>
+            <div class="share-title">{{ shareData.album?.title || '成长记录' }}</div>
+          </div>
+        </div>
+
+        <div v-if="generatedCaption" class="caption-box">
+          <div class="caption-label">朋友圈文案</div>
+          <div class="caption-text">{{ generatedCaption }}</div>
+          <el-button size="small" @click="copyCaption" :icon="Link">复制文案</el-button>
+        </div>
+
+        <div class="share-actions">
+          <div class="share-btn" @click="copyLink">
+            <div class="btn-icon"><el-icon><Link /></el-icon></div>
+            <div class="btn-text">复制链接</div>
+          </div>
+          <div class="share-btn" @click="generateWechatCaption">
+            <div class="btn-icon"><el-icon><ChatDotRound /></el-icon></div>
+            <div class="btn-text">AI 文案</div>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="showShareDialog = false" round>关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { UploadFilled, Delete, Edit, Back, MoreFilled, Star, ChatDotRound, Promotion, Plus, Close } from '@element-plus/icons-vue'
+import { UploadFilled, Delete, Edit, Back, MoreFilled, Star, ChatDotRound, Promotion, Plus, Close, Share, Link } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import client from '@/api/client'
 import { getAlbums, createAlbum, deleteAlbum, addComment, deleteComment as delComment, likeAlbum, unlikeAlbum, type AlbumRecord, type AlbumComment } from '@/api/album'
+import { shareAlbum } from '@/api/share'
 import { useBabyStore } from '@/stores/baby'
 import { useUserStore } from '@/stores/user'
 
@@ -234,6 +271,10 @@ const commentInputs = ref<Record<number, string>>({})
 const replyContent = ref('')
 const replyingTo = ref<string | null>(null)
 const replyingComment = ref<AlbumComment | null>(null)
+
+const showShareDialog = ref(false)
+const shareData = ref<any>(null)
+const generatedCaption = ref('')
 
 const fetchAlbums = async (reset = false) => {
     if (reset) {
@@ -457,6 +498,48 @@ const formatTime = (time: string) => {
     if (hours < 24) return `${hours}小时前`
     if (days < 7) return `${days}天前`
     return new Date(time).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
+}
+
+const openShare = async (item: AlbumRecord) => {
+    shareData.value = null
+    generatedCaption.value = ''
+    try {
+        const res: any = await shareAlbum(item.id)
+        shareData.value = res
+    } catch (e) {
+        ElMessage.error('获取分享信息失败')
+    }
+    showShareDialog.value = true
+}
+
+const copyLink = async () => {
+    if (!shareData.value?.shareUrl) return
+    try {
+        await navigator.clipboard.writeText(shareData.value.shareUrl)
+        ElMessage.success('链接已复制到剪贴板')
+    } catch (e) {
+        ElMessage.error('复制失败')
+    }
+}
+
+const generateWechatCaption = async () => {
+    if (!shareData.value?.shareUrl) return
+    try {
+        const res: any = await shareAlbum(shareData.value.album.id, 'caption')
+        generatedCaption.value = res.caption
+    } catch (e) {
+        ElMessage.error('生成文案失败')
+    }
+}
+
+const copyCaption = async () => {
+    if (!generatedCaption.value) return
+    try {
+        await navigator.clipboard.writeText(generatedCaption.value)
+        ElMessage.success('文案已复制到剪贴板')
+    } catch (e) {
+        ElMessage.error('复制失败')
+    }
 }
 
 watch(albumType, () => fetchAlbums(true))
@@ -739,5 +822,107 @@ onMounted(() => {
 .load-more {
     text-align: center;
     padding: 20px;
+}
+
+.share-dialog {
+    :deep(.el-dialog) { border-radius: 16px !important; }
+}
+
+.share-content {
+    .share-card {
+        display: flex;
+        gap: 12px;
+        padding: 12px;
+        background: var(--el-fill-color-light);
+        border-radius: 12px;
+        margin-bottom: 16px;
+
+        .share-img {
+            width: 80px;
+            height: 80px;
+            border-radius: 8px;
+            flex-shrink: 0;
+        }
+
+        .share-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+
+            .share-baby {
+                font-size: 12px;
+                color: var(--el-color-primary);
+                margin-bottom: 4px;
+            }
+
+            .share-title {
+                font-size: 14px;
+                font-weight: 600;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+            }
+        }
+    }
+
+    .caption-box {
+        background: var(--el-fill-color-light);
+        border-radius: 12px;
+        padding: 12px;
+        margin-bottom: 16px;
+
+        .caption-label {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 8px;
+        }
+
+        .caption-text {
+            font-size: 14px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            margin-bottom: 12px;
+        }
+    }
+
+    .share-actions {
+        display: flex;
+        gap: 24px;
+        justify-content: center;
+
+        .share-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+
+            .btn-icon {
+                width: 48px;
+                height: 48px;
+                border-radius: 50%;
+                background: var(--el-color-primary-light-9);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 20px;
+                color: var(--el-color-primary);
+                transition: all 0.2s;
+
+                &:hover {
+                    background: var(--el-color-primary);
+                    color: white;
+                }
+            }
+
+            .btn-text {
+                font-size: 12px;
+                color: #666;
+            }
+        }
+    }
 }
 </style>
