@@ -201,10 +201,28 @@
       </div>
 
       <div class="footer-info">
-        <p>Nutri-Baby v1.2.0 (Stable)</p>
+        <div class="version-row">
+          <span class="version-text" @click="showChangelog = true">v{{ version }}</span>
+          <span class="separator">·</span>
+          <span class="license-text" @click="showLicense = true">开源协议</span>
+        </div>
         <p>已通过 SSL 加密传输，确保您的数据隐私安全</p>
       </div>
     </div>
+
+    <!-- Changelog Dialog -->
+    <el-dialog v-model="showChangelog" title="更新日志" width="90%" class="rounded-dialog" destroy-on-close>
+      <div class="changelog-content">
+        <pre>{{ changelog }}</pre>
+      </div>
+    </el-dialog>
+
+    <!-- License Dialog -->
+    <el-dialog v-model="showLicense" title="开源协议" width="90%" class="rounded-dialog" destroy-on-close>
+      <div class="license-content">
+        <pre>{{ license }}</pre>
+      </div>
+    </el-dialog>
 
     <!-- GitHub Config Dialog -->
     <el-dialog v-model="githubDialogVisible" title="配置 GitHub 同步" width="90%" class="rounded-dialog" destroy-on-close>
@@ -285,6 +303,13 @@ import client from '@/api/client'
 import { useUserStore } from '@/stores/user'
 import { useBabyStore } from '@/stores/baby'
 import { getGitHubSettings, saveGitHubSettings, testGitHubConnection, syncToGitHub, getSyncLogs } from '@/api/settings'
+import { VERSION, CHANGELOG, LICENSE } from '@/constants/version'
+
+const version = VERSION
+const changelog = CHANGELOG
+const license = LICENSE
+const showChangelog = ref(false)
+const showLicense = ref(false)
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -707,5 +732,45 @@ watch(showSyncLogs, (val) => {
   background: var(--el-fill-color-light);
   border-radius: 8px;
   margin: 0 20px 16px;
+}
+
+.version-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.version-text {
+  font-size: 13px;
+  color: var(--el-color-primary);
+  cursor: pointer;
+  &:hover { text-decoration: underline; }
+}
+
+.separator {
+  color: var(--el-text-color-secondary);
+}
+
+.license-text {
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+  cursor: pointer;
+  &:hover { text-decoration: underline; }
+}
+
+.changelog-content,
+.license-content {
+  max-height: 60vh;
+  overflow-y: auto;
+  pre {
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.6;
+  }
 }
 </style>
