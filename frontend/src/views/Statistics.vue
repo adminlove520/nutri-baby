@@ -117,10 +117,6 @@
         </div>
       </el-card>
 
-      <!-- Growth Album -->
-      ...
-      </el-card>
-
       <!-- Health & Medication Logs -->
       <el-row :gutter="20" class="logs-row">
         <el-col :xs="24" :sm="12">
