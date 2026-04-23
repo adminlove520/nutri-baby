@@ -24,7 +24,7 @@ export class GitHubUploader {
 
     private getHeaders() {
         return {
-            'Authorization': `Bearer ${this.config.token}`,
+            'Authorization': `token ${this.config.token}`,
             'Accept': 'application/vnd.github+json',
             'X-GitHub-Api-Version': '2022-11-28'
         };
@@ -167,6 +167,7 @@ export function generateAlbumPath(albumType: string, babyName: string, date: Dat
 
 export function generateFilename(originalName: string, index: number): string {
     const timestamp = Date.now();
+    const nanoid = Math.random().toString(36).substring(2, 8);
     const ext = originalName.split('.').pop() || 'jpg';
-    return `${timestamp}_${String(index).padStart(3, '0')}.${ext}`;
+    return `${timestamp}_${nanoid}_${String(index).padStart(3, '0')}.${ext}`;
 }

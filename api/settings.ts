@@ -156,8 +156,7 @@ async function handleSync(req: VercelRequest, res: VercelResponse, userId: numbe
         const albums = await prisma.babyAlbum.findMany({
             where: {
                 userId,
-                deletedAt: null,
-                url: { not: '' }
+                deletedAt: null
             },
             include: {
                 baby: { select: { name: true } }
@@ -168,6 +167,7 @@ async function handleSync(req: VercelRequest, res: VercelResponse, userId: numbe
 
         let syncedCount = 0;
         const errors: string[] = [];
+        const syncedPaths = new Set<string>();
 
         for (const album of albums) {
             try {
@@ -180,14 +180,32 @@ async function handleSync(req: VercelRequest, res: VercelResponse, userId: numbe
 
                 for (let i = 0; i < urls.length; i++) {
                     const url = urls[i].trim();
-                    if (!url || url.startsWith('data:') || url.includes('://localhost')) {
+                    const normalizedUrl = url.toLowerCase();
+
+                    if (!url || normalizedUrl.startsWith('data:') ||
+                        normalizedUrl.includes('localhost') ||
+                        normalizedUrl.includes('127.0.0.1') ||
+                        !normalizedUrl.startsWith('http')) {
                         continue;
                     }
 
                     const filename = generateFilename(`${album.id}_${i}.jpg`, i);
+                    const filePath = `${baseFolderPath}/${filename}`;
+
+                    if (syncedPaths.has(filePath)) {
+                        continue;
+                    }
+
+                    const exists = await uploader.checkFileExists(filePath);
+                    if (exists) {
+                        syncedPaths.add(filePath);
+                        syncedCount++;
+                        continue;
+                    }
+
                     const imageResponse = await fetch(url);
                     if (!imageResponse.ok) {
-                        errors.push(`Failed to fetch image: ${url}`);
+                        errors.push(`图片获取失败: ${url}`);
                         continue;
                     }
 
@@ -199,13 +217,14 @@ async function handleSync(req: VercelRequest, res: VercelResponse, userId: numbe
                     );
 
                     if (result.success) {
+                        syncedPaths.add(filePath);
                         syncedCount++;
                     } else {
-                        errors.push(result.error || 'Upload failed');
+                        errors.push(result.error || '上传失败');
                     }
                 }
             } catch (e: any) {
-                errors.push(`Album ${album.id} sync error: ${e.message}`);
+                errors.push(`相册 ${album.id} 同步错误: ${e.message}`);
             }
         }
 

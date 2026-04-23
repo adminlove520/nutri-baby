@@ -4,6 +4,109 @@ import { sendEmail } from '../lib/mail';
 import { getUserFromRequest } from '../lib/auth';
 import { AIFactory } from '../lib/ai/factory';
 import { success, error } from '../lib/utils';
+import { GitHubUploader, generateAlbumPath, generateFilename } from '../lib/github';
+
+async function syncUserAlbumsToGitHub(userId: number): Promise<{ success: boolean; syncedCount: number; errors: string[] }> {
+    const config = await prisma.gitHubConfig.findUnique({ where: { userId } });
+
+    if (!config || !config.autoSync) {
+        return { success: false, syncedCount: 0, errors: ['GitHub 同步未启用'] };
+    }
+
+    const uploader = new GitHubUploader({
+        token: config.token,
+        owner: config.owner,
+        repo: config.repo,
+        branch: config.branch,
+        basePath: config.basePath
+    });
+
+    const connectionTest = await uploader.testConnection();
+    if (!connectionTest.valid) {
+        return { success: false, syncedCount: 0, errors: ['GitHub 连接失败: ' + connectionTest.message] };
+    }
+
+    const albums = await prisma.babyAlbum.findMany({
+        where: { userId, deletedAt: null },
+        include: { baby: { select: { name: true } } },
+        orderBy: { createdAt: 'desc' },
+        take: 100
+    });
+
+    let syncedCount = 0;
+    const errors: string[] = [];
+    const syncedPaths = new Set<string>();
+
+    for (const album of albums) {
+        try {
+            const urls = album.url.split(',');
+            const babyName = album.baby?.name || '未知宝宝';
+            const date = new Date(album.createdAt);
+            const baseFolderPath = generateAlbumPath(album.albumType, babyName, date);
+
+            await uploader.createFolder(baseFolderPath);
+
+            for (let i = 0; i < urls.length; i++) {
+                const url = urls[i].trim();
+                const normalizedUrl = url.toLowerCase();
+
+                if (!url || normalizedUrl.startsWith('data:') ||
+                    normalizedUrl.includes('localhost') ||
+                    normalizedUrl.includes('127.0.0.1') ||
+                    !normalizedUrl.startsWith('http')) {
+                    continue;
+                }
+
+                const filename = generateFilename(`${album.id}_${i}.jpg`, i);
+                const filePath = `${baseFolderPath}/${filename}`;
+
+                if (syncedPaths.has(filePath)) continue;
+
+                const exists = await uploader.checkFileExists(filePath);
+                if (exists) {
+                    syncedPaths.add(filePath);
+                    syncedCount++;
+                    continue;
+                }
+
+                const imageResponse = await fetch(url);
+                if (!imageResponse.ok) {
+                    errors.push(`图片获取失败: ${url}`);
+                    continue;
+                }
+
+                const imageBuffer = await imageResponse.arrayBuffer();
+                const result = await uploader.uploadFile(Buffer.from(imageBuffer), filename, baseFolderPath);
+
+                if (result.success) {
+                    syncedPaths.add(filePath);
+                    syncedCount++;
+                } else {
+                    errors.push(result.error || '上传失败');
+                }
+            }
+        } catch (e: any) {
+            errors.push(`相册 ${album.id} 同步错误: ${e.message}`);
+        }
+    }
+
+    await prisma.gitHubConfig.update({
+        where: { userId },
+        data: { lastSyncAt: new Date() }
+    });
+
+    await prisma.syncLog.create({
+        data: {
+            userId,
+            status: errors.length > 0 ? 'partial' : 'success',
+            message: `定时同步完成，成功 ${syncedCount} 个文件`,
+            syncedCount,
+            errorLog: errors.length > 0 ? errors.join('\n') : null
+        }
+    });
+
+    return { success: true, syncedCount, errors };
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Basic secret check for cron jobs
@@ -231,6 +334,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             await prisma.notification.createMany({
                 data: notifications
             });
+        }
+
+        const usersWithGitHubSync = await prisma.gitHubConfig.findMany({
+            where: { autoSync: true }
+        });
+
+        for (const gConfig of usersWithGitHubSync) {
+            const lastSync = gConfig.lastSyncAt ? new Date(gConfig.lastSyncAt) : null;
+            const shouldSync = !lastSync ||
+                (gConfig.syncInterval === 'daily' && (Date.now() - lastSync.getTime()) > 24 * 60 * 60 * 1000) ||
+                (gConfig.syncInterval === 'weekly' && (Date.now() - lastSync.getTime()) > 7 * 24 * 60 * 60 * 1000) ||
+                (gConfig.syncInterval === 'monthly' && (Date.now() - lastSync.getTime()) > 30 * 24 * 60 * 60 * 1000);
+
+            if (shouldSync) {
+                try {
+                    await syncUserAlbumsToGitHub(gConfig.userId);
+                } catch (e) {
+                    console.error(`GitHub sync failed for user ${gConfig.userId}:`, e);
+                }
+            }
         }
 
         return res.status(200).json({ processed: upcomingVaccines.length });
