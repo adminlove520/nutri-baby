@@ -463,13 +463,19 @@ const quickDiaper = async (type: 'dry' | 'wet' | 'dirty' | 'both' = 'dry') => {
     try {
         const typeMap: Record<string, string> = {
             'dry': '干爽',
-            'wet': '尿尿',
+            'wet': '嘘嘘',
             'dirty': '臭臭',
-            'both': '又尿又臭'
+            'both': '嘘嘘 + 臭臭'
+        }
+        const apiTypeMap: Record<string, string> = {
+            'dry': 'dry',
+            'wet': 'pee',
+            'dirty': 'poop',
+            'both': 'both'
         }
         await client.post('/record/diaper', {
             babyId: babyStore.currentBaby.id,
-            type: type,
+            type: apiTypeMap[type] || 'dry',
             time: getBeijingNow().toISOString()
         })
         ElMessage.success(`闪电记录：${typeMap[type] || '尿布'}`)
@@ -918,15 +924,17 @@ onUnmounted(() => {
   }
   
   .alert-arrow { color: var(--el-color-primary-light-3); font-size: 18px; }
+}
+
 .section-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 16px;
     width: 100%;
-  }
-  .section-header .section-title { margin: 0; font-weight: 800; font-size: 1.3rem; }
-  .section-header .section-subtitle { font-size: 12px; color: var(--el-text-color-secondary); margin-left: 8px; font-weight: 500; }
+
+    .section-title { margin: 0; font-weight: 800; font-size: 1.3rem; }
+    .section-subtitle { font-size: 12px; color: var(--el-text-color-secondary); margin-left: 8px; font-weight: 500; }
 }
 
 .quick-action-grid {

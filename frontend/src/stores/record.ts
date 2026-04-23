@@ -27,6 +27,7 @@ export const useRecordStore = defineStore('record', () => {
 
     const deleteRecord = async (type: string, id: string) => {
         try {
+            const token = localStorage.getItem('token')
             const res = await axios.delete(`/api/record/${type}/${id}`, {
                 headers: { Authorization: `Bearer ${token}` }
             })

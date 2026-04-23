@@ -235,8 +235,8 @@ const handleDelete = (entry: any) => {
   }).then(async () => {
     try {
         const token = localStorage.getItem('token')
-        await axios.delete(`/api/record/${entry.type}`, {
-            params: { id: entry.data.id },
+        await axios.delete('/api/record', {
+            params: { type: entry.type, id: entry.data.id },
             headers: { Authorization: `Bearer ${token}` }
         })
         ElMessage.success('已删除记录')
