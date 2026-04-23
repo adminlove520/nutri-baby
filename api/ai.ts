@@ -66,11 +66,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         })
                     ]);
 
+                    // 精确计算月龄（小于1个月用天数表示）
+                    const birthDateObj = new Date(baby.birthDate);
+                    const now = new Date();
+                    const diffMs = now.getTime() - birthDateObj.getTime();
+                    const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                    const months = Math.floor(days / 30);
                     babyProfile = {
                         name: baby.name,
                         gender: baby.gender,
                         birthDate: baby.birthDate,
-                        month: Math.floor((new Date().getTime() - new Date(baby.birthDate).getTime()) / (1000 * 60 * 60 * 24 * 30))
+                        month: months,
+                        days: days,
+                        ageStr: months >= 1 ? `${months}个月` : `${days}天`
                     };
 
                     // Serialize records for AI

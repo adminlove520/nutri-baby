@@ -923,16 +923,15 @@ onUnmounted(() => {
   }
   
   .alert-arrow { color: var(--el-color-primary-light-3); font-size: 18px; }
-}
-
 .section-header {
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  margin-bottom: 16px;
-  
-  .section-title { margin: 0; font-weight: 800; font-size: 1.3rem; }
-  .section-subtitle { font-size: 12px; color: var(--el-text-color-secondary); margin-left: 8px; font-weight: 500; }
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    width: 100%;
+  }
+  .section-header .section-title { margin: 0; font-weight: 800; font-size: 1.3rem; }
+  .section-header .section-subtitle { font-size: 12px; color: var(--el-text-color-secondary); margin-left: 8px; font-weight: 500; }
 }
 
 .quick-action-grid {

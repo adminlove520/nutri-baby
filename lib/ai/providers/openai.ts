@@ -44,13 +44,24 @@ export class OpenAIProvider implements AIProvider {
 使用清晰的 Markdown 格式（标题、列表、表格等）来组织内容。`;
         } else {
             requireJson = true;
-            systemPrompt = `你是一位专业的育儿专家。请根据以下宝宝的最近数据提供深度的健康分析，并以 JSON 格式返回结果。
-1. insight: 对宝宝现状的总体评价与洞察
-2. recommendations: 3-5条针对性的专业育儿建议
-3. sentiment: 情绪倾向 (positive/neutral/concern)`;
-            userPrompt = `${babyInfo}
-最近记录：喂养${JSON.stringify(recentRecords.feeding)}, 睡眠${JSON.stringify(recentRecords.sleep)}, 医疗${JSON.stringify((recentRecords as any).medication || [])}, 健康记录${JSON.stringify((recentRecords as any).health || [])}
-用户提问：${(query || '请分析宝宝现状并提供建议').trim()}`;
+            const ageInfo = babyProfile?.ageStr
+                ? `，月龄：${babyProfile.ageStr}（出生${babyProfile.days}天）`
+                : '';
+            systemPrompt = `你是一位资深儿科医生，专注于婴幼儿健康成长指导。请根据以下数据提供深度健康分析，并以 JSON 格式返回：
+1. insight: 对宝宝现状的详细评估，包括喂养、睡眠、生长发育、健康状况等各方面
+2. recommendations: 5-7条针对性强、可操作的育儿建议
+3. sentiment: 整体状态评估 (positive/neutral/concern)
+
+宝宝档案：${babyProfile?.name || '未知'}，性别：${babyProfile?.gender === 'male' ? '男' : '女'}${ageInfo}
+最近7天记录：
+- 喂养记录：${JSON.stringify(recentRecords.feeding)}
+- 睡眠记录：${JSON.stringify(recentRecords.sleep)}
+- 用药记录：${JSON.stringify((recentRecords as any).medication || [])}
+- 健康记录：${JSON.stringify((recentRecords as any).health || [])}
+用户提问：${(query || '请分析宝宝现状并提供建议').trim()}
+
+请提供专业、详细、有针对性的分析和建议。`;
+            userPrompt = ``;
         }
 
         try {

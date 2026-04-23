@@ -145,8 +145,17 @@ const analyze = async () => {
 
     loading.value = true
     try {
+        const baby = babyStore.currentBaby
+        const birthDate = baby?.birthDate ? new Date(baby.birthDate) : null
+        const birthTime = birthDate ? birthDate.getTime() : 0
+        const nowMs = Date.now()
+        const days = birthTime ? Math.floor((nowMs - birthTime) / (1000 * 60 * 60 * 24)) : 0
+        const months = Math.floor(days / 30)
+        const ageStr = months >= 1 ? `${months}个月` : `${days}天`
+
         const res: any = await client.post('/ai/analyze', {
-            babyId: babyStore.currentBaby.id.toString()
+            babyId: babyStore.currentBaby.id.toString(),
+            query: `宝宝：${baby?.name || '未知'}，性别：${baby?.gender === 'male' ? '男' : '女'}，年龄：${ageStr}（出生${days}天）。请提供专业的育儿健康分析和建议。`
         })
         console.log('[AI Insight] Analysis Result:', res)
         
