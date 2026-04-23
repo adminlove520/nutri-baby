@@ -15,7 +15,32 @@ export interface AlbumRecord {
     albumType: string
     time?: string
     createdAt: string
+    isLiked?: boolean
+    _count?: { comments: number; likes: number }
+    comments?: AlbumComment[]
+    likes?: AlbumLike[]
     baby?: { id: number; name: string }
+    user?: { id: number; nickname: string; avatar?: string }
+}
+
+export interface AlbumComment {
+    id: number
+    albumId: number
+    userId: number
+    content: string
+    parentId?: number
+    createdAt: string
+    replyCount?: number
+    replies?: AlbumComment[]
+    user?: { id: number; nickname: string; avatar?: string }
+}
+
+export interface AlbumLike {
+    id: number
+    albumId: number
+    userId: number
+    createdAt: string
+    user?: { id: number; nickname: string }
 }
 
 export interface AlbumListResponse {
@@ -62,4 +87,24 @@ export const updateAlbum = async (id: number, data: {
 
 export const deleteAlbum = async (id: number): Promise<void> => {
     return client.delete(`/album?id=${id}`)
+}
+
+export const addComment = async (data: {
+    albumId: number
+    content: string
+    parentId?: number
+}): Promise<AlbumComment> => {
+    return client.post('/album?action=comment', data)
+}
+
+export const deleteComment = async (id: number): Promise<void> => {
+    return client.delete(`/album?action=comment&id=${id}`)
+}
+
+export const likeAlbum = async (albumId: number): Promise<{ liked: boolean }> => {
+    return client.post('/album?action=like', { albumId })
+}
+
+export const unlikeAlbum = async (albumId: number): Promise<{ liked: boolean }> => {
+    return client.delete(`/album?action=like&albumId=${albumId}`)
 }

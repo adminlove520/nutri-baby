@@ -132,10 +132,42 @@ model BabyAlbum {
   deletedAt   DateTime? @map("deleted_at")
   baby        Baby      @relation(fields: [babyId], references: [id], onDelete: Cascade)
   user        User      @relation(fields: [userId], references: [id])
+  comments    AlbumComment[]
+  likes       AlbumLike[]
 
   @@index([babyId, createdAt])
   @@index([userId])
   @@map("baby_album")
+}
+
+model AlbumComment {
+  id        BigInt    @id @default(autoincrement())
+  albumId   BigInt    @map("album_id")
+  userId    BigInt    @map("user_id")
+  content   String
+  parentId  BigInt?   @map("parent_id")
+  createdAt DateTime  @default(now()) @map("created_at")
+  deletedAt DateTime? @map("deleted_at")
+  album     BabyAlbum @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id])
+  parent    AlbumComment? @relation("CommentReplies", fields: [parentId], references: [id])
+  replies   AlbumComment[] @relation("CommentReplies")
+
+  @@index([albumId, createdAt])
+  @@map("album_comment")
+}
+
+model AlbumLike {
+  id        BigInt    @id @default(autoincrement())
+  albumId   BigInt    @map("album_id")
+  userId    BigInt    @map("user_id")
+  createdAt DateTime  @default(now()) @map("created_at")
+  album     BabyAlbum @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@unique([albumId, userId])
+  @@index([albumId])
+  @@map("album_like")
 }
 
 model BabyCollaborator {
