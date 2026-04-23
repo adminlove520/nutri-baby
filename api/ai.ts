@@ -103,3 +103,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
     }
 }
+
+// Vercel function configuration
+export const config = {
+    maxDuration: 60, // 增加超时时间到 60s (Pro 支持，Hobby 限制在 10s 但设置无害)
+};

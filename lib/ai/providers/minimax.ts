@@ -21,14 +21,14 @@ export class MinimaxProvider implements AIProvider {
 月龄：${babyProfile.month || '未知'}个月
 ` : '宝宝档案：目前暂无具体宝宝信息，请提供通用的育儿建议。';
 
-        const systemPrompt = `你是一位育儿专家。请分析以下数据并以 JSON 返回：
+        const systemPrompt = `你是一位精炼的育儿专家。请分析以下数据并以 JSON 返回。注意：请保持回答简洁，insight 不要超过 100 字。
 1. insight: 总体评价
 2. recommendations: 3条具体建议
 3. sentiment: positive/neutral/concern
 
 ${babyInfo}
 最近记录：喂养${JSON.stringify(recentRecords.feeding)}, 睡眠${JSON.stringify(recentRecords.sleep)}, 用药${JSON.stringify((recentRecords as any).medication || [])}, 健康${JSON.stringify((recentRecords as any).health || [])}
-用户提问：${query || '分析现状'}`;
+用户提问：${(query || '分析现状').trim().substring(0, 500)}`;
 
         try {
             // 使用标准 Fetch API 调用 MiniMax V2 接口
@@ -47,7 +47,7 @@ ${babyInfo}
                     messages: [
                         {
                             role: 'system',
-                            content: '你是一个专业的育儿助手，始终以 JSON 格式输出分析结果。'
+                            content: '你是一个专业的育儿助手，始终以 JSON 格式输出分析结果。回答务必精简，以提高响应速度。'
                         },
                         {
                             role: 'user',
@@ -57,8 +57,9 @@ ${babyInfo}
                     response_format: { type: 'json_object' },
                     stream: false
                 }),
-                // 设置 9 秒超时（Vercel Hobby 10秒限制），给程序留点时间报错
-                signal: AbortSignal.timeout(9000)
+                // 增加超时时间。如果是 Vercel Hobby，最大约 10s；如果是 Pro，最大可支持更多。
+                // 我们设置为 25s 以适应可能的 Pro 环境或稍微延长的响应。
+                signal: AbortSignal.timeout(25000)
             });
 
             if (!response.ok) {
