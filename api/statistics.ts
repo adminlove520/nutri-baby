@@ -23,16 +23,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     try {
         if (action === 'standards') {
-            const { type, gender } = req.query;
-            const standards = await prisma.growthStandard.findMany({
-                where: { 
-                    gender: (gender as string) || 'male', 
-                    type: (type as string) || 'height',
-                    source: 'WHO' 
-                },
-                orderBy: { month: 'asc' }
-            });
-            return success(res, standards);
+            // GrowthStandard model not in schema yet — return empty array
+            return success(res, []);
         }
 
         // 强制使用北京时间 (UTC+8)
@@ -52,27 +44,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             startDate.setDate(startDate.getDate() - days);
             startDate.setHours(0, 0, 0, 0);
 
-            const [feedingRecords, sleepRecords, growthRecords, medicationRecords, healthRecords, baby, standards] = await Promise.all([
+            const [feedingRecords, sleepRecords, growthRecords, medicationRecords, healthRecords, baby] = await Promise.all([
                 prisma.feedingRecord.findMany({ where: { babyId: bId, time: { gte: startDate } }, orderBy: { time: 'asc' } }),
                 prisma.sleepRecord.findMany({ where: { babyId: bId, startTime: { gte: startDate } }, orderBy: { startTime: 'asc' } }),
                 prisma.growthRecord.findMany({ where: { babyId: bId, time: { gte: startDate } }, orderBy: { time: 'asc' } }),
                 prisma.medicationRecord.findMany({ where: { babyId: bId, time: { gte: startDate } }, orderBy: { time: 'asc' } }),
                 prisma.healthRecord.findMany({ where: { babyId: bId, time: { gte: startDate } }, orderBy: { time: 'asc' } }),
-                prisma.baby.findUnique({ where: { id: bId } }),
-                prisma.growthStandard.findMany({
-                    where: { gender: 'male', source: 'WHO' },
-                    orderBy: { month: 'asc' }
-                })
+                prisma.baby.findUnique({ where: { id: bId } })
             ]);
 
-            // Use baby's gender for standards if available
-            let genderedStandards = standards;
-            if (baby?.gender) {
-                genderedStandards = await prisma.growthStandard.findMany({
-                    where: { gender: baby.gender, source: 'WHO' },
-                    orderBy: { month: 'asc' }
-                });
-            }
+            // GrowthStandard model not in schema yet
+            const genderedStandards: any[] = [];
 
             const dailyFeeding: Record<string, number> = {};
             const toNum = (v: any) => v == null ? 0 : (typeof v.toNumber === 'function' ? v.toNumber() : Number(v));
