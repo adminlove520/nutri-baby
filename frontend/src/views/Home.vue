@@ -4,13 +4,18 @@
     <div class="welcome-header">
        <div class="welcome-text">
           <h1>{{ greeting }}, {{ userInfo.nickname || '新家长' }} 👋</h1>
-          <p v-if="babyStore.currentBaby">宝宝 <b>{{ babyStore.currentBaby.name }}</b> 已经陪伴您 {{ joinDays }} 天了</p>
+          <div class="baby-quick-info" v-if="babyStore.currentBaby">
+             <el-tag size="small" round effect="dark" class="age-tag">{{ babyAgeText }}</el-tag>
+             <span class="companion-text">已陪伴您 <b>{{ joinDays }}</b> 天</span>
+          </div>
           <p v-else>欢迎加入 Nutri-Baby，开启科学育儿之旅</p>
        </div>
        <div class="header-actions">
-          <el-badge :is-dot="hasNewNotifications">
+          <el-badge :is-dot="hasNewNotifications" class="mr-12">
              <el-button circle :icon="Bell" @click="router.push('/notifications')"></el-button>
           </el-badge>
+          <el-avatar :size="40" v-if="userInfo?.avatar" :src="userInfo.avatar" @click="router.push('/user')" />
+          <el-avatar :size="40" v-else icon="UserFilled" @click="router.push('/user')" />
        </div>
     </div>
 
@@ -30,6 +35,41 @@
       <el-col :xs="24" :sm="15" :md="16" :lg="17">
         <!-- AI Insight -->
         <AIInsightCard v-if="babyStore.currentBaby" class="mb-24" />
+
+        <!-- Flash Actions -->
+        <div class="section-header" v-if="babyStore.currentBaby">
+           <div class="section-title">闪电记录</div>
+           <span class="section-subtitle">凌晨3点的得力助手</span>
+        </div>
+        <div class="quick-action-grid mb-24" v-if="babyStore.currentBaby">
+           <div class="q-btn-wrap" @click="quickFeeding(120)">
+              <div class="q-btn b1"><el-icon><Mug /></el-icon></div>
+              <span>120ml奶</span>
+           </div>
+           <div class="q-btn-wrap" @click="quickSleepToggle">
+              <div class="q-btn b2">
+                <el-icon v-if="!isSleeping"><Moon /></el-icon>
+                <el-icon v-else class="is-loading"><Refresh /></el-icon>
+              </div>
+              <span>{{ isSleeping ? `已睡 ${sleepDuration}` : '睡了' }}</span>
+           </div>
+           <div class="q-btn-wrap" @click="quickDiaper">
+              <div class="q-btn b3"><el-icon><ToiletPaper /></el-icon></div>
+              <span>干爽尿布</span>
+           </div>
+           <div class="q-btn-wrap" @click="quickVitaminD">
+              <div class="q-btn b4"><el-icon><Opportunity /></el-icon></div>
+              <span>补维D</span>
+           </div>
+           <div class="q-btn-wrap" @click="medicationDialogVisible = true">
+              <div class="q-btn b5"><el-icon><FirstAidKit /></el-icon></div>
+              <span>用药</span>
+           </div>
+           <div class="q-btn-wrap" @click="healthDialogVisible = true">
+              <div class="q-btn b6"><el-icon><DataLine /></el-icon></div>
+              <span>体温</span>
+           </div>
+        </div>
 
         <!-- Daily Statistics -->
         <div class="section-header">
@@ -179,6 +219,61 @@
          </el-card>
       </el-col>
     </el-row>
+
+    <!-- Medication Record Dialog -->
+    <el-dialog v-model="medicationDialogVisible" title="用药记录" width="90%" class="rounded-dialog">
+       <el-form :model="medForm" label-position="top">
+          <el-form-item label="药品名称">
+             <el-input v-model="medForm.name" placeholder="如：布洛芬、益生菌" />
+          </el-form-item>
+          <el-form-item label="剂量">
+             <el-input v-model="medForm.dosage" placeholder="如：2.5ml、1包" />
+          </el-form-item>
+          <el-form-item label="记录时间">
+             <el-date-picker v-model="medForm.time" type="datetime" style="width: 100%" />
+          </el-form-item>
+          <el-form-item label="备注">
+             <el-input v-model="medForm.notes" type="textarea" placeholder="记录宝宝的反应或用药原因" />
+          </el-form-item>
+       </el-form>
+       <template #footer>
+          <div class="dialog-footer">
+            <el-button @click="medicationDialogVisible = false" round>取消</el-button>
+            <el-button type="primary" @click="submitMedication" :loading="submitting" round>提交记录</el-button>
+          </div>
+       </template>
+    </el-dialog>
+
+    <!-- Health Record Dialog -->
+    <el-dialog v-model="healthDialogVisible" title="健康监测" width="90%" class="rounded-dialog">
+       <el-form :model="healthForm" label-position="top">
+          <el-form-item label="指标类型">
+             <el-radio-group v-model="healthForm.type" size="small">
+                <el-radio-button label="TEMP">体温 (°C)</el-radio-button>
+                <el-radio-button label="OXYGEN">血氧 (%)</el-radio-button>
+                <el-radio-button label="HEART_RATE">心率 (bpm)</el-radio-button>
+             </el-radio-group>
+          </el-form-item>
+          <el-form-item label="数值">
+             <el-input v-model="healthForm.value" type="number" placeholder="输入测量数值" />
+          </el-form-item>
+          <el-form-item label="记录时间">
+             <el-date-picker v-model="healthForm.time" type="datetime" style="width: 100%" />
+          </el-form-item>
+          <el-form-item label="症状描述">
+             <el-input v-model="healthForm.symptoms" placeholder="如：流鼻涕、咳嗽、精神良好" />
+          </el-form-item>
+          <el-form-item label="备注">
+             <el-input v-model="healthForm.notes" type="textarea" placeholder="其他需要记录的信息" />
+          </el-form-item>
+       </el-form>
+       <template #footer>
+          <div class="dialog-footer">
+            <el-button @click="healthDialogVisible = false" round>取消</el-button>
+            <el-button type="primary" @click="submitHealth" :loading="submitting" round>提交记录</el-button>
+          </div>
+       </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -189,7 +284,7 @@ import client from '@/api/client'
 import { useRouter } from 'vue-router'
 import { 
   Mug, Moon, ToiletPaper, TrendCharts, ArrowRight, Pouring, 
-  Bell, WarningFilled 
+  Bell, WarningFilled, Opportunity, Refresh, FirstAidKit, DataLine
 } from '@element-plus/icons-vue'
 import DailyTipsCard from '@/components/DailyTipsCard.vue'
 import AIInsightCard from './components/AIInsightCard.vue'
@@ -205,6 +300,120 @@ const userStore = useUserStore()
 const loading = ref(false)
 const joinDays = ref(0)
 const hasNewNotifications = ref(false)
+const isSleeping = ref(false)
+const lastSleepId = ref<string | null>(null)
+const sleepStartTime = ref<string | null>(null)
+const sleepDuration = ref('00:00:00')
+let sleepTimer: any = null
+
+const updateSleepDuration = () => {
+    if (!sleepStartTime.value) return
+    const diff = new Date().getTime() - new Date(sleepStartTime.value).getTime()
+    const h = Math.floor(diff / 3600000).toString().padStart(2, '0')
+    const m = Math.floor((diff % 3600000) / 60000).toString().padStart(2, '0')
+    const s = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0')
+    sleepDuration.value = `${h}:${m}:${s}`
+}
+
+const startSleepTimer = () => {
+    stopSleepTimer()
+    updateSleepDuration()
+    sleepTimer = setInterval(updateSleepDuration, 1000)
+}
+
+const stopSleepTimer = () => {
+    if (sleepTimer) {
+        clearInterval(sleepTimer)
+        sleepTimer = null
+    }
+}
+
+const quickFeeding = async (amount: number) => {
+    if (!babyStore.currentBaby?.id) return
+    try {
+        await client.post('/record/feeding', {
+            babyId: babyStore.currentBaby.id,
+            type: 'bottle',
+            amount,
+            time: new Date().toISOString()
+        })
+        ElMessage.success(`闪电记录：瓶喂 ${amount}ml`)
+        fetchData()
+    } catch (e) {}
+}
+
+const quickSleepToggle = async () => {
+    if (!babyStore.currentBaby?.id) return
+    try {
+        if (!isSleeping.value) {
+            // Start Sleep
+            const res: any = await client.post('/record/sleep', {
+                babyId: babyStore.currentBaby.id,
+                startTime: new Date().toISOString(),
+                type: 'day'
+            })
+            isSleeping.value = true
+            lastSleepId.value = (res as any).id
+            sleepStartTime.value = new Date().toISOString()
+            startSleepTimer()
+            ElMessage.success('宝宝开始睡觉了')
+        } else {
+            // End Sleep
+            await client.patch('/record/sleep', {
+                id: lastSleepId.value,
+                endTime: new Date().toISOString()
+            })
+            isSleeping.value = false
+            lastSleepId.value = null
+            stopSleepTimer()
+            ElMessage.success('宝宝醒了')
+        }
+        fetchData()
+    } catch (e) {}
+}
+
+const quickDiaper = async () => {
+    if (!babyStore.currentBaby?.id) return
+    try {
+        await client.post('/record/diaper', {
+            babyId: babyStore.currentBaby.id,
+            type: 'dry',
+            time: new Date().toISOString()
+        })
+        ElMessage.success('闪电记录：干爽尿布')
+        fetchData()
+    } catch (e) {}
+}
+
+const quickVitaminD = async () => {
+    if (!babyStore.currentBaby?.id) return
+    try {
+        await client.post('/record/medication', {
+            babyId: babyStore.currentBaby.id,
+            name: '维生素 D3',
+            dosage: '1 滴',
+            time: new Date().toISOString()
+        })
+        ElMessage.success('闪电记录：补维D')
+        fetchData()
+    } catch (e) {}
+}
+
+const babyAgeText = computed(() => {
+    if (!babyStore.currentBaby?.birthDate) return ''
+    const birth = new Date(babyStore.currentBaby.birthDate)
+    const now = new Date()
+    let diffMonth = (now.getFullYear() - birth.getFullYear()) * 12 + (now.getMonth() - birth.getMonth())
+    const diffDay = now.getDate() - birth.getDate()
+    if (diffDay < 0) diffMonth--
+    
+    if (diffMonth < 1) {
+        const days = Math.floor((now.getTime() - birth.getTime()) / 86400000)
+        return `${days}天`
+    }
+    if (diffMonth < 12) return `${diffMonth}个月`
+    return `${Math.floor(diffMonth / 12)}岁${diffMonth % 12}个月`
+})
 
 const userInfo = computed(() => userStore.userInfo)
 const greeting = computed(() => {
@@ -256,14 +465,27 @@ const fetchData = async () => {
             return
         }
 
-        const [statsRes, vaccineRes, userStats] = await Promise.all([
+        const [statsRes, vaccineRes, userStats, sleepRes] = await Promise.all([
             getStatistics(babyId),
             getVaccines(babyId),
-            client.get('/user/stats')
+            client.get('/user/stats'),
+            client.get('/record/sleep', { params: { babyId, limit: 1 } })
         ])
 
         todayStats.value = statsRes.today
         joinDays.value = (userStats as any).joinDays
+
+        // Update sleeping status
+        const lastSleep = (sleepRes as any).records?.[0]
+        if (lastSleep && !lastSleep.endTime) {
+            isSleeping.value = true
+            lastSleepId.value = lastSleep.id
+            sleepStartTime.value = lastSleep.startTime
+            startSleepTimer()
+        } else {
+            isSleeping.value = false
+            stopSleepTimer()
+        }
 
         const pending = vaccineRes
             .filter((v: any) => v.vaccinationStatus === 'pending')
@@ -300,6 +522,67 @@ const handleTipClick = (tip: any) => {
 
 const tipDetailVisible = ref(false)
 const tipDetail = ref<any>(null)
+const medicationDialogVisible = ref(false)
+const healthDialogVisible = ref(false)
+
+const medForm = reactive({
+    name: '',
+    dosage: '',
+    time: new Date().toISOString(),
+    notes: ''
+})
+
+const healthForm = reactive({
+    type: 'TEMP',
+    value: '',
+    symptoms: '',
+    time: new Date().toISOString(),
+    notes: ''
+})
+
+const submitting = ref(false)
+
+const submitMedication = async () => {
+    if (!babyStore.currentBaby?.id) return
+    submitting.value = true
+    try {
+        await client.post('/record/medication', {
+            babyId: babyStore.currentBaby.id,
+            ...medForm
+        })
+        ElMessage.success('用药记录已添加')
+        medicationDialogVisible.value = false
+        // Reset form
+        medForm.name = ''
+        medForm.dosage = ''
+        medForm.notes = ''
+        fetchData()
+    } catch (e) {
+    } finally {
+        submitting.value = false
+    }
+}
+
+const submitHealth = async () => {
+    if (!babyStore.currentBaby?.id) return
+    submitting.value = true
+    try {
+        await client.post('/record/health', {
+            babyId: babyStore.currentBaby.id,
+            ...healthForm
+        })
+        ElMessage.success('健康数据已添加')
+        healthDialogVisible.value = false
+        // Reset form
+        healthForm.value = ''
+        healthForm.symptoms = ''
+        healthForm.notes = ''
+        fetchData()
+    } catch (e) {
+    } finally {
+        submitting.value = false
+    }
+}
 const handleFeeding = () => router.push('/record/feeding')
 const handleSleep = () => router.push('/record/sleep')
 const handleDiaper = () => router.push('/record/diaper')
@@ -320,7 +603,20 @@ watch(() => babyStore.currentBaby?.id, fetchData)
   
   .welcome-text {
     h1 { font-size: 26px; font-weight: 900; margin: 0 0 6px; color: var(--el-text-color-primary); }
-    p { margin: 0; color: var(--el-text-color-secondary); font-size: 14px; b { color: var(--el-color-primary); } }
+    .baby-quick-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+      .age-tag { background: var(--el-color-primary); border: none; }
+      .companion-text { font-size: 13px; color: var(--el-text-color-secondary); b { color: var(--el-color-primary); } }
+    }
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    .el-avatar { cursor: pointer; border: 2px solid #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
   }
 }
 
@@ -362,11 +658,51 @@ watch(() => babyStore.currentBaby?.id, fetchData)
 
 .section-header {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   margin-bottom: 16px;
   
   .section-title { margin: 0; font-weight: 800; font-size: 1.3rem; }
+  .section-subtitle { font-size: 12px; color: var(--el-text-color-secondary); margin-left: 8px; font-weight: 500; }
+}
+
+.quick-action-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-top: 16px;
+
+    .q-btn-wrap {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        transition: transform 0.2s;
+        
+        &:active { transform: scale(0.95); }
+        
+        span { font-size: 12px; font-weight: 700; color: var(--el-text-color-primary); }
+    }
+
+    .q-btn {
+        width: 100%;
+        aspect-ratio: 1;
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        color: white;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.05);
+
+        &.b1 { background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); }
+        &.b2 { background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%); }
+        &.b3 { background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%); }
+        &.b4 { background: linear-gradient(135deg, #fccb90 0%, #d57eeb 100%); }
+        &.b5 { background: linear-gradient(135deg, #a6c1ee 0%, #fbc2eb 100%); }
+        &.b6 { background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%); }
+    }
 }
 
 .stats-grid {

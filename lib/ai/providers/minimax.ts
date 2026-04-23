@@ -21,31 +21,22 @@ export class MinimaxProvider implements AIProvider {
 月龄：${babyProfile.month || '未知'}个月
 ` : '宝宝档案：目前暂无具体宝宝信息，请提供通用的育儿建议。';
 
-        const systemPrompt = `你是一位资深的育儿专家。请根据提供的宝宝档案和最近的记录（喂养、睡眠、生长），给出一份简洁明了的分析报告。
-报告必须包含：
-1. 洞察（insight）：对当前状态的总体评价。
-2. 建议（recommendations）：3-5条具体的改进或维持建议。
-3. 情感（sentiment）：positive, neutral, 或 concern。
+        const systemPrompt = `你是一位育儿专家。请分析以下数据并以 JSON 返回：
+1. insight: 总体评价
+2. recommendations: 3条具体建议
+3. sentiment: positive/neutral/concern
 
 ${babyInfo}
-
-最近记录：
-- 喂养：${JSON.stringify(recentRecords.feeding)}
-- 睡眠：${JSON.stringify(recentRecords.sleep)}
-- 生长：${JSON.stringify(recentRecords.growth)}
-
-用户的问题：${query || '请分析宝宝最近的状况。'}
-
-请以符合要求的 JSON 格式返回，不要包含任何 markdown 代码块标识。
-{
-  "insight": "...",
-  "recommendations": ["...", "..."],
-  "sentiment": "positive/neutral/concern"
-}`;
+最近记录：喂养${JSON.stringify(recentRecords.feeding)}, 睡眠${JSON.stringify(recentRecords.sleep)}, 用药${JSON.stringify((recentRecords as any).medication || [])}, 健康${JSON.stringify((recentRecords as any).health || [])}
+用户提问：${query || '分析现状'}`;
 
         try {
             // 使用标准 Fetch API 调用 MiniMax V2 接口
-            const response = await fetch('https://api.minimax.chat/v1/text/chatcompletion_v2', {
+            const url = this.groupId 
+                ? `https://api.minimax.chat/v1/text/chatcompletion_v2?GroupId=${this.groupId}`
+                : 'https://api.minimax.chat/v1/text/chatcompletion_v2';
+
+            const response = await fetch(url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -63,8 +54,11 @@ ${babyInfo}
                             content: systemPrompt
                         }
                     ],
-                    response_format: { type: 'json_object' }
-                })
+                    response_format: { type: 'json_object' },
+                    stream: false
+                }),
+                // 设置 9 秒超时（Vercel Hobby 10秒限制），给程序留点时间报错
+                signal: AbortSignal.timeout(9000)
             });
 
             if (!response.ok) {
@@ -79,27 +73,52 @@ ${babyInfo}
             }
 
             const data = await response.json();
-            if (!data.choices || data.choices.length === 0) {
-                throw new Error(`MiniMax API returned no choices: ${JSON.stringify(data)}`);
+            
+            // Check for choices and message structure
+            if (!data || !data.choices || data.choices.length === 0 || !data.choices[0].message) {
+                console.error('Unexpected MiniMax Response Structure:', data);
+                throw new Error(`MiniMax API returned unexpected structure: ${JSON.stringify(data)}`);
             }
+            
             const content = data.choices[0].message.content;
+            if (content === undefined || content === null) {
+                console.error('MiniMax API returned null/undefined content:', data);
+                throw new Error('MiniMax API returned empty content');
+            }
 
             // 尝试解析 JSON
             try {
-                // 有些模型即便要求 json_object 也会返回带 ```json 的内容，做一次清洗
-                const cleanedContent = content.replace(/```json\n?|\n?```/g, '').trim();
+                // 如果 content 已经是对象（虽然通常是字符串）
+                if (typeof content === 'object') {
+                    return {
+                        insight: (content as any).insight || '无法获取分析洞察',
+                        recommendations: (content as any).recommendations || [],
+                        sentiment: (content as any).sentiment || 'neutral'
+                    };
+                }
+
+                // 模型可能返回带 markdown 代码块的内容，先进行强力清洗
+                let cleanedContent = content.trim();
+                // 移除可能的开头结尾非 JSON 字符（比如 "这是分析结果：{...}"）
+                const jsonStart = cleanedContent.indexOf('{');
+                const jsonEnd = cleanedContent.lastIndexOf('}');
+                if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+                    cleanedContent = cleanedContent.substring(jsonStart, jsonEnd + 1);
+                }
+                
                 const parsed = JSON.parse(cleanedContent);
                 
                 return {
-                    insight: parsed.insight || '无法获取分析结果',
+                    insight: parsed.insight || '分析完成，但未返回具体洞察',
                     recommendations: parsed.recommendations || [],
                     sentiment: parsed.sentiment || 'neutral'
                 };
             } catch (e) {
-                console.error('JSON Parse Error from MiniMax:', content);
+                console.error('JSON Parse Error from MiniMax. Raw content:', content);
+                // 允许返回非 JSON 文本作为洞察，这样前端至少能看到东西
                 return {
-                    insight: content, // 回退：直接显示文本内容
-                    recommendations: ["建议咨询医生获取详细指导"],
+                    insight: typeof content === 'string' ? content : '分析数据格式异常',
+                    recommendations: ["建议点击重新分析尝试获取更准确的结果"],
                     sentiment: 'neutral'
                 };
             }

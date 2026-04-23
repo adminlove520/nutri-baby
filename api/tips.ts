@@ -66,8 +66,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 let aiTips = [];
                 try {
                     // Clean AI response from markdown blocks
-                    const jsonContent = aiResponse.insight.replace(/```json\n?|\n?```/g, '').trim();
-                    aiTips = JSON.parse(jsonContent);
+                    let cleanJson = aiResponse.insight.trim();
+                    if (cleanJson.startsWith('```')) {
+                        const match = cleanJson.match(/```(?:json)?\n?([\s\S]*?)\n?```/);
+                        if (match && match[1]) {
+                            cleanJson = match[1].trim();
+                        }
+                    }
+                    aiTips = JSON.parse(cleanJson);
                 } catch (e) {
                     aiTips = [{ title: baby ? '宝宝专属建议' : '科学育儿建议', content: aiResponse.insight, category: 'general' }];
                 }

@@ -19,7 +19,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     try {
         let babyProfile = undefined;
-        let records = { feeding: [], sleep: [], growth: [] };
+        let records: any = { feeding: [], sleep: [], growth: [], medication: [], health: [] };
 
         if (babyId && babyId !== 'null' && babyId !== 'undefined') {
             const id = BigInt(babyId.toString());
@@ -36,7 +36,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     const sevenDaysAgo = new Date();
                     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-                    const [feeding, sleep, growth] = await Promise.all([
+                    const [feeding, sleep, growth, medication, health] = await Promise.all([
                         prisma.feedingRecord.findMany({
                             where: { babyId: id, time: { gte: sevenDaysAgo } },
                             orderBy: { time: 'desc' },
@@ -48,6 +48,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                             take: 10
                         }),
                         prisma.growthRecord.findMany({
+                            where: { babyId: id, time: { gte: sevenDaysAgo } },
+                            orderBy: { time: 'desc' },
+                            take: 5
+                        }),
+                        prisma.medicationRecord.findMany({
+                            where: { babyId: id, time: { gte: sevenDaysAgo } },
+                            orderBy: { time: 'desc' },
+                            take: 5
+                        }),
+                        prisma.healthRecord.findMany({
                             where: { babyId: id, time: { gte: sevenDaysAgo } },
                             orderBy: { time: 'desc' },
                             take: 5
@@ -66,7 +76,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     records = {
                         feeding: serialize(feeding),
                         sleep: serialize(sleep),
-                        growth: serialize(growth)
+                        growth: serialize(growth),
+                        medication: serialize(medication),
+                        health: serialize(health)
                     };
                 }
             }

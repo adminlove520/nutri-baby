@@ -77,10 +77,39 @@ model Baby {
   vaccines       BabyVaccineSchedule[]
   diaperRecords  DiaperRecord[]
   feedingRecords FeedingRecord[]
-  growthRecords  GrowthRecord[]
-  sleepRecords   SleepRecord[]
+  growthRecords     GrowthRecord[]
+  sleepRecords      SleepRecord[]
+  medicationRecords MedicationRecord[]
+  healthRecords     HealthRecord[]
 
   @@index([userId])
+}
+
+model MedicationRecord {
+  id        BigInt   @id @default(autoincrement())
+  babyId    BigInt   @map("baby_id")
+  name      String
+  dosage    String // 例如: 1滴, 5ml
+  time      DateTime @default(now())
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  baby      Baby     @relation(fields: [babyId], references: [id], onDelete: Cascade)
+
+  @@index([babyId, time])
+}
+
+model HealthRecord {
+  id        BigInt   @id @default(autoincrement())
+  babyId    BigInt   @map("baby_id")
+  type      String // TEMP (体温), ILLNESS (症状)
+  value     Float? // 体温数值
+  symptoms  String? // 症状描述
+  time      DateTime @default(now())
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  baby      Baby     @relation(fields: [babyId], references: [id], onDelete: Cascade)
+
+  @@index([babyId, time])
 }
 
 model BabyCollaborator {
@@ -171,6 +200,7 @@ model GrowthRecord {
   height            Decimal?  @db.Decimal(10, 2)
   weight            Decimal?  @db.Decimal(10, 2)
   headCircumference Decimal?  @map("head_circumference") @db.Decimal(10, 2)
+  imageUrl          String?   @map("image_url")
   note              String?
   createdBy         BigInt    @map("created_by")
   createdByName     String?   @map("created_by_name")

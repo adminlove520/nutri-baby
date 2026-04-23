@@ -33,10 +33,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const startDate = new Date();
             startDate.setDate(startDate.getDate() - days);
 
-            const [feedingRecords, sleepRecords, growthRecords, baby, standards] = await Promise.all([
+            const [feedingRecords, sleepRecords, growthRecords, medicationRecords, healthRecords, baby, standards] = await Promise.all([
                 prisma.feedingRecord.findMany({ where: { babyId: bId, time: { gte: startDate } }, orderBy: { time: 'asc' } }),
                 prisma.sleepRecord.findMany({ where: { babyId: bId, startTime: { gte: startDate } }, orderBy: { startTime: 'asc' } }),
                 prisma.growthRecord.findMany({ where: { babyId: bId, time: { gte: startDate } }, orderBy: { time: 'asc' } }),
+                prisma.medicationRecord.findMany({ where: { babyId: bId, time: { gte: startDate } }, orderBy: { time: 'asc' } }),
+                prisma.healthRecord.findMany({ where: { babyId: bId, time: { gte: startDate } }, orderBy: { time: 'asc' } }),
                 prisma.baby.findUnique({ where: { id: bId } }),
                 prisma.growthStandard.findMany({
                     where: { gender: 'male', source: 'WHO' },
@@ -74,7 +76,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     month: Math.floor((r.time.getTime() - new Date(baby?.birthDate || '').getTime()) / (30 * 24 * 60 * 60 * 1000)),
                     height: r.height ? Number(r.height) : null,
                     weight: r.weight ? Number(r.weight) : null,
-                    head: r.headCircumference ? Number(r.headCircumference) : null
+                    head: r.headCircumference ? Number(r.headCircumference) : null,
+                    imageUrl: r.imageUrl,
+                    note: r.note
+                })),
+                medication: medicationRecords.map(r => ({
+                    date: r.time.toISOString().split('T')[0],
+                    name: r.name,
+                    dosage: r.dosage
+                })),
+                health: healthRecords.map(r => ({
+                    date: r.time.toISOString().split('T')[0],
+                    type: r.type,
+                    value: r.value ? Number(r.value) : null,
+                    symptoms: r.symptoms
                 })),
                 standards: genderedStandards.map(s => ({ month: s.month, type: s.type, p3: Number(s.p3), p15: Number(s.p15), p50: Number(s.p50), p85: Number(s.p85), p97: Number(s.p97) }))
             });

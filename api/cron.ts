@@ -52,10 +52,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 query: "请生成一条通用的、科学的、温馨的每日育儿锦囊（包含标题和正文）。内容应涵盖营养、睡眠、心理或日常护理中的一个方面。请以JSON格式返回，不要包含Markdown代码块：{ \"title\": \"...\", \"content\": \"...\", \"category\": \"...\" }"
             });
 
+            if (!aiResponse || !aiResponse.insight) {
+                throw new Error('AI Provider returned empty response');
+            }
+
             let tipData = { title: '每日育儿锦囊', content: aiResponse.insight, category: '日常护理' };
             try {
                 // Try to parse if AI returned JSON as requested
-                const cleanJson = aiResponse.insight.replace(/```json/g, '').replace(/```/g, '').trim();
+                let cleanJson = aiResponse.insight.trim();
+                if (cleanJson.startsWith('```')) {
+                    const match = cleanJson.match(/```(?:json)?\n?([\s\S]*?)\n?```/);
+                    if (match && match[1]) {
+                        cleanJson = match[1].trim();
+                    }
+                }
+                
                 const parsed = JSON.parse(cleanJson);
                 if (parsed.title && (parsed.content || parsed.description)) {
                     tipData = {

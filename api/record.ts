@@ -31,6 +31,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 records = await prisma.diaperRecord.findMany({ where: { babyId: bId }, orderBy: { time: 'desc' }, take });
             } else if (type === 'growth') {
                 records = await prisma.growthRecord.findMany({ where: { babyId: bId }, orderBy: { time: 'desc' }, take });
+            } else if (type === 'medication') {
+                records = await prisma.medicationRecord.findMany({ where: { babyId: bId }, orderBy: { time: 'desc' }, take });
+            } else if (type === 'health') {
+                records = await prisma.healthRecord.findMany({ where: { babyId: bId }, orderBy: { time: 'desc' }, take });
             }
 
             return success(res, { records });
@@ -85,7 +89,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     }
                 });
             } else if (type === 'growth') {
-                const { height, weight, headCircumference, remark, note } = rest;
+                const { height, weight, headCircumference, remark, note, imageUrl } = rest;
                 result = await prisma.growthRecord.create({
                     data: {
                         babyId: bId,
@@ -93,13 +97,60 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         height: height ? parseFloat(height) : null,
                         weight: weight ? parseFloat(weight) : null,
                         headCircumference: headCircumference ? parseFloat(headCircumference) : null,
+                        imageUrl: imageUrl || null,
                         note: note || remark,
                         createdBy: uId
+                    }
+                });
+            } else if (type === 'medication') {
+                const { name, dosage, notes } = rest;
+                result = await prisma.medicationRecord.create({
+                    data: {
+                        babyId: bId,
+                        time: recordTime,
+                        name: name || '未知药品',
+                        dosage: dosage || '',
+                        notes: notes || ''
+                    }
+                });
+            } else if (type === 'health') {
+                const { type: healthType, value, symptoms, notes } = rest;
+                result = await prisma.healthRecord.create({
+                    data: {
+                        babyId: bId,
+                        time: recordTime,
+                        type: healthType || 'TEMP',
+                        value: value ? parseFloat(value) : null,
+                        symptoms: symptoms || '',
+                        notes: notes || ''
                     }
                 });
             }
 
             return success(res, result, 201);
+        } else if (req.method === 'PATCH') {
+            if (type === 'sleep') {
+                const { id, endTime, note } = req.body;
+                if (!id) return error(res, 'ID 缺失');
+                
+                const recordId = BigInt(id);
+                const record = await prisma.sleepRecord.findUnique({ where: { id: recordId } });
+                if (!record) return error(res, '记录不存在', 404);
+                
+                if (!(await hasBabyPermission(user.userId, record.babyId))) {
+                    return error(res, '权限不足', 403);
+                }
+
+                const updated = await prisma.sleepRecord.update({
+                    where: { id: recordId },
+                    data: {
+                        endTime: endTime ? new Date(endTime) : undefined,
+                        note: note !== undefined ? note : undefined
+                    }
+                });
+                return success(res, updated);
+            }
+            return error(res, '该类型不支持 PATCH', 400);
         } else if (req.method === 'DELETE') {
             const { id } = req.query;
             if (!id) return error(res, '记录 ID 缺失');
@@ -111,6 +162,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             else if (type === 'sleep') record = await prisma.sleepRecord.findUnique({ where: { id: rId } });
             else if (type === 'diaper') record = await prisma.diaperRecord.findUnique({ where: { id: rId } });
             else if (type === 'growth') record = await prisma.growthRecord.findUnique({ where: { id: rId } });
+            else if (type === 'medication') record = await prisma.medicationRecord.findUnique({ where: { id: rId } });
+            else if (type === 'health') record = await prisma.healthRecord.findUnique({ where: { id: rId } });
 
             if (!record) return error(res, '记录不存在', 404);
             
@@ -122,10 +175,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             else if (type === 'sleep') await prisma.sleepRecord.delete({ where: { id: rId } });
             else if (type === 'diaper') await prisma.diaperRecord.delete({ where: { id: rId } });
             else if (type === 'growth') await prisma.growthRecord.delete({ where: { id: rId } });
+            else if (type === 'medication') await prisma.medicationRecord.delete({ where: { id: rId } });
+            else if (type === 'health') await prisma.healthRecord.delete({ where: { id: rId } });
 
             return success(res, { message: '记录已删除' });
         }
     } catch (err) {
+        console.error('Record API Error:', err);
         return error(res, '服务器开小差了，请稍后再试', 500);
     }
 }

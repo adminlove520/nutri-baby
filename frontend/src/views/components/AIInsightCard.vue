@@ -50,15 +50,29 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { MagicStick, Refresh, InfoFilled } from '@element-plus/icons-vue'
-import axios from 'axios'
+import client from '@/api/client'
 import { useBabyStore } from '@/stores/baby'
 import { ElMessage } from 'element-plus'
 
 const loading = ref(false)
 const result = ref<any>(null)
 const babyStore = useBabyStore()
+
+onMounted(() => {
+    if (babyStore.currentBaby?.id) {
+        analyze()
+    }
+})
+
+watch(() => babyStore.currentBaby?.id, (newId) => {
+    if (newId) {
+        analyze()
+    } else {
+        result.value = null
+    }
+})
 
 const sentimentLabel = computed(() => {
     const s = result.value?.sentiment
@@ -69,22 +83,18 @@ const sentimentLabel = computed(() => {
 
 const analyze = async () => {
     if (!babyStore.currentBaby?.id) {
-        ElMessage.warning('请先选择一个宝宝')
         return
     }
 
     loading.value = true
     try {
-        const token = localStorage.getItem('token')
-        const res = await axios.post('/api/ai/analyze', {
+        const res = await client.post('/ai/analyze', {
             babyId: babyStore.currentBaby.id
-        }, {
-             headers: { Authorization: `Bearer ${token}` }
         })
-        result.value = res.data
+        console.log('[AI Insight] Analysis Result:', res)
+        result.value = res
     } catch (e) {
         console.error(e)
-        ElMessage.error('无法生成分析报告，请稍后再试')
     } finally {
         loading.value = false
     }
