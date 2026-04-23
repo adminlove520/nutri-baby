@@ -33,6 +33,11 @@ model User {
   growthRecords     GrowthRecord[]
   notifications     Notification[]
   sleepRecords      SleepRecord[]
+  albums            BabyAlbum[]
+  comments          AlbumComment[]
+  likes             AlbumLike[]
+  githubConfig      GitHubConfig?
+  syncLogs          SyncLog[]
 }
 
 model Notification {
@@ -82,6 +87,7 @@ model Baby {
   sleepRecords      SleepRecord[]
   medicationRecords MedicationRecord[]
   healthRecords     HealthRecord[]
+  albums         BabyAlbum[]
 
   @@index([userId])
 }
