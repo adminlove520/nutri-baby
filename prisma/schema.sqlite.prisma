@@ -182,11 +182,31 @@ model GrowthRecord {
   @@index([babyId, time])
 }
 
+model GrowthStandard {
+  id     Int     @id @default(autoincrement())
+  gender String
+  type   String
+  month  Int
+  p3     Float
+  p15    Float
+  p50    Float
+  p85    Float
+  p97    Float
+  source String  @default("WHO")
+  unit   String
+
+  @@unique([gender, type, month, source])
+  @@index([gender, type])
+  @@map("growth_standards")
+}
+
 model VaccinePlanTemplate {
   id           Int                   @id @default(autoincrement())
   vaccineType  String
   vaccineName  String
   description  String?
+  targetDisease String?
+  tips         String?
   ageInMonths  Int
   doseNumber   Int
   isRequired   Boolean
@@ -205,6 +225,8 @@ model BabyVaccineSchedule {
   vaccineType       String
   vaccineName       String
   description       String?
+  targetDisease     String?
+  tips              String?
   ageInMonths       Int
   doseNumber        Int
   isRequired        Boolean              @default(true)

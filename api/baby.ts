@@ -51,6 +51,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 if (!(await hasBabyPermission(uId, bId))) return error(res, '您没有修改权限', 403);
 
                 const { name, nickname, gender, birthDate, avatarUrl } = req.body;
+                const oldBaby = await prisma.baby.findUnique({ where: { id: bId } });
+                
                 const updated = await prisma.baby.update({
                     where: { id: bId },
                     data: {
@@ -59,6 +61,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         avatarUrl
                     }
                 });
+
+                // 如果出生日期发生变化，同步更新所有未完成的疫苗接种计划时间
+                if (birthDate && oldBaby && new Date(birthDate).getTime() !== new Date(oldBaby.birthDate).getTime()) {
+                    const schedules = await prisma.babyVaccineSchedule.findMany({
+                        where: { babyId: bId, vaccinationStatus: 'pending' }
+                    });
+                    
+                    const newBirthDate = new Date(birthDate);
+                    for (const s of schedules) {
+                        const newScheduledDate = new Date(newBirthDate);
+                        newScheduledDate.setMonth(newScheduledDate.getMonth() + s.ageInMonths);
+                        await prisma.babyVaccineSchedule.update({
+                            where: { id: s.id },
+                            data: { scheduledDate: newScheduledDate }
+                        });
+                    }
+                }
+
                 return success(res, { ...updated, id: updated.id.toString(), userId: updated.userId.toString() });
             }
 
@@ -95,6 +115,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                             return {
                                 babyId: bId, templateId: t.id, vaccineType: t.vaccineType,
                                 vaccineName: t.vaccineName, description: t.description,
+                                targetDisease: t.targetDisease, tips: t.tips,
                                 ageInMonths: t.ageInMonths, doseNumber: t.doseNumber,
                                 isRequired: t.isRequired, scheduledDate, createdBy: uId
                             };

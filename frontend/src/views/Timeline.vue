@@ -48,6 +48,12 @@
                    <p v-else-if="entry.type === 'growth'">
                      {{ getGrowthText(entry.data) }}
                    </p>
+                   <p v-else-if="entry.type === 'medication'">
+                     💊 {{ entry.data.name }} - {{ entry.data.dosage }}
+                   </p>
+                   <p v-else-if="entry.type === 'health'">
+                     {{ getHealthText(entry.data) }}
+                   </p>
                    <div class="remark" v-if="entry.data.remark || entry.data.note">
                      <el-icon><ChatDotRound /></el-icon> {{ entry.data.remark || entry.data.note }}
                    </div>
@@ -86,7 +92,7 @@ import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { 
   Refresh, Mug, Moon, ToiletPaper, TrendCharts, 
-  ChatDotRound, MoreFilled, Edit, Delete 
+  ChatDotRound, MoreFilled, Edit, Delete, FirstAidKit, DataLine
 } from '@element-plus/icons-vue'
 import { useBabyStore } from '@/stores/baby'
 import { formatTime, formatRelative } from '@/utils/date'
@@ -143,6 +149,8 @@ const getTimelineItemType = (type: string) => {
     case 'sleep': return 'success'
     case 'diaper': return 'warning'
     case 'growth': return 'info'
+    case 'medication': return 'danger'
+    case 'health': return 'warning'
     default: return ''
   }
 }
@@ -153,6 +161,8 @@ const getIcon = (type: string) => {
     case 'sleep': return Moon
     case 'diaper': return ToiletPaper
     case 'growth': return TrendCharts
+    case 'medication': return FirstAidKit
+    case 'health': return DataLine
     default: return Mug
   }
 }
@@ -163,6 +173,8 @@ const getTypeName = (type: string) => {
     case 'sleep': return '睡眠'
     case 'diaper': return '尿布'
     case 'growth': return '生长'
+    case 'medication': return '用药'
+    case 'health': return '健康'
     default: return '记录'
   }
 }
@@ -198,6 +210,16 @@ const getGrowthText = (data: any) => {
   if (data.weight) parts.push(`体重 ${data.weight}kg`)
   if (data.headCircumference) parts.push(`头围 ${data.headCircumference}cm`)
   return parts.join(' / ')
+}
+
+const getHealthText = (data: any) => {
+  if (data.type === 'TEMP') {
+    return `体温: ${data.value}°C`
+  } else if (data.type === 'ILLNESS') {
+    return `症状: ${data.symptoms || '未填写'}`
+  } else {
+    return `${data.type}: ${data.value}`
+  }
 }
 
 const handleEdit = (entry: any) => {

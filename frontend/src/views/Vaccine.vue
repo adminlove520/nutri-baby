@@ -39,12 +39,12 @@
            <div class="ai-plan-section mb-32">
               <el-card class="ai-plan-card" shadow="hover">
                  <div class="ai-header">
-                    <div class="title">✨ AI 定制接种清单</div>
-                    <el-button size="small" round @click="generateAiPlan" :loading="aiPlanLoading">智能生成</el-button>
+                    <div class="title">✨ AI 接种疫苗推荐</div>
+                    <el-button size="small" round @click="generateAiPlan" :loading="aiPlanLoading">智能推荐</el-button>
                  </div>
                  <div class="ai-plan-content">
                     <div v-if="!aiPlan" class="plan-placeholder">
-                       点击“智能生成”，由 AI 定制专属接种建议
+                       点击“智能推荐”，根据 2021 国家免疫规划标准及宝宝情况为您推荐近期疫苗
                     </div>
                     <div v-else class="plan-text markdown-body" v-html="aiPlan"></div>
                  </div>
@@ -225,17 +225,23 @@ const AMAP_SECURITY_CODE = import.meta.env.VITE_AMAP_SECURITY_CODE || 'f2f710ee6
 const generateAiPlan = async () => {
     aiPlanLoading.value = true
     try {
+        const baby = babyStore.currentBaby
+        const birthStr = baby?.birthDate ? new Date(baby.birthDate).toLocaleDateString() : '未知'
         const res: any = await client.post('/ai/analyze', {
-            babyId: babyStore.currentBaby?.id?.toString(),
-            query: '请作为一名专业的儿科专家，列出一份针对0-1岁宝宝的国家免疫规划接种清单。包括：疫苗名称、推荐接种时间、主要预防疾病。如果是针对特定月龄的宝宝，请重点标注。请使用Markdown表格格式返回。'
+            babyId: baby?.id?.toString(),
+            query: `请根据《国家免疫规划疫苗儿童免疫程序及说明（2021年版）》政策标准，结合宝宝出生日期（${birthStr}）和当前月龄，推荐近期接种疫苗清单及接种建议。
+            返回格式要求：
+            1. 推荐接种的疫苗清单（包含：疫苗名称、推荐接种月龄、预防疾病）
+            2. 相关疫苗接种的建议tips (包含：接种前准备、接种后护理等)
+            请使用清晰美观的Markdown格式返回。`
         })
         // 合并 insight + recommendations 为完整 Markdown
         const parts = [res.insight || '']
         if (Array.isArray(res.recommendations) && res.recommendations.length > 0) {
-            parts.push('\n\n**建议**\n' + res.recoions.map((r: string) => `- ${r}`).join('\n'))
+            parts.push('\n\n**专家建议**\n' + res.recommendations.map((r: string) => `- ${r}`).join('\n'))
         }
         aiPlan.value = renderMarkdown(parts.join(''))
-        ElMessage.success('接种清单已生成')
+        ElMessage.success('AI 接种推荐已生成')
     } catch (e) {
         // Handled
     } finally {
@@ -430,8 +436,8 @@ const showWiki = (v: any) => {
     currentWiki.title = v.vaccineName
     currentWiki.type = v.isRequired ? '一类疫苗' : '二类疫苗'
     currentWiki.age = v.ageInMonths === 0 ? '出生' : v.ageInMonths + '个月'
-    currentWiki.content = v.description || '该疫苗暂无详细科普信息。'
-    currentWiki.tips = v.isRequired ? '这是国家强制接种的免费疫苗，请务必按时接种。' : '这是自费可选疫苗，建议根据医生指导和家庭情况选择。'
+    currentWiki.content = `【主要预防疾病】\n${v.targetDisease || '系统暂无记录'}\n\n【科普详情】\n${v.description || '该疫苗暂无详细科普信息。'}`
+    currentWiki.tips = v.tips || (v.isRequired ? '这是国家强制接种的免费疫苗，请务必按时接种。' : '这是自费可选疫苗，建议根据医生指导和家庭情况选择。')
     wikiVisible.value = true
 }
 

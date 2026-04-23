@@ -55,9 +55,18 @@
            <span class="section-subtitle">凌晨3点的得力助手</span>
         </div>
         <div class="quick-action-grid mb-24" v-if="babyStore.currentBaby">
+           <!-- 第一排：核心记录 -->
            <div class="q-btn-wrap" @click="quickFeeding(120)">
               <div class="q-btn b1"><el-icon><Mug /></el-icon></div>
               <span>120ml奶</span>
+           </div>
+           <div class="q-btn-wrap" @click="quickBreastfeeding('left')">
+              <div class="q-btn b1" style="background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%);"><el-icon><Pouring /></el-icon></div>
+              <span>左亲喂</span>
+           </div>
+           <div class="q-btn-wrap" @click="quickBreastfeeding('right')">
+              <div class="q-btn b1" style="background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);"><el-icon><Pouring /></el-icon></div>
+              <span>右亲喂</span>
            </div>
            <div class="q-btn-wrap" @click="quickSleepToggle">
               <div class="q-btn b2">
@@ -66,26 +75,59 @@
               </div>
               <span>{{ isSleeping ? `已睡 ${sleepDuration}` : '睡了' }}</span>
            </div>
-           <div class="q-btn-wrap" @click="quickDiaper">
+
+           <!-- 第二排：日常护理 -->
+           <div class="q-btn-wrap" @click="quickDiaper('wet')">
               <div class="q-btn b3"><el-icon><ToiletPaper /></el-icon></div>
-              <span>干爽尿布</span>
+              <span>尿尿</span>
            </div>
+           <div class="q-btn-wrap" @click="quickDiaper('dirty')">
+              <div class="q-btn b3" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);"><el-icon><TrendCharts /></el-icon></div>
+              <span>臭臭</span>
+           </div>
+           <div class="q-btn-wrap" @click="quickBath">
+              <div class="q-btn b5" style="background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);"><el-icon><Umbrella /></el-icon></div>
+              <span>洗澡</span>
+           </div>
+           <div class="q-btn-wrap" @click="quickTummyTime">
+              <div class="q-btn b6"><el-icon><Checked /></el-icon></div>
+              <span>趴卧</span>
+           </div>
+
+           <!-- 第三排：补剂与健康 -->
            <div class="q-btn-wrap" @click="quickVitaminD">
               <div class="q-btn b4"><el-icon><Opportunity /></el-icon></div>
               <span>补维D</span>
-            </div>
-            <div class="q-btn-wrap" @click="quickProbiotics">
-               <div class="q-btn b6"><el-icon><StarFilled /></el-icon></div>
-               <span>益生菌</span>
-            </div>
            </div>
+           <div class="q-btn-wrap" @click="quickDHA">
+               <div class="q-btn b3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"><el-icon><Coffee /></el-icon></div>
+               <span>补DHA</span>
+           </div>
+           <div class="q-btn-wrap" @click="quickProbiotics">
+               <div class="q-btn b6" style="background: linear-gradient(135deg, #5ee7df 0%, #b490ca 100%);"><el-icon><StarFilled /></el-icon></div>
+               <span>益生菌</span>
+           </div>
+           <div class="q-btn-wrap" @click="quickCalcium">
+               <div class="q-btn b2" style="background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);"><el-icon><Food /></el-icon></div>
+               <span>补钙</span>
+           </div>
+
+           <!-- 第四排：其他 -->
            <div class="q-btn-wrap" @click="medicationDialogVisible = true">
               <div class="q-btn b5"><el-icon><FirstAidKit /></el-icon></div>
               <span>用药</span>
            </div>
            <div class="q-btn-wrap" @click="healthDialogVisible = true">
-              <div class="q-btn b6"><el-icon><DataLine /></el-icon></div>
+              <div class="q-btn b4" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);"><el-icon><DataLine /></el-icon></div>
               <span>体温</span>
+           </div>
+           <div class="q-btn-wrap" @click="quickSpitUp">
+              <div class="q-btn b1"><el-icon><Warning /></el-icon></div>
+              <span>吐奶</span>
+           </div>
+           <div class="q-btn-wrap" @click="router.push('/statistics')">
+              <div class="q-btn b4" style="background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);"><el-icon><ArrowRight /></el-icon></div>
+              <span>更多</span>
            </div>
         </div>
 
@@ -310,7 +352,7 @@ import { useRouter } from 'vue-router'
 import { 
   Mug, Moon, ToiletPaper, TrendCharts, ArrowRight, Pouring, 
   Bell, WarningFilled, Opportunity, Refresh, FirstAidKit, DataLine, UserFilled,
-  StarFilled, Checked
+  StarFilled, Checked, Moon, Food, Coffee, Umbrella, Warning
 } from '@element-plus/icons-vue'
 import DailyTipsCard from '@/components/DailyTipsCard.vue'
 import AIInsightCard from './components/AIInsightCard.vue'
@@ -369,6 +411,21 @@ const quickFeeding = async (amount: number) => {
     } catch (e) {}
 }
 
+const quickBreastfeeding = async (side: 'left' | 'right') => {
+    if (!babyStore.currentBaby?.id) return
+    try {
+        await client.post('/record/feeding', {
+            babyId: babyStore.currentBaby.id,
+            type: 'breast',
+            leftBreastMinutes: side === 'left' ? 10 : 0,
+            rightBreastMinutes: side === 'right' ? 10 : 0,
+            time: getBeijingNow().toISOString()
+        })
+        ElMessage.success(`闪电记录：亲喂 (${side === 'left' ? '左侧' : '右侧'}) 10min`)
+        fetchData()
+    } catch (e) {}
+}
+
 const quickSleepToggle = async () => {
     if (!babyStore.currentBaby?.id) return
     try {
@@ -399,15 +456,49 @@ const quickSleepToggle = async () => {
     } catch (e) {}
 }
 
-const quickDiaper = async () => {
+const quickDiaper = async (type: 'dry' | 'wet' | 'dirty' | 'both' = 'dry') => {
     if (!babyStore.currentBaby?.id) return
     try {
+        const typeMap: Record<string, string> = {
+            'dry': '干爽',
+            'wet': '尿尿',
+            'dirty': '臭臭',
+            'both': '又尿又臭'
+        }
         await client.post('/record/diaper', {
             babyId: babyStore.currentBaby.id,
-            type: 'dry',
+            type: type,
             time: getBeijingNow().toISOString()
         })
-        ElMessage.success('闪电记录：干爽尿布')
+        ElMessage.success(`闪电记录：${typeMap[type] || '尿布'}`)
+        fetchData()
+    } catch (e) {}
+}
+
+const quickBath = async () => {
+    if (!babyStore.currentBaby?.id) return
+    try {
+        await client.post('/record/health', {
+            babyId: babyStore.currentBaby.id,
+            type: 'ACTIVITY',
+            symptoms: '洗澡',
+            time: getBeijingNow().toISOString()
+        })
+        ElMessage.success('闪电记录：洗澡')
+        fetchData()
+    } catch (e) {}
+}
+
+const quickTummyTime = async () => {
+    if (!babyStore.currentBaby?.id) return
+    try {
+        await client.post('/record/health', {
+            babyId: babyStore.currentBaby.id,
+            type: 'ACTIVITY',
+            symptoms: '趴卧/Tummy Time',
+            time: getBeijingNow().toISOString()
+        })
+        ElMessage.success('闪电记录：趴卧')
         fetchData()
     } catch (e) {}
 }
@@ -438,6 +529,62 @@ const quickVitaminD = async () => {
             time: getBeijingNow().toISOString()
         })
         ElMessage.success('闪电记录：补维D')
+        fetchData()
+    } catch (e) {}
+}
+
+const quickDHA = async () => {
+    if (!babyStore.currentBaby?.id) return
+    try {
+        await client.post('/record/medication', {
+            babyId: babyStore.currentBaby.id,
+            name: 'DHA',
+            dosage: '1粒',
+            time: getBeijingNow().toISOString()
+        })
+        ElMessage.success('闪电记录：补DHA')
+        fetchData()
+    } catch (e) {}
+}
+
+const quickCalcium = async () => {
+    if (!babyStore.currentBaby?.id) return
+    try {
+        await client.post('/record/medication', {
+            babyId: babyStore.currentBaby.id,
+            name: '钙剂',
+            dosage: '1包',
+            time: getBeijingNow().toISOString()
+        })
+        ElMessage.success('闪电记录：补钙')
+        fetchData()
+    } catch (e) {}
+}
+
+const quickSpitUp = async () => {
+    if (!babyStore.currentBaby?.id) return
+    try {
+        await client.post('/record/health', {
+            babyId: babyStore.currentBaby.id,
+            type: 'ILLNESS',
+            symptoms: '吐奶',
+            time: getBeijingNow().toISOString()
+        })
+        ElMessage.success('闪电记录：吐奶')
+        fetchData()
+    } catch (e) {}
+}
+
+const quickCrying = async () => {
+    if (!babyStore.currentBaby?.id) return
+    try {
+        await client.post('/record/health', {
+            babyId: babyStore.currentBaby.id,
+            type: 'ILLNESS',
+            symptoms: '哭闹',
+            time: getBeijingNow().toISOString()
+        })
+        ElMessage.success('闪电记录：哭闹')
         fetchData()
     } catch (e) {}
 }

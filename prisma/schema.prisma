@@ -238,6 +238,8 @@ model VaccinePlanTemplate {
   vaccineType  String                @map("vaccine_type")
   vaccineName  String                @map("vaccine_name")
   description  String?
+  targetDisease String?              @map("target_disease")
+  tips         String?
   ageInMonths  Int                   @map("age_in_months")
   doseNumber   Int                   @map("dose_number")
   isRequired   Boolean               @map("is_required")
@@ -258,6 +260,8 @@ model BabyVaccineSchedule {
   vaccineType       String               @map("vaccine_type")
   vaccineName       String               @map("vaccine_name")
   description       String?
+  targetDisease     String?              @map("target_disease")
+  tips              String?
   ageInMonths       Int                  @map("age_in_months")
   doseNumber        Int                  @map("dose_number")
   isRequired        Boolean              @default(true) @map("is_required")

@@ -126,15 +126,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const today = new Date();
-    const reminderTarget = new Date();
-    reminderTarget.setDate(today.getDate() + 3); // 3 days in advance
+    today.setHours(0, 0, 0, 0);
+    
+    // Target is tomorrow (1 day before)
+    const reminderTarget = new Date(today);
+    reminderTarget.setDate(today.getDate() + 1);
+    
+    const reminderEnd = new Date(reminderTarget);
+    reminderEnd.setHours(23, 59, 59, 999);
 
     try {
         const upcomingVaccines = await prisma.babyVaccineSchedule.findMany({
             where: {
                 scheduledDate: {
-                    lte: reminderTarget,
-                    gte: today
+                    gte: reminderTarget,
+                    lte: reminderEnd
                 },
                 vaccinationStatus: 'pending',
                 reminderSent: false
@@ -155,37 +161,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const notifications: { userId: any; title: string; content: string; type: string }[] = [];
         for (const v of upcomingVaccines) {
+            const primaryUser = v.baby.user;
+            const primarySettings = (primaryUser.settings as any) || {};
+
             const title = `疫苗接种提醒: ${v.vaccineName}`;
             const content = `您的宝宝 ${v.baby.name} 预计将在 ${v.scheduledDate.toISOString().split('T')[0]} 接种 ${v.vaccineName}。请提前做好准备。`;
             
-            // Create for primary user
-            notifications.push({
-                userId: v.baby.userId,
-                title,
-                content,
-                type: 'vaccine'
-            });
-
-            // Create for collaborators
-            v.baby.collaborators.forEach(c => {
+            // 1. Create Internal Notification for primary user
+            if (primarySettings.vaccineNotify !== false) {
                 notifications.push({
-                    userId: c.userId,
+                    userId: v.baby.userId,
                     title,
                     content,
                     type: 'vaccine'
                 });
-            });
+            }
 
-            // Update reminder sent status
-            await prisma.babyVaccineSchedule.update({
-                where: { id: v.id },
-                data: { reminderSent: true, reminderSentAt: new Date() }
-            });
+            // 2. Create for collaborators
+            for (const c of v.baby.collaborators) {
+                const cSettings = (c.user.settings as any) || {};
+                if (cSettings.vaccineNotify !== false) {
+                    notifications.push({
+                        userId: c.userId,
+                        title,
+                        content,
+                        type: 'vaccine'
+                    });
+                }
+            }
 
-            // Real Email Push
-            if (v.baby.user.email) {
+            // 3. Real Email Push for primary user
+            if (primaryUser.email && primarySettings.emailNotify !== false) {
                 try {
-                    await sendEmail(v.baby.user.email, title, `
+                    await sendEmail(primaryUser.email, title, `
                         <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #f9fbfc;">
                             <div style="background-color: #fff; padding: 40px; border-radius: 24px; box-shadow: 0 10px 30px rgba(255,142,148,0.1); border: 1px solid #ffeaec;">
                                 <div style="text-align: center; margin-bottom: 30px;">
@@ -208,9 +216,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         </div>
                     `);
                 } catch (err) {
-                    console.error('Failed to send email to', v.baby.user.email, err);
+                    console.error('Failed to send email to', primaryUser.email, err);
                 }
             }
+
+            // Update reminder sent status
+            await prisma.babyVaccineSchedule.update({
+                where: { id: v.id },
+                data: { reminderSent: true, reminderSentAt: new Date() }
+            });
         }
 
         if (notifications.length > 0) {

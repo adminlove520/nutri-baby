@@ -39,6 +39,14 @@
         <el-card class="setting-card" shadow="never">
           <div class="setting-item">
             <div class="item-info">
+              <span class="label">站内消息</span>
+              <span class="desc">在应用内接收重要的系统与任务提醒</span>
+            </div>
+            <el-switch v-model="settings.inAppNotify" @change="saveSettings" />
+          </div>
+          <div class="divider"></div>
+          <div class="setting-item">
+            <div class="item-info">
               <span class="label">邮件提醒</span>
               <span class="desc">开启疫苗接种、成长建议的邮件推送</span>
             </div>
@@ -47,10 +55,39 @@
           <div class="divider"></div>
           <div class="setting-item">
             <div class="item-info">
+              <span class="label">疫苗接种提醒</span>
+              <span class="desc">在预计接种前 1 天为您发送提醒</span>
+            </div>
+            <el-switch v-model="settings.vaccineNotify" @change="saveSettings" />
+          </div>
+          <div class="divider"></div>
+          <div class="setting-item">
+            <div class="item-info">
               <span class="label">每日 AI 育儿锦囊</span>
               <span class="desc">由 AI 每天为您生成一则科学育儿建议</span>
             </div>
             <el-switch v-model="settings.aiTipsNotify" @change="saveSettings" />
+          </div>
+        </el-card>
+      </div>
+
+      <div class="setting-group">
+        <h3 class="group-title">定时任务 (Cron)</h3>
+        <el-card class="setting-card" shadow="never">
+          <div class="setting-item">
+            <div class="item-info">
+              <span class="label">定时扫描频率</span>
+              <span class="desc">系统每日凌晨自动扫描待接种疫苗</span>
+            </div>
+            <el-tag type="info" size="small">每日一次</el-tag>
+          </div>
+          <div class="divider"></div>
+          <div class="setting-item">
+            <div class="item-info">
+              <span class="label">手动触发同步</span>
+              <span class="desc">立即检查并推送明天的疫苗接种提醒</span>
+            </div>
+            <el-button type="primary" size="small" :loading="syncing" @click="handleManualSync" plain round>立即执行</el-button>
           </div>
         </el-card>
       </div>
@@ -121,6 +158,7 @@ const babyStore = useBabyStore()
 const settings = reactive({
     defaultBabyId: '',
     emailNotify: true,
+    vaccineNotify: true,
     inAppNotify: true,
     aiTipsNotify: true,
     darkMode: false
@@ -128,6 +166,7 @@ const settings = reactive({
 
 const passwordDialogVisible = ref(false)
 const changingPassword = ref(false)
+const syncing = ref(false)
 const passwordForm = reactive({
     oldPassword: '',
     newPassword: '',
@@ -189,6 +228,20 @@ const changePassword = async () => {
         // Handled
     } finally {
         changingPassword.value = false
+    }
+}
+
+const handleManualSync = async () => {
+    syncing.value = true
+    try {
+        // Trigger the cron endpoint (assuming it allows manual trigger for the logged-in user's baby or general)
+        // In this implementation, api/cron.ts processes all babies.
+        await client.get('/cron')
+        ElMessage.success('定时任务同步完成')
+    } catch (e) {
+        ElMessage.error('同步失败')
+    } finally {
+        syncing.value = false
     }
 }
 
