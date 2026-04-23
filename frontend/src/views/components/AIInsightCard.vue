@@ -112,9 +112,9 @@ onMounted(() => {
         if (cached) {
             result.value = { insight: cached.insight, recommendations: cached.recommendations, sentiment: cached.sentiment }
             lastUpdated.value = formatUpdateTime(cached.timestamp)
-        } else {
-            analyze()
         }
+        // AI analysis is now manual or cron-based to save tokens/cost
+        // else { analyze() }
     }
 })
 
@@ -124,9 +124,9 @@ watch(() => babyStore.currentBaby?.id, (newId) => {
         if (cached) {
             result.value = { insight: cached.insight, recommendations: cached.recommendations, sentiment: cached.sentiment }
             lastUpdated.value = formatUpdateTime(cached.timestamp)
-        } else {
-            analyze()
         }
+        // AI analysis is now manual or cron-based
+        // else { analyze() }
     } else {
         result.value = null
         lastUpdated.value = ''

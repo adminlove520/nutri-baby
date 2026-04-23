@@ -140,9 +140,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // ── 单独路由：初始化 WHO 标准数据（不需要 babyId）──────────────────────────
     if (action === 'seed_standards') {
         try {
+            const model = (prisma as any).growthStandard;
+            if (!model) throw new Error('growthStandard model missing in Prisma client');
+
             let inserted = 0;
             for (const row of ALL_STANDARDS) {
-                await (prisma as any).growthStandard.upsert({
+                await model.upsert({
                     where: { gender_type_month_source: { gender: row.gender, type: row.type, month: row.month, source: row.source } },
                     update: { p3: row.p3, p15: row.p15, p50: row.p50, p85: row.p85, p97: row.p97, unit: row.unit },
                     create: row,
@@ -169,10 +172,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!(await hasBabyPermission(uId, bId))) return error(res, '权限不足', 403);
 
     try {
-        // ── 返回 WHO 标准数据（按性别过滤）────────────────────────────────────
+            // ── 返回 WHO 标准数据（按性别过滤）────────────────────────────────────
         if (action === 'standards') {
             const { type, gender } = req.query;
-            const standards = await (prisma as any).growthStandard.findMany({
+            const model = (prisma as any).growthStandard;
+            if (!model) {
+                console.warn('[Stats] growthStandard model is missing from Prisma client');
+                return success(res, []);
+            }
+            const standards = await model.findMany({
                 where: {
                     gender: (gender as string) || 'male',
                     ...(type ? { type: type as string } : {}),
@@ -237,10 +245,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             // 拉取该宝宝性别对应的 WHO 标准
             const gender = baby?.gender || 'male';
-            const standards = await (prisma as any).growthStandard.findMany({
-                where: { gender, source: 'WHO' },
-                orderBy: [{ type: 'asc' }, { month: 'asc' }],
-            });
+            const model = (prisma as any).growthStandard;
+            let standards = [];
+            if (model) {
+                standards = await model.findMany({
+                    where: { gender, source: 'WHO' },
+                    orderBy: [{ type: 'asc' }, { month: 'asc' }],
+                });
+            } else {
+                console.warn('[Stats] growthStandard model missing, charts will have no WHO baseline');
+            }
 
             return success(res, {
                 feeding: Object.entries(dailyFeeding).map(([date, amount]) => ({ date, amount })),
