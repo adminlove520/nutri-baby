@@ -21,15 +21,14 @@ export class MinimaxProvider implements AIProvider {
 月龄：${babyProfile.month || '未知'}个月
 ` : '宝宝档案：目前暂无具体宝宝信息，请提供通用的育儿建议。';
 
-        const systemPrompt = `你是一位精炼的育儿专家。请分析数据并以 JSON 返回。
-注意：回答必须极其简练，insight 限制在 60 字以内。
+        const systemPrompt = `你是一位专业的育儿专家。请分析以下数据并以 JSON 返回：
 1. insight: 总体评价
-2. recommendations: 3条简短建议
+2. recommendations: 3-5条具体建议
 3. sentiment: positive/neutral/concern
 
 ${babyInfo}
-最近记录：喂养${JSON.stringify(recentRecords.feeding)}, 睡眠${JSON.stringify(recentRecords.sleep)}, 医疗${JSON.stringify((recentRecords as any).medication || [])}
-用户提问：${(query || '分析现状').trim().substring(0, 200)}`;
+最近记录：喂养${JSON.stringify(recentRecords.feeding)}, 睡眠${JSON.stringify(recentRecords.sleep)}, 用药${JSON.stringify((recentRecords as any).medication || [])}, 健康记录${JSON.stringify((recentRecords as any).health || [])}
+用户提问：${(query || '分析现状').trim()}`;
 
         try {
             // 使用标准 Fetch API 调用 MiniMax V2 接口
@@ -48,7 +47,7 @@ ${babyInfo}
                     messages: [
                         {
                             role: 'system',
-                            content: '你是一个专业的育儿助手，始终以 JSON 格式输出分析结果。回答务必极其精简，以确保在 5 秒内生成。'
+                            content: '你是一个专业的育儿助手，始终以 JSON 格式输出分析结果。'
                         },
                         {
                             role: 'user',
@@ -58,8 +57,8 @@ ${babyInfo}
                     response_format: { type: 'json_object' },
                     stream: false
                 }),
-                // 设置为 7.5 秒，留出足够时间让外层逻辑完成响应
-                signal: AbortSignal.timeout(7500)
+                // 恢复为较长的超时时间
+                signal: AbortSignal.timeout(25000)
             });
 
             if (!response.ok) {

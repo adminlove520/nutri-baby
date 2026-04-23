@@ -18,15 +18,14 @@ export class OpenAIProvider implements AIProvider {
             ? `宝宝: ${babyProfile.name}, 性别: ${babyProfile.gender}, 月龄: ${babyProfile.month}个月`
             : '（未选择宝宝）';
 
-        const systemPrompt = `你是一位精炼的育儿专家。请分析数据并以 JSON 返回。
-注意：回答必须极其简练，insight 限制在 100 字以内。
-1. insight: 总体评价
-2. recommendations: 3条简短建议
-3. sentiment: positive/neutral/concern
+        const systemPrompt = `你是一位专业的育儿专家。请根据以下宝宝的最近数据提供深度的健康分析，并以 JSON 格式返回结果。
+1. insight: 对宝宝现状的总体评价与洞察
+2. recommendations: 3-5条针对性的专业育儿建议
+3. sentiment: 情绪倾向 (positive/neutral/concern)
 
 ${babyInfo}
-最近记录：喂养${JSON.stringify(recentRecords.feeding)}, 睡眠${JSON.stringify(recentRecords.sleep)}, 医疗${JSON.stringify((recentRecords as any).medication || [])}
-用户提问：${(query || '分析现状').trim().substring(0, 300)}`;
+最近记录：喂养${JSON.stringify(recentRecords.feeding)}, 睡眠${JSON.stringify(recentRecords.sleep)}, 医疗${JSON.stringify((recentRecords as any).medication || [])}, 健康记录${JSON.stringify((recentRecords as any).health || [])}
+用户提问：${(query || '请分析宝宝现状并提供建议').trim()}`;
 
         try {
             const response = await fetch(`${this.baseUrl}/chat/completions`, {
@@ -40,7 +39,7 @@ ${babyInfo}
                     messages: [
                         {
                             role: 'system',
-                            content: '你是一个专业的育儿助手，始终以 JSON 格式输出分析结果。回答务必极其精简，以确保快速生成。'
+                            content: '你是一个专业的育儿助手，始终以 JSON 格式输出深度分析结果。'
                         },
                         {
                             role: 'user',
@@ -50,7 +49,8 @@ ${babyInfo}
                     response_format: { type: 'json_object' },
                     temperature: 0.7
                 }),
-                signal: AbortSignal.timeout(15000)
+                // 增加超时容忍度。对于 OpenAI 来说，15-25s 通常很稳
+                signal: AbortSignal.timeout(25000)
             });
 
             if (!response.ok) {
