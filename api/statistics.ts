@@ -325,6 +325,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             ? Math.floor((Date.now() - new Date(userData.createdAt).getTime()) / (1000 * 60 * 60 * 24))
             : 0;
 
+        console.log('[DEBUG Stats] joinDays calculation:', {
+            userDataCreatedAt: userData?.createdAt,
+            now: Date.now(),
+            result: joinDays
+        });
+
         return success(res, {
             today: {
                 feeding: { totalCount: feedingToday.length, bottleMl: totalMl, lastFeedingTime: lastFeeding },

@@ -11,8 +11,10 @@
           <p v-else>欢迎加入 Nutri-Baby，开启科学育儿之旅</p>
        </div>
        <div class="header-actions">
-          <el-badge :is-dot="hasNewNotifications" class="mr-12">
-             <el-button circle :icon="Bell" @click="router.push('/notifications')"></el-button>
+          <el-badge :is-dot="hasNewNotifications" class="mr-12 notification-badge">
+             <span class="notification-btn" @click="router.push('/notifications')">
+                <el-icon :size="22"><Bell /></el-icon>
+             </span>
           </el-badge>
           <el-avatar :size="40" v-if="userInfo?.avatar" :src="userInfo.avatar" @click="router.push('/user')" />
           <el-avatar :size="40" v-else icon="UserFilled" @click="router.push('/user')" />
@@ -868,6 +870,21 @@ onUnmounted(() => {
   .header-actions {
     display: flex;
     align-items: center;
+    .notification-badge {
+      :deep(.el-badge__content) { top: 2px; right: 2px; }
+    }
+    .notification-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--el-fill-color-light);
+      cursor: pointer;
+      transition: all 0.2s;
+      &:hover { background: var(--el-fill-color); }
+    }
     .el-avatar { cursor: pointer; border: 2px solid #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
   }
 }
