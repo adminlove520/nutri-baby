@@ -30,15 +30,19 @@
           </li>
           <li>
             <el-icon><Check /></el-icon>
+            <span><b>成长相册</b>：记录宝宝每个珍贵瞬间。</span>
+          </li>
+          <li>
+            <el-icon><Check /></el-icon>
             <span><b>疫苗提醒</b>：根据宝宝月龄自动规划并推送接种提醒。</span>
           </li>
           <li>
             <el-icon><Check /></el-icon>
-            <span><b>AI 育儿专家</b>：基于 MiniMax 大模型提供实时咨询。</span>
+            <span><b>AI 育儿专家</b>：基于 OpenAI/MiniMax 大模型提供实时咨询。</span>
           </li>
           <li>
             <el-icon><Check /></el-icon>
-            <span><b>多端同步</b>：支持家庭成员共同维护，实时同步。</span>
+            <span><b>家庭共享</b>：支持家庭成员共同维护，实时同步。</span>
           </li>
         </ul>
       </el-card>
