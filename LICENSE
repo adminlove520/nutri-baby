@@ -1,0 +1,59 @@
+# Nutri-Baby 育儿助手
+
+![Version](https://img.shields.io/badge/version-2.0.1-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Vue](https://img.shields.io/badge/Vue-3-orange)
+![Vercel](https://img.shields.io/badge/Vercel-Deployed-brightgreen)
+
+一款专为新手父母设计的智能育儿助手，帮助记录宝宝成长、疫苗接种、喂养睡眠等重要信息。
+
+## 功能特性
+
+- 👶 **宝宝管理** - 支持多个宝宝 profiles，快速切换
+- 📊 **成长记录** - 身高体重绘制成长曲线
+- 💉 **疫苗管理** - 疫苗接种提醒与记录
+- 📷 **相册功能** - 朋友圈风格成长相册，支持评论点赞
+- 🔄 **GitHub 同步** - 图库自动同步到 GitHub 仓库
+- 🤖 **AI 助手** - 每日育儿锦囊，智能分析建议
+- 📱 **PWA 支持** - 离线使用，随时访问
+
+## 技术栈
+
+- **前端**: Vue 3 + Vite + Pinia + Element Plus
+- **后端**: Vercel Serverless Functions + Prisma ORM
+- **数据库**: PostgreSQL
+- **部署**: Vercel
+
+## 开始使用
+
+### 安装依赖
+
+```bash
+# 安装前端依赖
+cd frontend
+npm install
+
+# 安装后端依赖
+cd ../api
+npm install
+```
+
+### 配置环境变量
+
+```bash
+# 复制环境变量模板
+cp .env.example .env
+```
+
+### 启动开发服务器
+
+```bash
+cd frontend
+npm run dev
+```
+
+## 许可证
+
+本项目基于 [MIT License](LICENSE) 开源。
+
+Copyright (c) 2025-2026 Nutri-Baby Project
