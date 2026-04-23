@@ -219,7 +219,8 @@ const aiPlanLoading = ref(false)
 const hospitals = ref<any[]>([])
 const mapLoading = ref(false)
 
-const AMAP_KEY = 'a38d9863a8019c9c922aeae63ca94ff4' // Corrected key from user (replacing l with 1 as common in hex)
+const AMAP_KEY = import.meta.env.VITE_AMAP_KEY || 'a38d9863a8019c9c922aeae63ca94ff4'
+const AMAP_SECURITY_CODE = import.meta.env.VITE_AMAP_SECURITY_CODE || 'f2f710ee6896c3f9501bb5d128755a70'
 
 const generateAiPlan = async () => {
     aiPlanLoading.value = true
@@ -319,6 +320,14 @@ const loadAMap = () => {
         searchNearbyHospitals()
         return
     }
+    
+    // 设置高德地图安全密钥（JS API 2.0 必须在加载脚本前设置）
+    if (AMAP_SECURITY_CODE) {
+        (window as any)._AMapSecurityConfig = {
+            securityJsCode: AMAP_SECURITY_CODE,
+        }
+    }
+
     mapLoading.value = true
     const script = document.createElement('script')
     script.src = `https://webapi.amap.com/maps?v=2.0&key=${AMAP_KEY}&plugin=AMap.Geolocation,AMap.PlaceSearch,AMap.CitySearch`
