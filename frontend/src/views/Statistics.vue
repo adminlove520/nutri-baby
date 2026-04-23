@@ -625,12 +625,14 @@ watch([range, () => babyStore.currentBaby?.id], fetchData)
 
 .page-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: flex-end;
+  gap: 16px;
   margin-bottom: 32px;
-  
-  .title { font-size: 26px; font-weight: 900; color: var(--el-text-color-primary); margin: 0 0 4px; }
-  .subtitle { font-size: 14px; color: var(--el-text-color-secondary); font-weight: 500; }
+
+  .title { font-size: clamp(20px, 4vw, 26px); font-weight: 900; color: var(--el-text-color-primary); margin: 0 0 4px; }
+  .subtitle { font-size: clamp(12px, 2vw, 14px); color: var(--el-text-color-secondary); font-weight: 500; }
   .range-select { width: 140px; :deep(.el-input__wrapper) { border-radius: 12px; } }
 }
 
@@ -718,6 +720,10 @@ watch([range, () => babyStore.currentBaby?.id], fetchData)
 .chart-container {
   height: 280px;
   &.tall { height: 420px; }
+  @media (max-width: 768px) {
+    height: 220px;
+    &.tall { height: 280px; }
+  }
 }
 
 .chart { width: 100%; height: 100%; }

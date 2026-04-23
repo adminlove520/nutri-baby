@@ -222,10 +222,11 @@ const saveRecord = async () => {
 
 .page-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
   margin-bottom: 24px;
-  .title { font-size: 20px; font-weight: 800; color: #2c3e50; }
+  .title { font-size: clamp(16px, 4vw, 20px); font-weight: 800; color: #2c3e50; }
 }
 
 .type-selector {

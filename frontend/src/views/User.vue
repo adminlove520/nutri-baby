@@ -274,7 +274,7 @@ const handleLogout = () => {
 
 .page-header {
   margin: 10px 0 20px;
-  .title { font-size: 24px; font-weight: 800; color: var(--el-text-color-primary); }
+  .title { font-size: clamp(18px, 4vw, 24px); font-weight: 800; color: var(--el-text-color-primary); }
 }
 
 .profile-card {

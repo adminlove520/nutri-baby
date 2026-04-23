@@ -127,7 +127,7 @@ const saveRecord = async () => {
 
 <style scoped lang="scss">
 .growth-page { max-width: 500px; margin: 0 auto; }
-.page-header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; .title { font-size: 20px; font-weight: 800; color: #2c3e50; } }
+.page-header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 24px; .title { font-size: clamp(16px, 4vw, 20px); font-weight: 800; color: #2c3e50; } }
 .full-width { width: 100%; }
 .submit-wrapper { margin-top: 40px; .submit-btn { width: 100%; height: 50px; font-weight: bold; } }
 

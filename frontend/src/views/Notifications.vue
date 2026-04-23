@@ -146,18 +146,20 @@ onMounted(fetchNotifications)
 
 .page-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   margin-bottom: 24px;
-  
+
   .header-left {
     display: flex;
     align-items: center;
     gap: 12px;
     .back-btn { font-size: 20px; color: var(--el-text-color-primary); }
-    .title { font-size: 22px; font-weight: 800; color: var(--el-text-color-primary); margin: 0; }
+    .title { font-size: clamp(18px, 4vw, 22px); font-weight: 800; color: var(--el-text-color-primary); margin: 0; }
   }
-  
+
   .read-all-btn { font-weight: 700; font-size: 14px; }
 }
 

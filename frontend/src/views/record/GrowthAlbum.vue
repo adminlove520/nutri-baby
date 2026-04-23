@@ -91,21 +91,27 @@ watch(() => babyStore.currentBaby?.id, fetchData)
 
 .page-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   margin-bottom: 30px;
   .header-left {
     display: flex;
     align-items: center;
     gap: 12px;
-    .title { font-size: 24px; font-weight: 800; margin: 0; }
+    .title { font-size: clamp(18px, 4vw, 24px); font-weight: 800; margin: 0; }
   }
 }
 
 .album-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 16px;
+  @media (max-width: 480px) {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
 }
 
 .album-card {

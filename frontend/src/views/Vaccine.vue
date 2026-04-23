@@ -516,11 +516,13 @@ watch(() => babyStore.currentBaby?.id, fetchVaccines)
 
 .page-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   margin-bottom: 24px;
-  .title { font-size: 22px; font-weight: 900; color: var(--el-text-color-primary); margin: 0; }
-  .subtitle { font-size: 13px; color: var(--el-text-color-secondary); margin-top: 4px; }
+  .title { font-size: clamp(18px, 4vw, 22px); font-weight: 900; color: var(--el-text-color-primary); margin: 0; }
+  .subtitle { font-size: clamp(11px, 2vw, 13px); color: var(--el-text-color-secondary); margin-top: 4px; }
 }
 
 .mini-stat-card {
@@ -656,7 +658,11 @@ watch(() => babyStore.currentBaby?.id, fetchVaccines)
 .wiki-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
+    gap: 12px;
+    @media (max-width: 480px) {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
 }
 
 .wiki-item-card {

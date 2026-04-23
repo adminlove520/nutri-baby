@@ -203,11 +203,12 @@ const handleDelete = () => {
 
 .page-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
   margin-bottom: 24px;
   .back-btn { font-size: 20px; color: var(--el-text-color-primary); }
-  .title { font-size: 22px; font-weight: 800; color: var(--el-text-color-primary); margin: 0; }
+  .title { font-size: clamp(18px, 4vw, 22px); font-weight: 800; color: var(--el-text-color-primary); margin: 0; }
 }
 
 .form-card {

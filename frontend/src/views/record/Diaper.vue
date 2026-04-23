@@ -124,7 +124,7 @@ const saveRecord = async () => {
 
 <style scoped lang="scss">
 .diaper-page { max-width: 500px; margin: 0 auto; }
-.page-header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; .title { font-size: 20px; font-weight: 800; color: #2c3e50; } }
+.page-header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 24px; .title { font-size: clamp(16px, 4vw, 20px); font-weight: 800; color: #2c3e50; } }
 
 .diaper-selector-new {
     display: grid;

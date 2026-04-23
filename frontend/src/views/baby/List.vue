@@ -121,12 +121,14 @@ onMounted(() => {
 
 .page-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   margin-bottom: 30px;
-  
-  .title { font-size: 24px; font-weight: 800; color: #2c3e50; margin-bottom: 4px; }
-  .subtitle { font-size: 14px; color: #909399; }
+
+  .title { font-size: clamp(18px, 4vw, 24px); font-weight: 800; color: #2c3e50; margin-bottom: 4px; }
+  .subtitle { font-size: clamp(12px, 2vw, 14px); color: #909399; }
 }
 
 .baby-card {
