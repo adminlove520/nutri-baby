@@ -16,13 +16,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const { babyId, query } = req.body;
+    console.log('[AI] analyze request, babyId:', babyId, 'type:', typeof babyId);
 
     try {
         let babyProfile = undefined;
         let records: any = { feeding: [], sleep: [], growth: [], medication: [], health: [] };
 
-        if (babyId && babyId !== 'null' && babyId !== 'undefined') {
-            const id = BigInt(babyId.toString());
+        const babyIdStr = babyId != null ? String(babyId) : '';
+        if (babyIdStr && babyIdStr !== 'null' && babyIdStr !== 'undefined') {
+            const id = BigInt(babyIdStr);
             
             // Permissions check
             const hasPermission = await hasBabyPermission(user.userId, id);
@@ -92,7 +94,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             query: babyProfile ? query : `(用户尚未添加宝宝或未选择宝宝，请提供通用的育儿或接种建议) ${query || ''}`
         });
 
-        return success(res, result);
+        // Normalize: ensure recommendations is always a string array
+        const normalized = {
+            insight: result.insight || '',
+            sentiment: result.sentiment || 'neutral',
+            recommendations: Array.isArray(result.recommendations)
+                ? result.recommendations
+                : typeof result.recommendations === 'string'
+                    ? (result.recommendations as string).split(/[;\n]/).map((s: string) => s.trim()).filter(Boolean)
+                    : []
+        };
+        return success(res, normalized);
 
     } catch (err: any) {
         console.error('AI Analyze Error:', err);

@@ -44,7 +44,7 @@ import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Back, Share } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import axios from 'axios'
+import client from '@/api/client'
 
 const route = useRoute()
 const router = useRouter()
@@ -54,14 +54,19 @@ const inviteUrl = ref('')
 const generateLink = async () => {
     loading.value = true
     try {
-        const token = localStorage.getItem('token')
-        const babyId = route.params.id
-        const res = await axios.post('/api/baby/invite', { babyId }, {
-            headers: { Authorization: `Bearer ${token}` }
-        })
-        inviteUrl.value = res.data.url
-    } catch (e) {
-        ElMessage.error('生成失败')
+        const babyId = route.params.id as string
+        if (!babyId) {
+            ElMessage.error('宝宝 ID 无效，请返回重试')
+            return
+        }
+        // GET /api/baby/:babyId/invite → action=invite&babyId=:babyId
+        const res: any = await client.get(`/baby/${babyId}/invite`)
+        // Backend returns { token } — build the invite URL
+        const token = res.token || res
+        inviteUrl.value = `${window.location.origin}/join?token=${token}`
+    } catch (e: any) {
+        console.error('[Invite] Error:', e)
+        ElMessage.error('生成失败，请稍后再试')
     } finally {
         loading.value = false
     }

@@ -1,9 +1,10 @@
 import client from './client'
 
-export const getStatistics = async (babyId: string) => {
-    // 获取当前时区偏移量（小时）
-    const tz = (new Date().getTimezoneOffset() / -60).toString();
-    return client.get('/statistics', { params: { babyId, tz } })
+export const getStatistics = async (babyId: string | bigint) => {
+    if (!babyId || babyId === 'null' || babyId === 'undefined') {
+        return Promise.reject(new Error('babyId is required'))
+    }
+    return client.get('/statistics', { params: { babyId: babyId.toString() } })
 }
 
 export const getGrowthStandards = async (type: string, gender: string) => {

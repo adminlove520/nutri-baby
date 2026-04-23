@@ -9,12 +9,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const uId = BigInt(user.userId);
 
     const { action, babyId, range = '7', tz = '8' } = req.query;
-    if (!babyId) return error(res, '宝宝 ID 缺失');
+    if (!babyId || babyId === 'null' || babyId === 'undefined') return error(res, '宝宝 ID 缺失');
     
     let bId: bigint;
     try {
         bId = BigInt(babyId as string);
     } catch (e) {
+        console.error('[Stats] Invalid babyId format:', babyId);
         return error(res, '宝宝 ID 格式不正确');
     }
 
@@ -139,7 +140,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             },
             joinDays
         });
-    } catch (err) {
-        return error(res, '统计数据加载失败', 500);
+    } catch (err: any) {
+        console.error('[Stats] Unhandled error:', err?.message, err?.stack);
+        return error(res, `统计数据加载失败: ${err?.message || '未知错误'}`, 500);
     }
 }

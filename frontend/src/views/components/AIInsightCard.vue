@@ -17,7 +17,7 @@
     
     <div class="insight-content">
         <div v-if="loading" class="loading-state">
-            <el-skeleton :rows="3" animated />
+            <el-skeleton :rows="4" animated />
         </div>
         <div v-else-if="result" class="analysis-result">
              <div class="sentiment-badge" :class="result.sentiment">
@@ -27,6 +27,7 @@
                 <p class="insight-text">{{ result.insight }}</p>
              </div>
              
+             <!-- Recommendations Section -->
              <div class="recommendations" v-if="result.recommendations && result.recommendations.length > 0">
                 <div class="rec-title">
                     <el-icon><InfoFilled /></el-icon>
@@ -38,6 +39,11 @@
                         <span class="text">{{ rec }}</span>
                     </li>
                 </ul>
+             </div>
+
+             <div class="update-time" v-if="lastUpdated">
+                <el-icon><Clock /></el-icon>
+                <span>{{ lastUpdated }}</span>
              </div>
         </div>
         <div v-else class="empty-state">
@@ -51,26 +57,79 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { MagicStick, Refresh, InfoFilled } from '@element-plus/icons-vue'
+import { MagicStick, Refresh, InfoFilled, Clock } from '@element-plus/icons-vue'
 import client from '@/api/client'
 import { useBabyStore } from '@/stores/baby'
 import { ElMessage } from 'element-plus'
 
 const loading = ref(false)
 const result = ref<any>(null)
+const lastUpdated = ref<string>('')
 const babyStore = useBabyStore()
+
+// --- LocalStorage Persistence ---
+const getCacheKey = (babyId: string | bigint) => `ai_insight_${babyId}`
+
+const loadFromCache = (babyId: string | bigint) => {
+    try {
+        const key = getCacheKey(babyId)
+        const cached = localStorage.getItem(key)
+        if (!cached) return null
+        const parsed = JSON.parse(cached)
+        // Cache is valid for 6 hours
+        if (Date.now() - parsed.timestamp < 6 * 60 * 60 * 1000) {
+            return parsed
+        }
+        localStorage.removeItem(key)
+        return null
+    } catch {
+        return null
+    }
+}
+
+const saveToCache = (babyId: string | bigint, data: any) => {
+    try {
+        const key = getCacheKey(babyId)
+        localStorage.setItem(key, JSON.stringify({
+            ...data,
+            timestamp: Date.now()
+        }))
+    } catch {}
+}
+
+const formatUpdateTime = (timestamp: number) => {
+    const date = new Date(timestamp)
+    const h = date.getHours().toString().padStart(2, '0')
+    const m = date.getMinutes().toString().padStart(2, '0')
+    const month = date.getMonth() + 1
+    const day = date.getDate()
+    return `${month}月${day}日 ${h}:${m} 更新`
+}
 
 onMounted(() => {
     if (babyStore.currentBaby?.id) {
-        analyze()
+        const cached = loadFromCache(babyStore.currentBaby.id)
+        if (cached) {
+            result.value = { insight: cached.insight, recommendations: cached.recommendations, sentiment: cached.sentiment }
+            lastUpdated.value = formatUpdateTime(cached.timestamp)
+        } else {
+            analyze()
+        }
     }
 })
 
 watch(() => babyStore.currentBaby?.id, (newId) => {
     if (newId) {
-        analyze()
+        const cached = loadFromCache(newId)
+        if (cached) {
+            result.value = { insight: cached.insight, recommendations: cached.recommendations, sentiment: cached.sentiment }
+            lastUpdated.value = formatUpdateTime(cached.timestamp)
+        } else {
+            analyze()
+        }
     } else {
         result.value = null
+        lastUpdated.value = ''
     }
 })
 
@@ -82,19 +141,36 @@ const sentimentLabel = computed(() => {
 })
 
 const analyze = async () => {
-    if (!babyStore.currentBaby?.id) {
-        return
-    }
+    if (!babyStore.currentBaby?.id) return
 
     loading.value = true
     try {
-        const res = await client.post('/ai/analyze', {
-            babyId: babyStore.currentBaby.id
+        const res: any = await client.post('/ai/analyze', {
+            babyId: babyStore.currentBaby.id.toString()
         })
         console.log('[AI Insight] Analysis Result:', res)
-        result.value = res
-    } catch (e) {
-        console.error(e)
+        
+        // Ensure recommendations is always an array
+        const normalized = {
+            insight: res.insight || '',
+            sentiment: res.sentiment || 'neutral',
+            recommendations: Array.isArray(res.recommendations)
+                ? res.recommendations
+                : typeof res.recommendations === 'string'
+                    ? (res.recommendations as string).split(/[;\n]/).map((s: string) => s.trim()).filter(Boolean)
+                    : []
+        }
+        
+        result.value = normalized
+        
+        // Persist to cache with timestamp
+        const now = Date.now()
+        saveToCache(babyStore.currentBaby.id, { ...normalized, timestamp: now })
+        lastUpdated.value = formatUpdateTime(now)
+        
+    } catch (e: any) {
+        console.error('[AI Insight] Error:', e)
+        ElMessage.warning('AI 分析暂时不可用，请稍后再试')
     } finally {
         loading.value = false
     }
@@ -163,17 +239,18 @@ const analyze = async () => {
         margin-bottom: 20px;
         .insight-text {
             font-size: 15px;
-            line-height: 1.6;
+            line-height: 1.7;
             color: #303133;
             font-weight: 500;
         }
     }
     
     .recommendations {
-        background: #fff;
+        background: #fafbff;
         border-radius: 12px;
         padding: 16px;
         border: 1px dashed var(--el-color-primary-light-7);
+        margin-bottom: 12px;
 
         .rec-title {
             display: flex;
@@ -195,15 +272,29 @@ const analyze = async () => {
                 gap: 8px;
                 font-size: 13.5px;
                 color: #606266;
-                margin-bottom: 8px;
-                line-height: 1.5;
+                margin-bottom: 10px;
+                line-height: 1.6;
+                
+                &:last-child { margin-bottom: 0; }
                 
                 .bullet {
                     color: var(--el-color-primary);
                     font-weight: bold;
+                    flex-shrink: 0;
+                    margin-top: 1px;
                 }
             }
         }
+    }
+
+    .update-time {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 11px;
+        color: var(--el-text-color-placeholder);
+
+        .el-icon { font-size: 11px; }
     }
 }
 

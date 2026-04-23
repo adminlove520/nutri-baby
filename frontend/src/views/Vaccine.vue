@@ -206,13 +206,13 @@ const aiPlanLoading = ref(false)
 const hospitals = ref<any[]>([])
 const mapLoading = ref(false)
 
-const AMAP_KEY = '5266c29c18f9281ce3bf76c3a3fc61ec' // Corrected key from user (replacing l with 1 as common in hex)
+const AMAP_KEY = '772edaca6d3a5282c4265a79a19230f7' // Corrected key from user (replacing l with 1 as common in hex)
 
 const generateAiPlan = async () => {
     aiPlanLoading.value = true
     try {
         const res: any = await client.post('/ai/analyze', {
-            babyId: babyStore.currentBaby?.id,
+            babyId: babyStore.currentBaby?.id?.toString(),
             query: '请作为一名专业的儿科专家，列出一份精简的针对0-1岁宝宝的国家免疫规划接种清单。包括：疫苗名称、推荐接种时间、主要预防疾病。如果是针对特定月龄的宝宝，请重点标注。请使用Markdown表格格式返回。'
         })
         aiPlan.value = res.insight.replace(/\n/g, '<br/>')
@@ -327,9 +327,9 @@ const fetchVaccines = async () => {
     }
     loading.value = true
     try {
-        const res: any = await client.get('/baby/vaccines', {
-            params: { babyId: babyStore.currentBaby.id }
-        })
+        // Route: GET /api/baby/:babyId/vaccines → action=vaccines&babyId=:babyId
+        const babyId = babyStore.currentBaby.id.toString()
+        const res: any = await client.get(`/baby/${babyId}/vaccines`)
         vaccines.value = res
     } catch (e) {
         // Handled
@@ -347,12 +347,12 @@ const completeVaccine = async (v: any) => {
             roundButton: true
         })
         
-        await client.post('/baby/vaccines', {
-            id: v.id,
+        // Route: POST /api/baby/:babyId/vaccines → action=vaccines&babyId=:babyId
+        const babyId = babyStore.currentBaby?.id?.toString()
+        await client.post(`/baby/${babyId}/vaccines`, {
+            id: v.id?.toString(),
             status: 'completed',
             vaccineDate: new Date().toISOString()
-        }, {
-            params: { babyId: babyStore.currentBaby?.id }
         })
         
         ElMessage.success('已登记接种记录')
@@ -375,7 +375,7 @@ const generateAiKnowledge = async () => {
     aiLoading.value = true
     try {
         const res: any = await client.post('/ai/analyze', {
-            babyId: babyStore.currentBaby?.id,
+            babyId: babyStore.currentBaby?.id?.toString(),
             query: '请作为一名专业的儿科医生，提供一份疫苗接种百科知识，包括接种意义、常见反应及护理、注意事项等。如果宝宝信息存在，请针对宝宝月龄定制。请使用Markdown格式返回。'
         })
         aiKnowledge.value = res.insight.replace(/\n/g, '<br/>')

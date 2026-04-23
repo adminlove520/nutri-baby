@@ -17,12 +17,12 @@ export const deleteBaby = async (id: string) => {
     return client.delete(`/baby?babyId=${id}`)
 }
 
-export const getVaccines = async (babyId: string) => {
-    return client.get(`/baby/${babyId}/vaccines`)
+export const getVaccines = async (babyId: string | bigint) => {
+    return client.get(`/baby/${babyId.toString()}/vaccines`)
 }
 
-export const updateVaccine = async (babyId: string, data: any) => {
-    return client.post(`/baby/${babyId}/vaccines`, data)
+export const updateVaccine = async (babyId: string | bigint, data: any) => {
+    return client.post(`/baby/${babyId.toString()}/vaccines`, data)
 }
 
 export const getInviteToken = async (babyId: string) => {

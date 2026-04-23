@@ -448,13 +448,13 @@ const tipsLoading = ref(false)
 const manualGenerateTip = async () => {
     tipsLoading.value = true
     try {
-        await client.get('/cron?triggerAiTip=true')
-        ElMessage.success('已为您生成最新的育儿锦囊')
-        // Refresh tips
         const babyId = babyStore.currentBaby?.id
-        const tipsRes: any = await client.get('/tips', { params: { babyId } })
-        todayTips.value = tipsRes
+        // Call tips with forceAI=true to regenerate fresh AI tips
+        const tipsRes: any = await client.get('/tips', { params: { babyId: babyId?.toString(), forceAI: 'true' } })
+        todayTips.value = Array.isArray(tipsRes) ? tipsRes : []
+        ElMessage.success('已为您生成最新的育儿锦囊')
     } catch (e) {
+        ElMessage.warning('生成失败，请稍后再试')
     } finally {
         tipsLoading.value = false
     }
@@ -469,11 +469,12 @@ const fetchData = async () => {
         
         upcomingVaccines.value = []
         
+        const babyIdStr = babyId?.toString()
         const results = await Promise.allSettled([
-            client.get('/tips', { params: { babyId } }),
-            babyId ? getStatistics(babyId) : Promise.reject('No babyId'),
-            babyId ? getVaccines(babyId) : Promise.reject('No babyId'),
-            babyId ? client.get('/record/sleep', { params: { babyId, limit: 1 } }) : Promise.reject('No babyId'),
+            client.get('/tips', { params: { babyId: babyIdStr } }),
+            babyIdStr ? getStatistics(babyIdStr) : Promise.reject('No babyId'),
+            babyIdStr ? getVaccines(babyIdStr) : Promise.reject('No babyId'),
+            babyIdStr ? client.get('/record/sleep', { params: { babyId: babyIdStr, limit: 1 } }) : Promise.reject('No babyId'),
             client.get('/notifications?unreadOnly=true')
         ])
 
@@ -482,8 +483,10 @@ const fetchData = async () => {
         }
         tipsLoading.value = false 
 
+        console.log('[DEBUG Home] results[1]:', results[1].status, results[1].status === 'rejected' ? (results[1] as any).reason : '')
         if (results[1].status === 'fulfilled') {
             const data = results[1].value as any
+            console.log('[DEBUG Home] statistics data:', JSON.stringify(data))
             if (data.joinDays !== undefined) joinDays.value = data.joinDays
             if (data && data.today) {
                 const t = data.today
