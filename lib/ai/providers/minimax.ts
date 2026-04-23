@@ -58,74 +58,58 @@ ${babyInfo}
                     response_format: { type: 'json_object' },
                     stream: false
                 }),
-                // 关键修改：设置为 8 秒。Vercel Hobby 10秒限制，留出 2秒给 Prisma 和网络开销。
-                signal: AbortSignal.timeout(8000)
+                // 设置为 7.5 秒，留出足够时间让外层逻辑完成响应
+                signal: AbortSignal.timeout(7500)
             });
 
             if (!response.ok) {
                 const errorText = await response.text();
-                let errorData;
-                try {
-                    errorData = JSON.parse(errorText);
-                } catch (e) {
-                    errorData = errorText;
-                }
-                throw new Error(`MiniMax API Error (${response.status}): ${typeof errorData === 'object' ? JSON.stringify(errorData) : errorData}`);
+                throw new Error(`MiniMax API Error (${response.status}): ${errorText}`);
             }
 
             const data = await response.json();
+            const content = data.choices?.[0]?.message?.content;
             
-            // Check for choices and message structure
-            if (!data || !data.choices || data.choices.length === 0 || !data.choices[0].message) {
-                console.error('Unexpected MiniMax Response Structure:', data);
-                throw new Error(`MiniMax API returned unexpected structure: ${JSON.stringify(data)}`);
-            }
-            
-            const content = data.choices[0].message.content;
-            if (content === undefined || content === null) {
-                console.error('MiniMax API returned null/undefined content:', data);
-                throw new Error('MiniMax API returned empty content');
-            }
+            if (!content) throw new Error('Empty AI response');
 
-            // 尝试解析 JSON
+            let parsed;
             try {
-                // 如果 content 已经是对象（虽然通常是字符串）
-                if (typeof content === 'object') {
-                    return {
-                        insight: (content as any).insight || '无法获取分析洞察',
-                        recommendations: (content as any).recommendations || [],
-                        sentiment: (content as any).sentiment || 'neutral'
-                    };
-                }
-
-                // 模型可能返回带 markdown 代码块的内容，先进行强力清洗
-                let cleanedContent = content.trim();
-                // 移除可能的开头结尾非 JSON 字符（比如 "这是分析结果：{...}"）
-                const jsonStart = cleanedContent.indexOf('{');
-                const jsonEnd = cleanedContent.lastIndexOf('}');
-                if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
-                    cleanedContent = cleanedContent.substring(jsonStart, jsonEnd + 1);
-                }
-                
-                const parsed = JSON.parse(cleanedContent);
-                
-                return {
-                    insight: parsed.insight || '分析完成，但未返回具体洞察',
-                    recommendations: parsed.recommendations || [],
-                    sentiment: parsed.sentiment || 'neutral'
-                };
+                parsed = JSON.parse(content);
             } catch (e) {
-                console.error('JSON Parse Error from MiniMax. Raw content:', content);
-                // 允许返回非 JSON 文本作为洞察，这样前端至少能看到东西
+                // 如果不是 JSON，尝试清洗
+                const jsonStart = content.indexOf('{');
+                const jsonEnd = content.lastIndexOf('}');
+                if (jsonStart !== -1 && jsonEnd !== -1) {
+                    parsed = JSON.parse(content.substring(jsonStart, jsonEnd + 1));
+                } else {
+                    throw e;
+                }
+            }
+            
+            return {
+                insight: parsed.insight || '分析完成',
+                recommendations: parsed.recommendations || [],
+                sentiment: parsed.sentiment || 'neutral'
+            };
+
+        } catch (error: any) {
+            console.error('AI Analysis Error (Handled):', error);
+            
+            // 如果是超时或其他错误，返回降级后的默认建议，避免 500
+            if (error.name === 'TimeoutError' || error.message.includes('timeout')) {
                 return {
-                    insight: typeof content === 'string' ? content : '分析数据格式异常',
-                    recommendations: ["建议点击重新分析尝试获取更准确的结果"],
-                    sentiment: 'neutral'
+                    insight: "AI 医生正在忙碌中（请求超时），已为您生成初步建议。近期请注意宝宝的作息规律和环境卫生。",
+                    recommendations: ["保持室内空气流通", "定时监测宝宝体温", "点击'重新分析'再次尝试"],
+                    sentiment: "neutral"
                 };
             }
-        } catch (error: any) {
-            console.error('MiniMax Provider Error:', error);
-            throw error;
+            
+            // 其他错误也进行兜底
+            return {
+                insight: "分析服务暂时不可用，请稍后再试。建议根据宝宝实际情况进行常规护理。",
+                recommendations: ["如有异常请咨询专业医生", "记录数据以便后续分析"],
+                sentiment: "neutral"
+            };
         }
     }
 }
