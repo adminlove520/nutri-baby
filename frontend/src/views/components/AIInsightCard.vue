@@ -157,7 +157,6 @@ const analyze = async () => {
             babyId: babyStore.currentBaby.id.toString(),
             query: `宝宝：${baby?.name || '未知'}，性别：${baby?.gender === 'male' ? '男' : '女'}，年龄：${ageStr}（出生${days}天）。请提供专业的育儿健康分析和建议。`
         })
-        console.log('[AI Insight] Analysis Result:', res)
         
         // Ensure recommendations is always an array
         const normalized = {
@@ -178,8 +177,8 @@ const analyze = async () => {
         lastUpdated.value = formatUpdateTime(now)
         
     } catch (e: any) {
-        console.error('[AI Insight] Error:', e)
-        ElMessage.warning('AI 分析暂时不可用，请稍后再试')
+        console.error('AI Insight error:', e)
+        ElMessage.error('获取AI建议失败，请稍后重试')
     } finally {
         loading.value = false
     }

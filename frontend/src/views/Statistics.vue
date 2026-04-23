@@ -375,8 +375,8 @@ const fetchData = async () => {
          summary.heightGain = 0
       }
     } catch (e) {
-      console.error('Fetch statistics error:', e)
-      ElMessage.error('无法同步最新数据，请检查网络')
+        console.error('Statistics fetch error:', e)
+        ElMessage.error('加载统计数据失败')
     } finally {
       loading.value = false
     }

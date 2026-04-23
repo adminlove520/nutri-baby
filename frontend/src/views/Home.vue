@@ -647,7 +647,6 @@ const fetchData = async () => {
     tipsLoading.value = true
     try {
         const babyId = babyStore.currentBaby?.id
-        console.log('[DEBUG Home] Fetching data for babyId:', babyId)
         
         upcomingVaccines.value = []
         
@@ -665,10 +664,8 @@ const fetchData = async () => {
         }
         tipsLoading.value = false 
 
-        console.log('[DEBUG Home] results[1]:', results[1].status, results[1].status === 'rejected' ? (results[1] as any).reason : '')
         if (results[1].status === 'fulfilled') {
             const data = results[1].value as any
-            console.log('[DEBUG Home] statistics data:', JSON.stringify(data))
             if (data.joinDays !== undefined) joinDays.value = data.joinDays
             if (data && data.today) {
                 const t = data.today
@@ -685,8 +682,6 @@ const fetchData = async () => {
                 }
             }
         } else {
-            console.error('今日概览数据加载失败:', (results[1] as any).reason)
-            // 如果是因为没有选择宝宝，不提示错误
             if (babyIdStr) {
                 ElMessage.error('今日概览数据加载失败')
             }
@@ -732,7 +727,7 @@ const fetchData = async () => {
             hasNewNotifications.value = notifs.length > 0
         }
     } catch (e) {
-        console.error('[DEBUG Home] fetchData unexpected error:', e)
+        console.error('Home fetchData error:', e)
     } finally {
         loading.value = false
         tipsLoading.value = false

@@ -16,7 +16,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const { babyId, query } = req.body;
-    console.log('[AI] analyze request, babyId:', babyId, 'type:', typeof babyId);
 
     try {
         let babyProfile: { name: string; gender: string; birthDate: Date; month: number } | undefined = undefined;

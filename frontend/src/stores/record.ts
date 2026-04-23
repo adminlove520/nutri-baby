@@ -26,7 +26,15 @@ export const useRecordStore = defineStore('record', () => {
     }
 
     const deleteRecord = async (type: string, id: string) => {
-        console.log('Delete record', type, id)
+        try {
+            const res = await axios.delete(`/api/record/${type}/${id}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+            return res.data
+        } catch (error) {
+            console.error('Failed to delete record:', error)
+            throw error
+        }
     }
 
     return {

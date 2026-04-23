@@ -297,7 +297,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // ── Default: 今日概览 ───────────────────────────────────────────────
         const startOfToday = getStartOfToday();
-        console.log(`[DEBUG Stats] bId: ${bId}, startOfToday: ${startOfToday.toISOString()}`);
 
         const [feedingToday, sleepToday, diaperToday, latestGrowth, userData] = await Promise.all([
             prisma.feedingRecord.findMany({ where: { babyId: bId, time: { gte: startOfToday } }, orderBy: { time: 'asc' } }),
@@ -324,14 +323,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const userCreatedAt = userData?.createdAt ? new Date(userData.createdAt).getTime() : null;
         const diffDays = userCreatedAt ? Math.floor((Date.now() - userCreatedAt) / (1000 * 60 * 60 * 24)) : null;
         const joinDays = diffDays !== null && diffDays >= 0 ? Math.max(1, diffDays) : 1;
-
-        console.log('[DEBUG Stats] joinDays calculation:', {
-            userDataCreatedAt: userData?.createdAt,
-            userCreatedAt,
-            now: Date.now(),
-            diffDays,
-            result: joinDays
-        });
 
         return success(res, {
             today: {

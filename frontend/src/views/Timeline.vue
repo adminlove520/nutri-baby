@@ -136,7 +136,7 @@ const fetchTimeline = async (reset = false) => {
     entries.value = [...entries.value, ...newRecords]
     offset.value += limit
   } catch (e) {
-    console.error(e)
+    console.error('Timeline load error:', e)
     ElMessage.error('无法加载时光轴记录')
   } finally {
     loading.value = false

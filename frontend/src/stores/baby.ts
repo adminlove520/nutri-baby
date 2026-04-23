@@ -29,7 +29,7 @@ export const useBabyStore = defineStore('baby', () => {
                 localStorage.setItem('current_baby_id', found.id)
             }
         } catch (error) {
-            console.error('Failed to load babies', error)
+            console.error('Failed to load babies:', error)
         } finally {
             loading.value = false
         }
@@ -53,7 +53,7 @@ export const useBabyStore = defineStore('baby', () => {
             }
             return newBaby
         } catch (error) {
-            console.error('Add baby failed', error)
+            console.error('Add baby failed:', error)
             throw error
         }
     }
@@ -72,7 +72,7 @@ export const useBabyStore = defineStore('baby', () => {
             }
             return updated
         } catch (error) {
-            console.error('Update baby failed', error)
+            console.error('Update baby failed:', error)
             throw error
         }
     }
@@ -88,7 +88,7 @@ export const useBabyStore = defineStore('baby', () => {
                 else localStorage.removeItem('current_baby_id')
             }
         } catch (error) {
-            console.error('Delete baby failed', error)
+            console.error('Delete baby failed:', error)
             throw error
         }
     }

@@ -64,8 +64,8 @@ const generateLink = async () => {
         // Backend returns { token } — build the invite URL
         const token = res.token || res
         inviteUrl.value = `${window.location.origin}/join?token=${token}`
-    } catch (e: any) {
-        console.error('[Invite] Error:', e)
+    } catch (e) {
+        console.error('Invite error:', e)
         ElMessage.error('生成失败，请稍后再试')
     } finally {
         loading.value = false

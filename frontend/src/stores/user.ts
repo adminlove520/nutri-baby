@@ -18,7 +18,7 @@ export const useUserStore = defineStore('user', () => {
             const data = await authApi.login(code)
             setSession(data)
         } catch (error) {
-            console.error('Login failed', error)
+            console.error('Login failed:', error)
             throw error
         }
     }
