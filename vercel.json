@@ -10,6 +10,7 @@
         { "source": "/api/baby/join", "destination": "/api/baby?action=join" },
         { "source": "/api/statistics/charts", "destination": "/api/statistics?action=charts" },
         { "source": "/api/statistics/standards", "destination": "/api/statistics?action=standards" },
+        { "source": "/api/statistics/seed", "destination": "/api/statistics?action=seed_standards" },
         { "source": "/api/user/stats", "destination": "/api/user?action=stats" },
         { "source": "/api/user/update", "destination": "/api/user?action=update" },
         { "source": "/api/user/info", "destination": "/api/user?action=info" },

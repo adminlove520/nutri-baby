@@ -4,8 +4,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("PRISMA_DATABASE_URL")
+  directUrl = env("DATABASE_URL")
 }
 
 model User {
@@ -212,6 +213,24 @@ model GrowthRecord {
   creator           User      @relation(fields: [createdBy], references: [id])
 
   @@index([babyId, time])
+}
+
+model GrowthStandard {
+  id     Int     @id @default(autoincrement())
+  gender String  // 'male' | 'female'
+  type   String  // 'height' | 'weight' | 'head'
+  month  Int     // 0-60 月龄
+  p3     Float
+  p15    Float
+  p50    Float
+  p85    Float
+  p97    Float
+  source String  @default("WHO")
+  unit   String  // 'cm' | 'kg'
+
+  @@unique([gender, type, month, source])
+  @@index([gender, type])
+  @@map("growth_standards")
 }
 
 model VaccinePlanTemplate {

@@ -75,8 +75,9 @@
           <div class="card-header">
             <span class="card-title"><div class="dot d3"></div> WHO 生长基准对比</span>
             <div class="header-right">
-              <div class="percentile-tag" v-if="growthPercentile">
-                 {{ growthMode === 'height' ? '身高' : '体重' }}百分位: <strong>{{ growthPercentile }}</strong>
+              <div class="percentile-tag" v-if="growthPercentile"
+                :style="{ background: growthPercentile.color + '18', color: growthPercentile.color }">
+                {{ growthMode === 'height' ? '身高' : '体重' }} &nbsp;<strong>{{ growthPercentile.label }}</strong>
               </div>
               <el-button type="primary" size="small" round class="mr-12" @click="growthDialogVisible = true">记录成长</el-button>
               <el-radio-group v-model="growthMode" size="small" class="custom-radio">
@@ -89,9 +90,23 @@
         <div class="chart-container tall">
            <v-chart class="chart" :option="growthChartOption" autoresize />
         </div>
+        <div class="who-legend">
+          <div class="legend-item">
+            <div class="swatch" style="background:rgba(255,164,81,0.4)"></div>
+            <span>P3~P15 / P85~P97（偏离区）</span>
+          </div>
+          <div class="legend-item">
+            <div class="swatch" style="background:rgba(46,213,115,0.35)"></div>
+            <span>P15~P85（正常范围）</span>
+          </div>
+          <div class="legend-item">
+            <div class="swatch" style="background:#b2bec3;height:2px;border-radius:2px"></div>
+            <span>WHO P50 中位线</span>
+          </div>
+        </div>
         <div class="growth-tip">
            <el-icon><InfoFilled /></el-icon>
-           <span>虚线为 WHO 标准中位数，阴影区域为 P3-P97 正常发育范围。</span>
+           <span>数据来源 WHO 2006 儿童生长标准，绿色区间（P15~P85）为正常发育范围，橙色为偏高或偏低，仅供参考，具体请咨询医生。</span>
         </div>
       </el-card>
 
@@ -296,7 +311,9 @@ const chartData = reactive({
   growth: [] as any[],
   medication: [] as any[],
   health: [] as any[],
-  standards: [] as any[]
+  // 新结构：{ height: [{month,p3,p15,p50,p85,p97}], weight: [...] }
+  standards: { height: [] as any[], weight: [] as any[] },
+  babyGender: 'male' as string,
 })
 
 const summary = reactive({
@@ -326,7 +343,8 @@ const fetchData = async () => {
       chartData.growth = res?.growth || []
       chartData.medication = res?.medication || []
       chartData.health = res?.health || []
-      chartData.standards = res?.standards || []
+      chartData.standards = res?.standards || { height: [], weight: [] }
+      chartData.babyGender = res?.babyGender || 'male'
 
       // Stats Calculation with safety checks
       if (chartData.feeding && chartData.feeding.length > 0) {
@@ -422,104 +440,172 @@ const sleepChartOption = computed(() => ({
   }]
 }))
 
+// 找到与宝宝最新记录月龄最近的标准值
 const growthPercentile = computed(() => {
-  if (chartData.growth.length === 0 || chartData.standards.length === 0) return null
-  
-  const latest = chartData.growth[chartData.growth.length - 1]
   const isHeight = growthMode.value === 'height'
+  const stdList = isHeight ? chartData.standards.height : chartData.standards.weight
+  if (chartData.growth.length === 0 || stdList.length === 0) return null
+
+  const sorted = [...chartData.growth].sort((a, b) => b.month - a.month)
+  const latest = sorted[0]
   const val = isHeight ? latest.height : latest.weight
-  const typeKey = isHeight ? 'height' : 'weight'
-  
   if (!val) return null
-  
-  const standard = chartData.standards.find(s => s.month === latest.month && s.type === typeKey)
-  if (!standard) return null
-  
-  if (val < standard.p3) return '低于 P3'
-  if (val < standard.p15) return 'P3 - P15'
-  if (val < standard.p50) return 'P15 - P50'
-  if (val < standard.p85) return 'P50 - P85'
-  if (val < standard.p97) return 'P85 - P97'
-  return '高于 P97'
+
+  // 找最近月龄的标准（精确匹配或最接近）
+  const std = stdList.reduce((prev: any, curr: any) =>
+    Math.abs(curr.month - latest.month) < Math.abs(prev.month - latest.month) ? curr : prev
+  )
+  if (!std) return null
+
+  if (val < std.p3)  return { label: '低于 P3',    color: '#ff4757' }
+  if (val < std.p15) return { label: 'P3 ~ P15',   color: '#ffa502' }
+  if (val < std.p50) return { label: 'P15 ~ P50',  color: '#2ed573' }
+  if (val < std.p85) return { label: 'P50 ~ P85',  color: '#2ed573' }
+  if (val < std.p97) return { label: 'P85 ~ P97',  color: '#ffa502' }
+  return               { label: '高于 P97',        color: '#ff6b81' }
 })
 
 const growthChartOption = computed(() => {
   const isHeight = growthMode.value === 'height'
-  const typeKey = isHeight ? 'height' : 'weight'
-  const relevantStandards = chartData.standards.filter(s => s.type === typeKey)
-  
-  const maxMonthInRecord = chartData.growth.length > 0 ? Math.max(...chartData.growth.map(i => i.month)) : 0
-  const months = Array.from({ length: Math.max(maxMonthInRecord + 2, 7) }, (_, i) => i)
+  const stdList: any[] = isHeight ? chartData.standards.height : chartData.standards.weight
+  const babyColor = isHeight ? '#ff8e94' : '#ffd077'
+  const babyGlow  = isHeight ? 'rgba(255,142,148,0.35)' : 'rgba(255,208,119,0.35)'
+  const unit = isHeight ? 'cm' : 'kg'
+
+  // X 轴：从 0 到最大月龄（标准数据覆盖范围），至少显示到 12 月
+  const stdMonths = stdList.map(s => s.month)
+  const maxStdMonth = stdMonths.length > 0 ? Math.max(...stdMonths) : 36
+  const maxBabyMonth = chartData.growth.length > 0 ? Math.max(...chartData.growth.map(r => r.month)) : 0
+  const maxMonth = Math.max(maxStdMonth, maxBabyMonth, 12)
+  // 只取标准数据里有的月龄作为 X 轴，不做逐月插值（避免大量 null）
+  const xMonths = stdMonths.length > 0 ? stdMonths : Array.from({ length: 13 }, (_, i) => i)
+
+  const getStd = (m: number) => stdList.find(s => s.month === m)
+
+  // 正确的区间带做法：P3 bottom + (P15-P3) fill + (P50-P15) fill + (P85-P50) fill + (P97-P85) fill
+  // 用 markArea 或 band series（ECharts 推荐 stack=false + areaStyle between）
+  // 这里用四层叠加色带的正确方式：
+  // series[0] = P3 基线（透明 line，无 area）
+  // series[1] = P3→P15 area（stack，上层 fill）
+  // series[2] = P15→P50 area
+  // series[3] = P50→P85 area
+  // series[4] = P85→P97 area
+  // 每层 data = 该区间宽度（差值），上一层作为 base
+
+  const makeStdBand = (name: string, low: keyof typeof stdList[0], high: keyof typeof stdList[0], color: string, showInLegend = false) => ({
+    name,
+    type: 'line',
+    stack: 'who_band',
+    smooth: true,
+    symbol: 'none',
+    lineStyle: { opacity: 0, width: 0 },
+    areaStyle: { color, opacity: 1 },
+    data: xMonths.map(m => {
+      const s = getStd(m)
+      return s ? parseFloat(((s[high] as number) - (s[low] as number)).toFixed(2)) : null
+    }),
+    emphasis: { disabled: true },
+    legendHoverLink: false,
+    showInLegend,
+    tooltip: { show: false },
+    z: 1,
+  })
 
   return {
-    tooltip: { trigger: 'axis' },
-    legend: { bottom: 10, icon: 'roundRect', textStyle: { color: '#57606f', fontWeight: 600 } },
-    grid: { top: 30, left: 10, right: 20, bottom: 60, containLabel: true },
+    animation: true,
+    tooltip: {
+      trigger: 'axis',
+      formatter: (params: any[]) => {
+        const month = xMonths[params[0]?.dataIndex ?? 0]
+        const std = getStd(month)
+        const baby = params.find((p: any) => p.seriesName === '宝宝实测')
+        let html = `<div style="font-weight:700;margin-bottom:6px">${month} 月龄</div>`
+        if (std) {
+          html += `<div style="color:#aaa;font-size:12px">WHO 参考（${unit}）</div>`
+          html += `<div style="font-size:12px">P3: ${std.p3} &nbsp; P50: ${std.p50} &nbsp; P97: ${std.p97}</div>`
+        }
+        if (baby?.value != null) {
+          html += `<div style="margin-top:6px;color:${babyColor};font-weight:800">宝宝: ${baby.value} ${unit}</div>`
+        }
+        return html
+      }
+    },
+    legend: {
+      bottom: 6,
+      data: ['WHO P50中位线', '宝宝实测'],
+      icon: 'roundRect',
+      textStyle: { color: '#57606f', fontSize: 12, fontWeight: 600 },
+    },
+    grid: { top: 16, left: 8, right: 16, bottom: 50, containLabel: true },
     xAxis: {
       type: 'category',
       name: '月龄',
-      data: months,
-      axisLabel: { color: '#a4b0be', fontSize: 11 },
-      axisLine: { lineStyle: { color: '#f0f0f0' } }
+      nameTextStyle: { color: '#a4b0be', fontSize: 11 },
+      data: xMonths,
+      axisLabel: { color: '#a4b0be', fontSize: 11, formatter: (v: number) => `${v}m` },
+      axisLine: { lineStyle: { color: '#e8eaed' } },
+      axisTick: { show: false },
     },
-    yAxis: { 
-      type: 'value', 
-      scale: true, 
-      name: isHeight ? 'cm' : 'kg',
-      axisLabel: { color: '#a4b0be' },
-      splitLine: { lineStyle: { type: 'dashed', color: '#f1f2f6' } }
+    yAxis: {
+      type: 'value',
+      scale: true,
+      name: unit,
+      nameTextStyle: { color: '#a4b0be', fontSize: 11 },
+      axisLabel: { color: '#a4b0be', fontSize: 11 },
+      splitLine: { lineStyle: { type: 'dashed', color: '#f0f2f5' } },
     },
     series: [
+      // ── P3 基线（不填充，作为 stack base）──────────────────────────────
       {
-        name: 'WHO 标准 (P50)',
+        name: '_p3_base',
         type: 'line',
+        stack: 'who_band',
         smooth: true,
-        data: months.map(m => relevantStandards.find(s => s.month === m)?.p50),
-        lineStyle: { type: 'dashed', width: 2, color: '#ced6e0' },
         symbol: 'none',
-        z: 1
+        lineStyle: { opacity: 0, width: 0 },
+        areaStyle: { color: 'transparent', opacity: 0 },
+        data: xMonths.map(m => getStd(m)?.p3 ?? null),
+        emphasis: { disabled: true },
+        legendHoverLink: false,
+        showInLegend: false,
+        tooltip: { show: false },
+        z: 1,
       },
+      // ── P3 → P15 浅粉色带 ────────────────────────────────────────────
+      makeStdBand('_p3_p15', 'p3', 'p15', 'rgba(255,164,81,0.13)'),
+      // ── P15 → P50 绿色带 ─────────────────────────────────────────────
+      makeStdBand('_p15_p50', 'p15', 'p50', 'rgba(46,213,115,0.11)'),
+      // ── P50 → P85 绿色带 ─────────────────────────────────────────────
+      makeStdBand('_p50_p85', 'p50', 'p85', 'rgba(46,213,115,0.11)'),
+      // ── P85 → P97 浅粉色带 ───────────────────────────────────────────
+      makeStdBand('_p85_p97', 'p85', 'p97', 'rgba(255,164,81,0.13)'),
+      // ── P50 中位线 ───────────────────────────────────────────────────
       {
-        name: '参考发育区间 (P3-P97)',
+        name: 'WHO P50中位线',
         type: 'line',
-        stack: 'range',
         smooth: true,
-        data: months.map(m => relevantStandards.find(s => s.month === m)?.p3),
-        lineStyle: { opacity: 0 },
         symbol: 'none',
-        areaStyle: { color: 'rgba(164, 176, 190, 0.1)' },
-        z: 0
+        data: xMonths.map(m => getStd(m)?.p50 ?? null),
+        lineStyle: { type: 'dashed', width: 1.5, color: '#b2bec3' },
+        z: 3,
       },
+      // ── 宝宝实测折线 ──────────────────────────────────────────────────
       {
-        name: 'Upper Range',
-        type: 'line',
-        stack: 'range',
-        smooth: true,
-        data: months.map(m => {
-           const s = relevantStandards.find(st => st.month === m)
-           return s ? (s.p97 - s.p3) : null
-        }),
-        lineStyle: { opacity: 0 },
-        symbol: 'none',
-        areaStyle: { color: 'rgba(164, 176, 190, 0.1)' },
-        z: 0
-      },
-      {
-        name: '宝宝实测数据',
+        name: '宝宝实测',
         type: 'line',
         smooth: true,
-        data: months.map(m => {
-           const record = chartData.growth.find(r => r.month === m)
-           return record ? (isHeight ? record.height : record.weight) : null
-        }),
-        itemStyle: { color: isHeight ? '#ff8e94' : '#ffd077' },
-        symbol: 'circle',
-        symbolSize: 10,
-        lineStyle: { width: 5, shadowBlur: 10, shadowColor: isHeight ? 'rgba(255, 142, 148, 0.3)' : 'rgba(255, 208, 119, 0.3)' },
         connectNulls: true,
-        z: 10
-      }
-    ]
+        data: xMonths.map(m => {
+          const rec = chartData.growth.find(r => r.month === m)
+          return rec ? (isHeight ? rec.height : rec.weight) : null
+        }),
+        itemStyle: { color: babyColor, borderWidth: 2, borderColor: '#fff' },
+        lineStyle: { width: 3, color: babyColor, shadowBlur: 8, shadowColor: babyGlow },
+        symbol: 'circle',
+        symbolSize: 9,
+        z: 10,
+      },
+    ],
   }
 })
 
@@ -707,10 +793,36 @@ watch([range, () => babyStore.currentBaby?.id], fetchData)
   gap: 8px;
   margin-top: 10px;
   padding: 12px 16px;
-  background: #f9fbfc;
+  background: linear-gradient(135deg, #f9fbfc 0%, #f0f4ff 100%);
   border-radius: 14px;
   font-size: 12px;
   color: var(--el-text-color-secondary);
-  .el-icon { font-size: 16px; color: var(--el-color-info); }
+  border: 1px solid #eef1f8;
+  .el-icon { font-size: 16px; color: var(--el-color-info); flex-shrink: 0; }
+}
+
+.who-legend {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin: 8px 0 0;
+  padding: 10px 14px;
+  background: #f9fbfc;
+  border-radius: 12px;
+  font-size: 11px;
+  color: var(--el-text-color-secondary);
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    .swatch {
+      width: 24px;
+      height: 8px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+  }
 }
 </style>
