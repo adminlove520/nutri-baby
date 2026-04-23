@@ -76,16 +76,32 @@
         <el-card class="setting-card" shadow="never">
           <div class="setting-item">
             <div class="item-info">
-              <span class="label">定时扫描频率</span>
-              <span class="desc">系统每日凌晨自动扫描待接种疫苗</span>
+              <span class="label">疫苗接种提醒</span>
+              <span class="desc">在预计接种前 1 天发送站内通知和邮件</span>
             </div>
-            <el-tag type="info" size="small">每日一次</el-tag>
+            <el-switch v-model="settings.vaccineNotify" @change="saveSettings" />
           </div>
           <div class="divider"></div>
           <div class="setting-item">
             <div class="item-info">
-              <span class="label">手动触发同步</span>
-              <span class="desc">立即检查并推送明天的疫苗接种提醒</span>
+              <span class="label">每日 AI 育儿锦囊</span>
+              <span class="desc">每天生成一则科学育儿建议</span>
+            </div>
+            <el-switch v-model="settings.aiTipsNotify" @change="saveSettings" />
+          </div>
+          <div class="divider"></div>
+          <div class="setting-item">
+            <div class="item-info">
+              <span class="label">邮件通知</span>
+              <span class="desc">发送疫苗提醒等邮件通知</span>
+            </div>
+            <el-switch v-model="settings.emailNotify" @change="saveSettings" />
+          </div>
+          <div class="divider"></div>
+          <div class="setting-item">
+            <div class="item-info">
+              <span class="label">定时任务执行</span>
+              <span class="desc">系统每日凌晨自动执行定时任务</span>
             </div>
             <el-button type="primary" size="small" :loading="syncing" @click="handleManualSync" plain round>立即执行</el-button>
           </div>
@@ -97,7 +113,7 @@
         <el-card class="setting-card" shadow="never">
           <div class="setting-item">
             <div class="item-info">
-              <span class="label">配置 GitHub</span>
+              <span class="label">GitHub 配置</span>
               <span class="desc">设置 Token、仓库、分支等信息</span>
             </div>
             <el-button type="primary" size="small" @click="openGithubConfig" plain round>配置</el-button>
@@ -105,22 +121,52 @@
           <div class="divider"></div>
           <div class="setting-item">
             <div class="item-info">
-              <span class="label">同步频率</span>
-              <span class="desc">自动同步的时间间隔</span>
+              <span class="label">自动同步</span>
+              <span class="desc">随定时任务自动同步图库到 GitHub</span>
             </div>
-            <el-select v-model="githubSettings.syncInterval" style="width: 120px" @change="handleGithubSave">
-              <el-option label="每天" value="daily" />
-              <el-option label="每周" value="weekly" />
-              <el-option label="每月" value="monthly" />
-            </el-select>
+            <el-switch v-model="githubSettings.autoSync" @change="handleGithubSave" />
           </div>
+          <template v-if="githubSettings.autoSync">
+            <div class="divider"></div>
+            <div class="setting-item">
+              <div class="item-info">
+                <span class="label">同步策略</span>
+                <span class="desc">选择同步哪些类型的相册</span>
+              </div>
+            </div>
+            <div class="sync-strategy">
+              <el-checkbox v-model="githubSettings.syncGrowth" @change="handleGithubSave" label="成长记录" />
+              <el-checkbox v-model="githubSettings.syncMoment" @change="handleGithubSave" label="精彩瞬间" />
+              <el-checkbox v-model="githubSettings.syncVaccine" @change="handleGithubSave" label="疫苗记录" />
+            </div>
+            <div class="divider"></div>
+            <div class="setting-item">
+              <div class="item-info">
+                <span class="label">同步频率</span>
+                <span class="desc">自动同步的时间间隔</span>
+              </div>
+              <el-select v-model="githubSettings.syncInterval" style="width: 120px" @change="handleGithubSave">
+                <el-option label="每天" value="daily" />
+                <el-option label="每周" value="weekly" />
+                <el-option label="每月" value="monthly" />
+              </el-select>
+            </div>
+            <div class="divider"></div>
+            <div class="setting-item">
+              <div class="item-info">
+                <span class="label">保留本地副本</span>
+                <span class="desc">同步后保留原始图片链接</span>
+              </div>
+              <el-switch v-model="githubSettings.keepLocal" @change="handleGithubSave" />
+            </div>
+          </template>
           <div class="divider"></div>
           <div class="setting-item">
             <div class="item-info">
               <span class="label">上次同步</span>
               <span class="desc">{{ githubSettings.lastSyncAt || '从未同步' }}</span>
             </div>
-            <el-button type="primary" size="small" :loading="syncingGithub" @click="handleSyncNow" plain round>立即同步</el-button>
+            <el-button type="primary" size="small" :loading="syncingGithub" @click="handleSyncNow" plain round :disabled="!githubSettings.configured">立即同步</el-button>
           </div>
           <div class="divider"></div>
           <div class="setting-item">
@@ -264,8 +310,13 @@ const passwordForm = reactive({
 
 const githubDialogVisible = ref(false)
 const githubSettings = reactive({
+    configured: false,
     autoSync: false,
     syncInterval: 'daily' as 'daily' | 'weekly' | 'monthly',
+    syncGrowth: true,
+    syncMoment: true,
+    syncVaccine: false,
+    keepLocal: true,
     lastSyncAt: '',
     token: '',
     owner: '',
@@ -403,14 +454,19 @@ const loadGithubSettings = async () => {
     try {
         const res = await getGitHubSettings()
         if (res) {
-            githubSettings.autoSync = res.autoSync || false
-            githubSettings.syncInterval = res.syncInterval || 'daily'
-            githubSettings.lastSyncAt = res.lastSyncAt ? new Date(res.lastSyncAt).toLocaleString('zh-CN') : ''
-            githubSettings.token = res.token || ''
-            githubSettings.owner = res.owner || ''
-            githubSettings.repo = res.repo || ''
-            githubSettings.branch = res.branch || 'main'
-            githubSettings.basePath = res.basePath || ''
+            githubSettings.configured = res.configured || false
+            githubSettings.autoSync = res.config?.autoSync || false
+            githubSettings.syncInterval = res.config?.syncInterval || 'daily'
+            githubSettings.syncGrowth = res.config?.syncGrowth !== false
+            githubSettings.syncMoment = res.config?.syncMoment !== false
+            githubSettings.syncVaccine = res.config?.syncVaccine || false
+            githubSettings.keepLocal = res.config?.keepLocal !== false
+            githubSettings.lastSyncAt = res.config?.lastSyncAt ? new Date(res.config.lastSyncAt).toLocaleString('zh-CN') : ''
+            githubSettings.token = res.config?.token || ''
+            githubSettings.owner = res.config?.owner || ''
+            githubSettings.repo = res.config?.repo || ''
+            githubSettings.branch = res.config?.branch || 'main'
+            githubSettings.basePath = res.config?.basePath || ''
         }
     } catch (e) {
         console.error('Failed to load GitHub settings', e)
@@ -420,7 +476,11 @@ const loadGithubSettings = async () => {
 const handleGithubSave = async () => {
     await saveGitHubSettings({
         autoSync: githubSettings.autoSync,
-        syncInterval: githubSettings.syncInterval
+        syncInterval: githubSettings.syncInterval,
+        syncGrowth: githubSettings.syncGrowth,
+        syncMoment: githubSettings.syncMoment,
+        syncVaccine: githubSettings.syncVaccine,
+        keepLocal: githubSettings.keepLocal
     })
     ElMessage.success('设置已保存')
 }
@@ -462,7 +522,11 @@ const saveGithubConfig = async () => {
             branch: githubForm.branch,
             basePath: githubForm.basePath,
             autoSync: githubSettings.autoSync,
-            syncInterval: githubSettings.syncInterval
+            syncInterval: githubSettings.syncInterval,
+            syncGrowth: githubSettings.syncGrowth,
+            syncMoment: githubSettings.syncMoment,
+            syncVaccine: githubSettings.syncVaccine,
+            keepLocal: githubSettings.keepLocal
         })
         ElMessage.success('配置已保存')
         githubDialogVisible.value = false
@@ -633,5 +697,15 @@ watch(showSyncLogs, (val) => {
   color: var(--el-color-danger);
   margin-top: 4px;
   word-break: break-all;
+}
+
+.sync-strategy {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px 20px;
+  background: var(--el-fill-color-light);
+  border-radius: 8px;
+  margin: 0 20px 16px;
 }
 </style>

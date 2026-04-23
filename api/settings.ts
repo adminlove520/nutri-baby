@@ -46,6 +46,10 @@ async function handleGet(req: VercelRequest, res: VercelResponse, userId: number
                 basePath: config.basePath,
                 autoSync: config.autoSync,
                 syncInterval: config.syncInterval,
+                syncGrowth: config.syncGrowth,
+                syncMoment: config.syncMoment,
+                syncVaccine: config.syncVaccine,
+                keepLocal: config.keepLocal,
                 lastSyncAt: config.lastSyncAt
             }
         });
@@ -56,7 +60,7 @@ async function handleGet(req: VercelRequest, res: VercelResponse, userId: number
 }
 
 async function handleSave(req: VercelRequest, res: VercelResponse, userId: number) {
-    const { token, owner, repo, branch, basePath, autoSync, syncInterval } = req.body;
+    const { token, owner, repo, branch, basePath, autoSync, syncInterval, syncGrowth, syncMoment, syncVaccine, keepLocal } = req.body;
 
     if (!token || !owner || !repo) {
         return res.status(400).json({ message: '缺少必填参数' });
@@ -73,6 +77,10 @@ async function handleSave(req: VercelRequest, res: VercelResponse, userId: numbe
                 basePath,
                 autoSync: autoSync || false,
                 syncInterval: syncInterval || 'daily',
+                syncGrowth: syncGrowth !== undefined ? syncGrowth : true,
+                syncMoment: syncMoment !== undefined ? syncMoment : true,
+                syncVaccine: syncVaccine || false,
+                keepLocal: keepLocal !== undefined ? keepLocal : true,
                 updatedAt: new Date()
             },
             create: {
@@ -83,7 +91,11 @@ async function handleSave(req: VercelRequest, res: VercelResponse, userId: numbe
                 branch: branch || 'main',
                 basePath,
                 autoSync: autoSync || false,
-                syncInterval: syncInterval || 'daily'
+                syncInterval: syncInterval || 'daily',
+                syncGrowth: syncGrowth !== undefined ? syncGrowth : true,
+                syncMoment: syncMoment !== undefined ? syncMoment : true,
+                syncVaccine: syncVaccine || false,
+                keepLocal: keepLocal !== undefined ? keepLocal : true
             }
         });
 
@@ -95,7 +107,11 @@ async function handleSave(req: VercelRequest, res: VercelResponse, userId: numbe
                 branch: config.branch,
                 basePath: config.basePath,
                 autoSync: config.autoSync,
-                syncInterval: config.syncInterval
+                syncInterval: config.syncInterval,
+                syncGrowth: config.syncGrowth,
+                syncMoment: config.syncMoment,
+                syncVaccine: config.syncVaccine,
+                keepLocal: config.keepLocal
             }
         });
     } catch (error: any) {
@@ -156,7 +172,10 @@ async function handleSync(req: VercelRequest, res: VercelResponse, userId: numbe
         const albums = await prisma.babyAlbum.findMany({
             where: {
                 userId,
-                deletedAt: null
+                deletedAt: null,
+                albumType: config.syncVaccine
+                    ? undefined
+                    : { in: config.syncGrowth ? (config.syncMoment ? ['growth', 'moment'] : ['growth']) : (config.syncMoment ? ['moment'] : []) }
             },
             include: {
                 baby: { select: { name: true } }

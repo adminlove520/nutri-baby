@@ -27,7 +27,13 @@ async function syncUserAlbumsToGitHub(userId: number): Promise<{ success: boolea
     }
 
     const albums = await prisma.babyAlbum.findMany({
-        where: { userId, deletedAt: null },
+        where: {
+            userId,
+            deletedAt: null,
+            albumType: config.syncVaccine
+                ? undefined
+                : { in: config.syncGrowth ? (config.syncMoment ? ['growth', 'moment'] : ['growth']) : (config.syncMoment ? ['moment'] : []) }
+        },
         include: { baby: { select: { name: true } } },
         orderBy: { createdAt: 'desc' },
         take: 100

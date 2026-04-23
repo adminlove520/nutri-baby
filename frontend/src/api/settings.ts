@@ -9,6 +9,10 @@ export interface GitHubSettings {
         basePath?: string
         autoSync: boolean
         syncInterval: string
+        syncGrowth: boolean
+        syncMoment: boolean
+        syncVaccine: boolean
+        keepLocal: boolean
         lastSyncAt?: string
     }
 }
@@ -27,13 +31,17 @@ export const getGitHubSettings = async (): Promise<GitHubSettings> => {
 }
 
 export const saveGitHubSettings = async (data: {
-    token: string
-    owner: string
-    repo: string
+    token?: string
+    owner?: string
+    repo?: string
     branch?: string
     basePath?: string
     autoSync?: boolean
     syncInterval?: string
+    syncGrowth?: boolean
+    syncMoment?: boolean
+    syncVaccine?: boolean
+    keepLocal?: boolean
 }): Promise<any> => {
     return client.post('/settings?action=save', data)
 }
