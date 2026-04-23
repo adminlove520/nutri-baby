@@ -80,6 +80,7 @@
                 {{ growthMode === 'height' ? '身高' : '体重' }} &nbsp;<strong>{{ growthPercentile.label }}</strong>
               </div>
               <el-button type="primary" size="small" round class="mr-12" @click="growthDialogVisible = true">记录成长</el-button>
+              <el-button type="success" size="small" round class="mr-12" @click="router.push('/record/growth-album')">成长相册</el-button>
               <el-radio-group v-model="growthMode" size="small" class="custom-radio">
                 <el-radio-button label="height">身高曲线</el-radio-button>
                 <el-radio-button label="weight">体重曲线</el-radio-button>
@@ -223,6 +224,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, watch, computed, reactive } from 'vue'
+import { useRouter } from 'vue-router'
 import { InfoFilled, Picture, Plus } from '@element-plus/icons-vue'
 import VChart from 'vue-echarts'
 import client from '@/api/client'
@@ -239,6 +241,7 @@ import { GridComponent, TooltipComponent, LegendComponent, TitleComponent } from
 use([CanvasRenderer, BarChart, LineChart, GridComponent, TooltipComponent, LegendComponent, TitleComponent])
 
 const babyStore = useBabyStore()
+const router = useRouter()
 const loading = ref(false)
 const range = ref('7')
 const growthMode = ref('height')

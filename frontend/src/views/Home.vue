@@ -73,6 +73,11 @@
            <div class="q-btn-wrap" @click="quickVitaminD">
               <div class="q-btn b4"><el-icon><Opportunity /></el-icon></div>
               <span>补维D</span>
+            </div>
+            <div class="q-btn-wrap" @click="quickProbiotics">
+               <div class="q-btn b6"><el-icon><StarFilled /></el-icon></div>
+               <span>益生菌</span>
+            </div>
            </div>
            <div class="q-btn-wrap" @click="medicationDialogVisible = true">
               <div class="q-btn b5"><el-icon><FirstAidKit /></el-icon></div>
@@ -234,6 +239,16 @@
        <el-form :model="medForm" label-position="top">
           <el-form-item label="药品名称">
              <el-input v-model="medForm.name" placeholder="如：布洛芬、益生菌" />
+             <div style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px;">
+                <el-tag 
+                   v-for="tag in ['维D3', '益生菌', '钙剂', '布洛芬', '泰诺林']" 
+                   :key="tag"
+                   class="clickable"
+                   size="small"
+                   round
+                   @click="medForm.name = tag"
+                >{{ tag }}</el-tag>
+             </div>
           </el-form-item>
           <el-form-item label="剂量">
              <el-input v-model="medForm.dosage" placeholder="如：2.5ml、1包" />
@@ -259,6 +274,7 @@
           <el-form-item label="指标类型">
              <el-radio-group v-model="healthForm.type" size="small">
                 <el-radio-button label="TEMP">体温 (°C)</el-radio-button>
+                <el-radio-button label="ILLNESS">生病/症状</el-radio-button>
                 <el-radio-button label="OXYGEN">血氧 (%)</el-radio-button>
                 <el-radio-button label="HEART_RATE">心率 (bpm)</el-radio-button>
              </el-radio-group>
@@ -293,7 +309,8 @@ import client from '@/api/client'
 import { useRouter } from 'vue-router'
 import { 
   Mug, Moon, ToiletPaper, TrendCharts, ArrowRight, Pouring, 
-  Bell, WarningFilled, Opportunity, Refresh, FirstAidKit, DataLine, UserFilled
+  Bell, WarningFilled, Opportunity, Refresh, FirstAidKit, DataLine, UserFilled,
+  StarFilled, Checked
 } from '@element-plus/icons-vue'
 import DailyTipsCard from '@/components/DailyTipsCard.vue'
 import AIInsightCard from './components/AIInsightCard.vue'
@@ -393,6 +410,22 @@ const quickDiaper = async () => {
         ElMessage.success('闪电记录：干爽尿布')
         fetchData()
     } catch (e) {}
+}
+
+const quickProbiotics = async () => {
+    if (!babyStore.currentBaby?.id) return
+    try {
+        await client.post('/record/medication', {
+            babyId: babyStore.currentBaby.id,
+            name: '益生菌',
+            dosage: '1包',
+            time: getBeijingNow().toISOString()
+        })
+        ElMessage.success('闪电记录：益生菌')
+        fetchData()
+    } catch (e) {
+        ElMessage.error('记录失败')
+    }
 }
 
 const quickVitaminD = async () => {

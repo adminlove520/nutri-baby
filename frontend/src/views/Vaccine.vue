@@ -226,12 +226,12 @@ const generateAiPlan = async () => {
     try {
         const res: any = await client.post('/ai/analyze', {
             babyId: babyStore.currentBaby?.id?.toString(),
-            query: '请作为一名专业的儿科专家，列出一份精简的针对0-1岁宝宝的国家免疫规划接种清单。包括：疫苗名称、推荐接种时间、主要预防疾病。如果是针对特定月龄的宝宝，请重点标注。请使用Markdown表格格式返回。'
+            query: '请作为一名专业的儿科专家，列出一份针对0-1岁宝宝的国家免疫规划接种清单。包括：疫苗名称、推荐接种时间、主要预防疾病。如果是针对特定月龄的宝宝，请重点标注。请使用Markdown表格格式返回。'
         })
         // 合并 insight + recommendations 为完整 Markdown
         const parts = [res.insight || '']
         if (Array.isArray(res.recommendations) && res.recommendations.length > 0) {
-            parts.push('\n\n**建议**\n' + res.recommendations.map((r: string) => `- ${r}`).join('\n'))
+            parts.push('\n\n**建议**\n' + res.recoions.map((r: string) => `- ${r}`).join('\n'))
         }
         aiPlan.value = renderMarkdown(parts.join(''))
         ElMessage.success('接种清单已生成')

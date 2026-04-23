@@ -3,7 +3,7 @@ import axios from 'axios'
 
 export interface RecordPayload {
     babyId: string
-    modelType: 'feeding' | 'sleep' | 'diaper' | 'growth'
+    modelType: 'feeding' | 'sleep' | 'diaper' | 'growth' | 'medication' | 'health'
     time: string | number | Date
     [key: string]: any
 }

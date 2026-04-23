@@ -61,6 +61,11 @@ const routes: Array<RouteRecordRaw> = [
                 component: () => import('../views/record/Growth.vue'),
             },
             {
+                path: 'record/growth-album',
+                name: 'GrowthAlbum',
+                component: () => import('../views/record/GrowthAlbum.vue'),
+            },
+            {
                 path: 'vaccine',
                 name: 'Vaccine',
                 component: () => import('../views/Vaccine.vue'),
