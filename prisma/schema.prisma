@@ -170,6 +170,38 @@ model AlbumLike {
   @@map("album_like")
 }
 
+model GitHubConfig {
+  id           BigInt    @id @default(autoincrement())
+  userId       BigInt    @unique @map("user_id")
+  token        String
+  owner        String
+  repo         String
+  branch       String    @default("main")
+  basePath     String?   @map("base_path")
+  autoSync     Boolean   @default(false) @map("auto_sync")
+  syncInterval String    @default("daily") @map("sync_interval")
+  lastSyncAt   DateTime? @map("last_sync_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("github_config")
+}
+
+model SyncLog {
+  id          BigInt    @id @default(autoincrement())
+  userId      BigInt    @map("user_id")
+  status      String
+  message     String
+  syncedCount Int       @default(0) @map("synced_count")
+  errorLog    String?   @map("error_log")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  user        User      @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+  @@map("sync_log")
+}
+
 model BabyCollaborator {
   id           BigInt    @id @default(autoincrement())
   babyId       BigInt    @map("baby_id")
