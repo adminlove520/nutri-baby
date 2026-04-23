@@ -474,7 +474,16 @@ const fetchData = async () => {
         ])
 
         if (results[0].status === 'fulfilled') {
-            todayStats.value = (results[0].value as any).today
+            const data = results[0].value as any
+            if (data && data.today) {
+                // 深度合并数据，保留默认结构
+                todayStats.value = {
+                    feeding: { ...todayStats.value.feeding, ...data.today.feeding },
+                    sleep: { ...todayStats.value.sleep, ...data.today.sleep },
+                    diaper: { ...todayStats.value.diaper, ...data.today.diaper },
+                    growth: { ...todayStats.value.growth, ...data.today.growth }
+                }
+            }
         }
         
         if (results[2].status === 'fulfilled') {

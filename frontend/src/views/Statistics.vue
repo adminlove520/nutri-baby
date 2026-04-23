@@ -310,8 +310,13 @@ const fetchData = async () => {
 
   loading.value = true
     try {
-      const res: any = await client.get('/statistics/charts', {
-        params: { babyId: babyStore.currentBaby.id, range: range.value }
+      // 修复请求路径：后端是通过 action 参数区分的
+      const res: any = await client.get('/statistics', {
+        params: { 
+          action: 'charts',
+          babyId: babyStore.currentBaby.id, 
+          range: range.value 
+        }
       })
       
       // 使用可选链和默认值防止崩溃

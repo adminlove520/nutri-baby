@@ -27,6 +27,8 @@ client.interceptors.request.use(
 
 // Response Interceptor: Global Error Handling
 let isRelogging = false
+let lastMessage = ''
+let messageTimer: any = null
 
 client.interceptors.response.use(
     response => {
@@ -66,14 +68,21 @@ client.interceptors.response.use(
         } else if (error.request) {
             msg = '网络连接超时，请检查您的网络'
         }
+
+        // 简单的弹窗去重逻辑：相同消息在 2 秒内只显示一次
+        if (msg !== lastMessage) {
+            lastMessage = msg
+            ElMessage({
+                message: msg,
+                type: 'error',
+                grouping: true,
+                center: true,
+                duration: 3500
+            })
+            if (messageTimer) clearTimeout(messageTimer)
+            messageTimer = setTimeout(() => { lastMessage = '' }, 2000)
+        }
         
-        ElMessage({
-            message: msg,
-            type: 'error',
-            grouping: true,
-            center: true,
-            duration: 3500
-        })
         return Promise.reject(error)
     }
 )
