@@ -75,15 +75,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
 
             const dailyFeeding: Record<string, number> = {};
+            const toNum = (v: any) => v == null ? 0 : (typeof v.toNumber === 'function' ? v.toNumber() : Number(v));
             feedingRecords.forEach(r => {
                 const date = r.time.toISOString().split('T')[0];
-                dailyFeeding[date] = (dailyFeeding[date] || 0) + (r.amount || 0);
+                dailyFeeding[date] = (dailyFeeding[date] || 0) + toNum(r.amount);
             });
 
             const dailySleep: Record<string, number> = {};
             sleepRecords.forEach(r => {
                 const date = r.startTime.toISOString().split('T')[0];
-                const minutes = r.duration || (r.endTime ? Math.floor((r.endTime.getTime() - r.startTime.getTime()) / 60000) : 0);
+                const minutes = r.duration != null ? toNum(r.duration) : (r.endTime ? Math.floor((r.endTime.getTime() - r.startTime.getTime()) / 60000) : 0);
                 dailySleep[date] = (dailySleep[date] || 0) + minutes;
             });
 
@@ -126,8 +127,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             prisma.user.findUnique({ where: { id: uId }, select: { createdAt: true } })
         ]);
 
-        const totalMl = feedingToday.reduce((acc, curr) => acc + (curr.amount || 0), 0);
-        const totalSleepMinutes = sleepToday.reduce((acc, curr) => acc + (curr.duration || (curr.endTime ? Math.floor((curr.endTime.getTime() - curr.startTime.getTime()) / 60000) : 0)), 0);
+        // Safely convert Prisma Decimal/null to number
+        const toNum = (v: any) => v == null ? 0 : (typeof v.toNumber === 'function' ? v.toNumber() : Number(v));
+        const totalMl = feedingToday.reduce((acc, curr) => acc + toNum(curr.amount), 0);
+        const totalSleepMinutes = sleepToday.reduce((acc, curr) => {
+            const dur = curr.duration != null ? toNum(curr.duration) : (curr.endTime ? Math.floor((curr.endTime.getTime() - curr.startTime.getTime()) / 60000) : 0);
+            return acc + dur;
+        }, 0);
         const lastFeeding = feedingToday.length > 0 ? feedingToday[feedingToday.length - 1].time : null;
         const joinDays = userData ? Math.floor((new Date().getTime() - new Date(userData.createdAt).getTime()) / (1000 * 60 * 60 * 24)) : 0;
 

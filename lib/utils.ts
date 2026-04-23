@@ -7,7 +7,11 @@ export const safeJSON = (data: any) => {
     try {
         return JSON.parse(JSON.stringify(data, (key, value) => {
             if (typeof value === 'bigint') return value.toString();
-            if (key === 'password') return undefined; 
+            if (key === 'password') return undefined;
+            // Handle Prisma Decimal objects (they have toNumber/toString methods)
+            if (value !== null && typeof value === 'object' && typeof value.toNumber === 'function') {
+                return value.toNumber();
+            }
             return value;
         }));
     } catch (e) {

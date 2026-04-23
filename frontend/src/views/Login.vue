@@ -97,10 +97,12 @@ const handlePasswordLogin = async () => {
     loading.value = true
     try {
         await userStore.loginCredential(loginForm.account, loginForm.password)
-        ElMessage.success('欢迎回来')
-        router.push('/')
+        ElMessage.success('欢迎回来 👋')
+        // 确保 token 已写入后再跳转
+        await router.replace('/')
     } catch (e: any) {
-        // Handled by global interceptor
+        const msg = e?.response?.data?.message || e?.message || '登录失败，请检查账号密码'
+        ElMessage.error(msg)
     } finally {
         loading.value = false
     }
@@ -109,7 +111,6 @@ const handlePasswordLogin = async () => {
 const handleRegister = async () => {
     if (!registerForm.account || !registerForm.password) return ElMessage.warning('请填写完整信息')
     
-    // Simple validation for email or account
     const isEmail = registerForm.account.includes('@')
     const isPhone = /^\d{11}$/.test(registerForm.account)
     
@@ -119,10 +120,11 @@ const handleRegister = async () => {
     loading.value = true
     try {
         await userStore.register(registerForm.account, registerForm.password, registerForm.nickname)
-        ElMessage.success('注册成功')
-        router.push('/')
+        ElMessage.success('注册成功，欢迎加入 🎉')
+        await router.replace('/')
     } catch (e: any) {
-        // Handled by global interceptor
+        const msg = e?.response?.data?.message || e?.message || '注册失败，请稍后再试'
+        ElMessage.error(msg)
     } finally {
         loading.value = false
     }

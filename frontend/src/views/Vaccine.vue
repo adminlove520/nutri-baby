@@ -192,8 +192,21 @@
 import { ref, onMounted, computed, watch, reactive } from 'vue'
 import { Refresh, FirstAidKit, Check, InfoFilled, Opportunity, ArrowRight } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { marked } from 'marked'
 import client from '@/api/client'
 import { useBabyStore } from '@/stores/baby'
+
+// 配置 marked 选项
+marked.setOptions({ breaks: true, gfm: true } as any)
+
+const renderMarkdown = (text: string): string => {
+    if (!text) return ''
+    try {
+        return marked.parse(text) as string
+    } catch {
+        return text.replace(/\n/g, '<br/>')
+    }
+}
 
 const babyStore = useBabyStore()
 const activeTab = ref('list')
@@ -215,13 +228,47 @@ const generateAiPlan = async () => {
             babyId: babyStore.currentBaby?.id?.toString(),
             query: '请作为一名专业的儿科专家，列出一份精简的针对0-1岁宝宝的国家免疫规划接种清单。包括：疫苗名称、推荐接种时间、主要预防疾病。如果是针对特定月龄的宝宝，请重点标注。请使用Markdown表格格式返回。'
         })
-        aiPlan.value = res.insight.replace(/\n/g, '<br/>')
+        // 合并 insight + recommendations 为完整 Markdown
+        const parts = [res.insight || '']
+        if (Array.isArray(res.recommendations) && res.recommendations.length > 0) {
+            parts.push('\n\n**建议**\n' + res.recommendations.map((r: string) => `- ${r}`).join('\n'))
+        }
+        aiPlan.value = renderMarkdown(parts.join(''))
         ElMessage.success('接种清单已生成')
     } catch (e) {
         // Handled
     } finally {
         aiPlanLoading.value = false
     }
+}
+
+// 搜索附近医院（先用精准定位，失败后用IP定位兜底）
+const doSearch = (lng: number, lat: number) => {
+    const AMap = (window as any).AMap
+    AMap.plugin(['AMap.PlaceSearch'], () => {
+        const placeSearch = new AMap.PlaceSearch({
+            type: '社区卫生服务中心|疫苗接种点|妇幼保健院',
+            pageSize: 8,
+            pageIndex: 1,
+            extensions: 'all'
+        })
+        placeSearch.searchNearBy('接种 疫苗 卫生', [lng, lat], 8000, (s: string, r: any) => {
+            mapLoading.value = false
+            if (s === 'complete' && r.poiList?.pois?.length > 0) {
+                hospitals.value = r.poiList.pois
+            } else {
+                // 搜索范围扩大到15km再试一次
+                placeSearch.searchNearBy('医院 卫生服务', [lng, lat], 15000, (s2: string, r2: any) => {
+                    if (s2 === 'complete' && r2.poiList?.pois?.length > 0) {
+                        hospitals.value = r2.poiList.pois
+                    } else {
+                        hospitals.value = []
+                        ElMessage.info('未找到附近接种点，建议前往当地社区卫生服务中心咨询')
+                    }
+                })
+            }
+        })
+    })
 }
 
 const searchNearbyHospitals = () => {
@@ -231,34 +278,37 @@ const searchNearbyHospitals = () => {
     }
     
     mapLoading.value = true
+    hospitals.value = []
     const AMap = (window as any).AMap
     
-    AMap.plugin(['AMap.Geolocation', 'AMap.PlaceSearch'], () => {
+    // 优先GPS精准定位，失败后降级到IP城市级定位
+    AMap.plugin(['AMap.Geolocation', 'AMap.CitySearch'], () => {
         const geolocation = new AMap.Geolocation({
             enableHighAccuracy: true,
-            timeout: 10000,
+            timeout: 8000,
+            GeoLocationFirst: false,
+            noIpLocate: 0,   // 0=允许IP定位兜底
+            getCityWhenFail: true
         })
         
         geolocation.getCurrentPosition((status: string, result: any) => {
             if (status === 'complete') {
-                const placeSearch = new AMap.PlaceSearch({
-                    type: '社区卫生服务中心|疫苗接种点|医院',
-                    pageSize: 5,
-                    pageIndex: 1,
-                    extensions: 'all'
-                })
-                
-                placeSearch.searchNearBy('社区卫生服务中心', [result.position.lng, result.position.lat], 5000, (s: string, r: any) => {
-                    if (s === 'complete') {
-                        hospitals.value = r.poiList.pois
-                    } else {
-                        ElMessage.warning('附近未找到接种点')
-                    }
-                    mapLoading.value = false
-                })
+                // GPS定位成功
+                doSearch(result.position.lng, result.position.lat)
             } else {
-                ElMessage.error('获取定位失败，请检查浏览器定位权限')
-                mapLoading.value = false
+                // GPS失败 → 用IP定位获取城市中心坐标
+                console.warn('[AMap] GPS失败，降级IP定位:', result?.info)
+                const citySearch = new AMap.CitySearch()
+                citySearch.getLocalCity((ipStatus: string, ipResult: any) => {
+                    if (ipStatus === 'complete' && ipResult?.bounds) {
+                        const center = ipResult.bounds.getCenter()
+                        doSearch(center.lng, center.lat)
+                        ElMessage.info(`已使用IP定位（${ipResult.city || '当前城市'}），结果可能不够精准`)
+                    } else {
+                        mapLoading.value = false
+                        ElMessage.warning('定位失败，请允许浏览器访问位置信息后重试')
+                    }
+                })
             }
         })
     })
@@ -269,9 +319,14 @@ const loadAMap = () => {
         searchNearbyHospitals()
         return
     }
+    mapLoading.value = true
     const script = document.createElement('script')
-    script.src = `https://webapi.amap.com/maps?v=2.0&key=${AMAP_KEY}`
+    script.src = `https://webapi.amap.com/maps?v=2.0&key=${AMAP_KEY}&plugin=AMap.Geolocation,AMap.PlaceSearch,AMap.CitySearch`
     script.onload = () => searchNearbyHospitals()
+    script.onerror = () => {
+        mapLoading.value = false
+        ElMessage.error('地图加载失败，请检查网络')
+    }
     document.head.appendChild(script)
 }
 
@@ -378,7 +433,12 @@ const generateAiKnowledge = async () => {
             babyId: babyStore.currentBaby?.id?.toString(),
             query: '请作为一名专业的儿科医生，提供一份疫苗接种百科知识，包括接种意义、常见反应及护理、注意事项等。如果宝宝信息存在，请针对宝宝月龄定制。请使用Markdown格式返回。'
         })
-        aiKnowledge.value = res.insight.replace(/\n/g, '<br/>')
+        // 合并 insight + recommendations 为完整 Markdown
+        const parts = [res.insight || '']
+        if (Array.isArray(res.recommendations) && res.recommendations.length > 0) {
+            parts.push('\n\n## 接种建议\n' + res.recommendations.map((r: string) => `- ${r}`).join('\n'))
+        }
+        aiKnowledge.value = renderMarkdown(parts.join(''))
         ElMessage.success('知识库已优化')
     } catch (e) {
         // Handled
