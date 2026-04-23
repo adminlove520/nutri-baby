@@ -253,24 +253,46 @@ const generateAiPlan = async () => {
 const doSearch = (lng: number, lat: number) => {
     const AMap = (window as any).AMap
     AMap.plugin(['AMap.PlaceSearch'], () => {
+        // 搜索医院
         const placeSearch = new AMap.PlaceSearch({
-            type: '社区卫生服务中心|疫苗接种点|妇幼保健院',
+            type: '医疗卫生|医院',
             pageSize: 8,
             pageIndex: 1,
             extensions: 'all'
         })
-        placeSearch.searchNearBy('接种 疫苗 卫生', [lng, lat], 8000, (s: string, r: any) => {
-            mapLoading.value = false
+        placeSearch.searchNearBy('医院', [lng, lat], 10000, (s: string, r: any) => {
             if (s === 'complete' && r.poiList?.pois?.length > 0) {
+                mapLoading.value = false
                 hospitals.value = r.poiList.pois
             } else {
-                // 搜索范围扩大到15km再试一次
-                placeSearch.searchNearBy('医院 卫生服务', [lng, lat], 15000, (s2: string, r2: any) => {
+                // 搜索诊所/卫生院
+                const placeSearch2 = new AMap.PlaceSearch({
+                    type: '诊所|卫生院|社区卫生服务站',
+                    pageSize: 8,
+                    pageIndex: 1,
+                    extensions: 'all'
+                })
+                placeSearch2.searchNearBy('卫生', [lng, lat], 10000, (s2: string, r2: any) => {
                     if (s2 === 'complete' && r2.poiList?.pois?.length > 0) {
+                        mapLoading.value = false
                         hospitals.value = r2.poiList.pois
                     } else {
-                        hospitals.value = []
-                        ElMessage.info('未找到附近接种点，建议前往当地社区卫生服务中心咨询')
+                        // 搜索妇产医院/综合医院
+                        const placeSearch3 = new AMap.PlaceSearch({
+                            type: '妇产医院|综合医院',
+                            pageSize: 8,
+                            pageIndex: 1,
+                            extensions: 'all'
+                        })
+                        placeSearch3.searchNearBy('', [lng, lat], 15000, (s3: string, r3: any) => {
+                            mapLoading.value = false
+                            if (s3 === 'complete' && r3.poiList?.pois?.length > 0) {
+                                hospitals.value = r3.poiList.pois
+                            } else {
+                                hospitals.value = []
+                                ElMessage.info('未找到附近接种点，建议前往当地社区卫生服务中心咨询')
+                            }
+                        })
                     }
                 })
             }
