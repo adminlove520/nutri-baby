@@ -2,25 +2,28 @@
 
 ## 1. 功能概述
 
-成长相册是 Nutri-Baby 的宝宝照片管理模块，提供宝宝图库和时光相册两大功能。
+成长相册是 Nutri-Baby 的宝宝照片管理模块，提供宝宝图库和时光相册两大功能，支持评论点赞互动，并可将相册同步到 GitHub 仓库。
 
 ### 1.1 核心功能
 
 | 功能 | 说明 |
 |------|------|
 | **宝宝图库** | 多图上传、照片管理（CRUD）、分类管理 |
-| **时光相册** | 按时间轴展示宝宝成长照片 |
+| **时光相册** | 按时间轴展示宝宝成长照片（朋友圈风格） |
+| **评论点赞** | 照片评论、点赞、回复功能 |
+| **分享功能** | 生成分享链接、AI 生成朋友圈文案 |
+| **GitHub 同步** | 自动同步相册到 GitHub 仓库 |
 
 ### 1.2 入口位置
 
 - **个人中心** → 功能与服务 → 宝宝图库 / 时光相册
-- **底部导航** → 成长 → 右上角相册入口（待实现）
+- **底部导航** → 成长 → 右上角相册入口
 
 ---
 
 ## 2. 数据模型
 
-### 2.1 Prisma Model: BabyAlbum
+### 2.1 BabyAlbum（相册主表）
 
 ```prisma
 model BabyAlbum {
@@ -29,7 +32,7 @@ model BabyAlbum {
   userId      BigInt    @map("user_id")
   title       String?   // 照片标题
   description String?   // 照片描述
-  url         String    // CDN URL
+  url         String    // CDN URL，多图用逗号分隔
   filename    String    // 原始文件名
   fileSize    Int?      @map("file_size")
   mimeType    String?   // MIME类型
@@ -37,19 +40,60 @@ model BabyAlbum {
   height      Int?      // 图片高度
   albumType   String    @default("growth") @map("album_type")
   time        DateTime? // 拍照时间
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  likesCount  Int       @default(0) @map("likes_count")
+  commentsCount Int     @default(0) @map("comments_count")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
   deletedAt   DateTime? @map("deleted_at") // 软删除
 
-  baby  Baby @relation(fields: [babyId], references: [id], onDelete: Cascade)
-  user  User @relation(fields: [userId], references: [id])
+  baby      Baby           @relation(fields: [babyId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id])
+  comments  AlbumComment[]
+  likes     AlbumLike[]
 
   @@index([babyId, createdAt])
   @@map("baby_album")
 }
 ```
 
-### 2.2 albumType 枚举值
+### 2.2 AlbumComment（评论表）
+
+```prisma
+model AlbumComment {
+  id        BigInt   @id @default(autoincrement())
+  albumId   BigInt   @map("album_id")
+  userId    BigInt   @map("user_id")
+  content   String   // 评论内容
+  parentId  BigInt?  @map("parent_id") // 回复ID
+  createdAt DateTime @default(now()) @map("created_at")
+
+  album   BabyAlbum @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  user    User      @relation(fields: [userId], references: [id])
+  parent  AlbumComment? @relation("CommentReplies", fields: [parentId], references: [id])
+  replies AlbumComment[] @relation("CommentReplies")
+
+  @@map("album_comment")
+}
+```
+
+### 2.3 AlbumLike（点赞表）
+
+```prisma
+model AlbumLike {
+  id        BigInt   @id @default(autoincrement())
+  albumId   BigInt   @map("album_id")
+  userId    BigInt   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  album BabyAlbum @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  user  User      @relation(fields: [userId], references: [id])
+
+  @@unique([albumId, userId])
+  @@map("album_like")
+}
+```
+
+### 2.4 albumType 枚举值
 
 | 值 | 说明 |
 |----|------|
@@ -63,17 +107,8 @@ model BabyAlbum {
 ### 3.1 获取相册列表
 
 ```
-GET /api/album
+GET /api/album?babyId=123&albumType=growth&page=1&limit=20
 ```
-
-**Query Parameters:**
-
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| babyId | string | 是 | 宝宝ID |
-| albumType | string | 否 | 照片类型 (growth/moment) |
-| page | number | 否 | 页码，默认1 |
-| limit | number | 否 | 每页数量，默认20 |
 
 **Response:**
 ```json
@@ -99,37 +134,67 @@ POST /api/album
   "title": "宝宝百天照",
   "description": "今天是宝宝百天纪念日",
   "url": "https://cdn.example.com/photo.jpg",
-  "filename": "baby_100days.jpg",
-  "fileSize": 1024000,
-  "mimeType": "image/jpeg",
-  "albumType": "growth",
-  "time": "2024-01-15T10:30:00Z"
+  "albumType": "growth"
 }
 ```
 
-### 3.3 更新相册记录
+### 3.3 评论功能
 
 ```
-PUT /api/album
+POST /api/album?action=comment
 ```
 
 **Body:**
 ```json
 {
-  "id": 123,
-  "title": "更新后的标题",
-  "description": "更新后的描述",
-  "albumType": "moment"
+  "albumId": 123,
+  "content": "太可爱了！",
+  "parentId": null
 }
 ```
 
-### 3.4 删除相册记录
+### 3.4 点赞功能
 
 ```
-DELETE /api/album?id=123
+POST /api/album?action=like
 ```
 
-**说明:** 执行软删除，设置 `deletedAt` 时间戳
+**Body:**
+```json
+{
+  "albumId": 123
+}
+```
+
+### 3.5 分享功能
+
+```
+POST /api/share
+```
+
+**Body:**
+```json
+{
+  "albumId": 123,
+  "type": "link" | "caption"
+}
+```
+
+**Response:**
+```json
+{
+  "shareUrl": "https://nutri-baby.com/share/abc123",
+  "caption": "📸 宝宝的成长记录\n\n✨ 宝宝百天照\n\n记录于 2024-01-15\n\n🌟 分享自 Nutri-Baby 育儿助手"
+}
+```
+
+### 3.6 GitHub 同步
+
+```
+POST /api/settings?action=sync
+```
+
+详见 [GitHub 同步功能](./07_github_sync.md)
 
 ---
 
@@ -154,34 +219,23 @@ DELETE /api/album?id=123
 3. **分类筛选**
    - 全部 / 成长记录 / 精彩瞬间
 
-**组件结构:**
-
-```
-Gallery.vue
-├── page-header (标题 + 分类筛选)
-├── upload-section (上传区域)
-│   ├── upload-card
-│   │   └── upload-area (拖拽/点击上传)
-│   └── upload-progress
-├── gallery-grid (照片网格)
-│   └── gallery-item
-│       ├── photo (el-image)
-│       ├── item-overlay (悬停操作按钮)
-│       └── item-info (日期 + 标题)
-└── edit-dialog (编辑弹窗)
-```
-
 ### 4.2 时光相册 `/record/gallery`
 
 **功能特性:**
 
-1. **时间轴展示**
+1. **朋友圈风格展示**
    - 按月份分组显示
    - 瀑布流/网格混合布局
    - 点击查看大图
 
-2. **与成长记录关联**
-   - 可关联到特定生长记录
+2. **评论点赞**
+   - 点赞动画效果
+   - 评论输入框
+   - 回复功能
+
+3. **分享功能**
+   - 复制分享链接
+   - AI 生成朋友圈文案
 
 ---
 
@@ -196,9 +250,17 @@ Gallery.vue
 例: 123/1705312200000-baby_100days.jpg
 ```
 
-### 5.2 上传流程
+### 5.2 GitHub 同步路径结构
 
-1. 前端选择文件 → 2. 调用 `/api/upload?filename=xxx` → 3. 获取 CDN URL → 4. 调用 `/api/album` 保存元数据
+```
+basePath/
+├── 2024/
+│   └── 2024-01-15_宝宝名/
+│       ├── 成长记录/
+│       │   └── 1705312200000_abc123_001.jpg
+│       └── 精彩瞬间/
+│           └── 1705312200001_def456_001.jpg
+```
 
 ---
 
@@ -208,21 +270,12 @@ Gallery.vue
 |------|----------|
 | 查看相册 | 宝宝家庭成员或协作者 |
 | 上传照片 | 宝宝家庭成员或协作者 |
+| 评论/点赞 | 宝宝家庭成员或协作者 |
 | 编辑/删除 | 上传者或宝宝所有者 |
 
 ---
 
-## 7. 移动端适配
-
-| 特性 | 实现 |
-|------|------|
-| 响应式网格 | `grid-template-columns: repeat(3, 1fr)` |
-| 触摸预览 | el-image-viewer |
-| 压缩上传 | 前端压缩至 5MB 以内 |
-
----
-
-## 8. 后续优化方向
+## 7. 后续优化方向
 
 1. **人脸识别** - 自动按宝宝标记照片
 2. **AI 分类** - 按场景/表情自动分类
