@@ -169,7 +169,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const token = jwt.sign(
                 { babyId: bId.toString(), inviterId: uId.toString(), type: 'invite' },
                 JWT_SECRET,
-                { expiresIn: '24h' }
+                { expiresIn: '7d' }
             );
             return success(res, { token });
         }
@@ -189,7 +189,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
                 await prisma.babyCollaborator.create({ data: { babyId: bId, userId: uId, role: role || 'Member' } });
                 return success(res, { message: '成功加入守护团队' });
-            } catch (e) {
+            } catch (e: any) {
+                if (e.name === 'TokenExpiredError') {
+                    return error(res, '邀请链接已过期，请联系邀请人重新生成');
+                } else if (e.name === 'JsonWebTokenError') {
+                    return error(res, '邀请链接无效');
+                }
                 return error(res, '邀请链接已过期或无效');
             }
         }
