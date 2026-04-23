@@ -10,15 +10,6 @@
           </div>
           <p v-else>欢迎加入 Nutri-Baby，开启科学育儿之旅</p>
        </div>
-       <div class="header-actions">
-          <el-badge :is-dot="hasNewNotifications" class="mr-12 notification-badge">
-             <span class="notification-btn" @click="router.push('/notifications')">
-                <el-icon :size="22"><Bell /></el-icon>
-             </span>
-          </el-badge>
-          <el-avatar :size="40" v-if="userInfo?.avatar" :src="userInfo.avatar" @click="router.push('/user')" />
-          <el-avatar :size="40" v-else icon="UserFilled" @click="router.push('/user')" />
-       </div>
     </div>
 
     <!-- Important Alerts -->
@@ -351,9 +342,9 @@ import { ref, computed, onMounted, watch, reactive, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import client from '@/api/client'
 import { useRouter } from 'vue-router'
-import { 
-  Mug, Moon, ToiletPaper, TrendCharts, ArrowRight, Pouring, 
-  Bell, WarningFilled, Opportunity, Refresh, FirstAidKit, DataLine, UserFilled,
+import {
+  Mug, Moon, ToiletPaper, TrendCharts, ArrowRight, Pouring,
+  WarningFilled, Opportunity, Refresh, FirstAidKit, DataLine,
   StarFilled, Checked, Food, Coffee, Umbrella, Warning
 } from '@element-plus/icons-vue'
 import DailyTipsCard from '@/components/DailyTipsCard.vue'
@@ -370,7 +361,6 @@ const babyStore = useBabyStore()
 const userStore = useUserStore()
 const loading = ref(false)
 const joinDays = ref(0)
-const hasNewNotifications = ref(false)
 const isSleeping = ref(false)
 const lastSleepId = ref<string | null>(null)
 const sleepStartTime = ref<string | null>(null)
@@ -661,8 +651,7 @@ const fetchData = async () => {
             client.get('/tips', { params: { babyId: babyIdStr } }),
             babyIdStr ? getStatistics(babyIdStr) : Promise.reject('No babyId'),
             babyIdStr ? getVaccines(babyIdStr) : Promise.reject('No babyId'),
-            babyIdStr ? client.get('/record/sleep', { params: { babyId: babyIdStr, limit: 1 } }) : Promise.reject('No babyId'),
-            client.get('/notifications?unreadOnly=true')
+            babyIdStr ? client.get('/record/sleep', { params: { babyId: babyIdStr, limit: 1 } }) : Promise.reject('No babyId')
         ])
 
         if (results[0].status === 'fulfilled') {
@@ -726,11 +715,6 @@ const fetchData = async () => {
                     upcomingVaccines.value = [`宝宝接种提醒：${vName}（预计接种：${dateStr}）`]
                 }
             }
-        }
-        
-        if (results[4].status === 'fulfilled') {
-            const notifs = results[4].value as any[]
-            hasNewNotifications.value = notifs.length > 0
         }
     } catch (e) {
         console.error('Home fetchData error:', e)
@@ -866,27 +850,6 @@ onUnmounted(() => {
       .age-tag { background: var(--el-color-primary); border: none; }
       .companion-text { font-size: 13px; color: var(--el-text-color-secondary); b { color: var(--el-color-primary); } }
     }
-  }
-
-  .header-actions {
-    display: flex;
-    align-items: center;
-    .notification-badge {
-      :deep(.el-badge__content) { top: 2px; right: 2px; }
-    }
-    .notification-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      background: var(--el-fill-color-light);
-      cursor: pointer;
-      transition: all 0.2s;
-      &:hover { background: var(--el-fill-color); }
-    }
-    .el-avatar { cursor: pointer; border: 2px solid #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
   }
 }
 
