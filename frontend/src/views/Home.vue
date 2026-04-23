@@ -502,6 +502,12 @@ const fetchData = async () => {
                     todayStats.value.growth.latestWeight = t.growth.latestWeight ?? 0
                 }
             }
+        } else {
+            console.error('今日概览数据加载失败:', (results[1] as any).reason)
+            // 如果是因为没有选择宝宝，不提示错误
+            if (babyIdStr) {
+                ElMessage.error('今日概览数据加载失败')
+            }
         }
         
         if (results[3].status === 'fulfilled') {

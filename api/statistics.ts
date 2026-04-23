@@ -297,11 +297,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // ── Default: 今日概览 ───────────────────────────────────────────────
         const startOfToday = getStartOfToday();
+        console.log(`[DEBUG Stats] bId: ${bId}, startOfToday: ${startOfToday.toISOString()}`);
 
         const [feedingToday, sleepToday, diaperToday, latestGrowth, userData] = await Promise.all([
-            prisma.feedingRecord.findMany({ where: { babyId: bId, time: { gte: startOfToday } } }),
-            prisma.sleepRecord.findMany({ where: { babyId: bId, startTime: { gte: startOfToday } } }),
-            prisma.diaperRecord.findMany({ where: { babyId: bId, time: { gte: startOfToday } } }),
+            prisma.feedingRecord.findMany({ where: { babyId: bId, time: { gte: startOfToday } }, orderBy: { time: 'asc' } }),
+            prisma.sleepRecord.findMany({ where: { babyId: bId, startTime: { gte: startOfToday } }, orderBy: { startTime: 'asc' } }),
+            prisma.diaperRecord.findMany({ where: { babyId: bId, time: { gte: startOfToday } }, orderBy: { time: 'asc' } }),
             prisma.growthRecord.findFirst({ where: { babyId: bId }, orderBy: { time: 'desc' } }),
             prisma.user.findUnique({ where: { id: uId }, select: { createdAt: true } }),
         ]);
@@ -314,9 +315,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 : (curr.endTime ? Math.floor((curr.endTime.getTime() - curr.startTime.getTime()) / 60000) : 0);
             return acc + dur;
         }, 0);
+
+        // 获取最后一次喂奶时间（feedingToday 已按 time 'asc' 排序）
         const lastFeeding = feedingToday.length > 0
             ? feedingToday[feedingToday.length - 1].time
             : null;
+
         const joinDays = userData
             ? Math.floor((Date.now() - new Date(userData.createdAt).getTime()) / (1000 * 60 * 60 * 24))
             : 0;
