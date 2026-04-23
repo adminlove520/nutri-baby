@@ -219,7 +219,7 @@ const aiPlanLoading = ref(false)
 const hospitals = ref<any[]>([])
 const mapLoading = ref(false)
 
-const AMAP_KEY = '772edaca6d3a5282c4265a79a19230f7' // Corrected key from user (replacing l with 1 as common in hex)
+const AMAP_KEY = 'a38d9863a8019c9c922aeae63ca94ff4' // Corrected key from user (replacing l with 1 as common in hex)
 
 const generateAiPlan = async () => {
     aiPlanLoading.value = true
