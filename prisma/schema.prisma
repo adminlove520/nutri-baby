@@ -10,34 +10,34 @@ datasource db {
 }
 
 model User {
-  id                BigInt                @id @default(autoincrement())
-  openid            String?               @unique
-  phone             String?               @unique
-  email             String?               @unique
-  password          String?
-  nickname          String?
-  avatarUrl         String?               @map("avatar_url")
-  defaultBabyId     BigInt?               @map("default_baby_id")
-  lastLoginTime     DateTime?             @map("last_login_time")
-  createdAt         DateTime              @default(now()) @map("created_at")
-  updatedAt         DateTime              @updatedAt @map("updated_at")
-  deletedAt         DateTime?             @map("deleted_at")
-  settings          Json?                 @default("{}")
-  babies            Baby[]                @relation("UserBabies")
-  collaborations    BabyCollaborator[]
-  vaccineSchedules  BabyVaccineSchedule[] @relation("CompletedBy")
-  createdVaccine    BabyVaccineSchedule[] @relation("CreatedBy")
-  diaperRecords     DiaperRecord[]
-  expertTips        ExpertTip[]
-  feedingRecords    FeedingRecord[]
-  growthRecords     GrowthRecord[]
-  notifications     Notification[]
-  sleepRecords      SleepRecord[]
-  albums            BabyAlbum[]
-  comments          AlbumComment[]
-  likes             AlbumLike[]
-  githubConfig      GitHubConfig?
-  syncLogs          SyncLog[]
+  id               BigInt                @id @default(autoincrement())
+  openid           String?               @unique
+  phone            String?               @unique
+  email            String?               @unique
+  password         String?
+  nickname         String?
+  avatarUrl        String?               @map("avatar_url")
+  defaultBabyId    BigInt?               @map("default_baby_id")
+  lastLoginTime    DateTime?             @map("last_login_time")
+  createdAt        DateTime              @default(now()) @map("created_at")
+  updatedAt        DateTime              @updatedAt @map("updated_at")
+  deletedAt        DateTime?             @map("deleted_at")
+  settings         Json?                 @default("{}")
+  babies           Baby[]                @relation("UserBabies")
+  collaborations   BabyCollaborator[]
+  vaccineSchedules BabyVaccineSchedule[] @relation("CompletedBy")
+  createdVaccine   BabyVaccineSchedule[] @relation("CreatedBy")
+  diaperRecords    DiaperRecord[]
+  expertTips       ExpertTip[]
+  feedingRecords   FeedingRecord[]
+  growthRecords    GrowthRecord[]
+  notifications    Notification[]
+  sleepRecords     SleepRecord[]
+  albums           BabyAlbum[]
+  comments         AlbumComment[]
+  likes            AlbumLike[]
+  githubConfig     GitHubConfig?
+  syncLogs         SyncLog[]
 }
 
 model Notification {
@@ -65,29 +65,29 @@ model ExpertTip {
 }
 
 model Baby {
-  id             BigInt                @id @default(autoincrement())
-  name           String
-  nickname       String?
-  birthDate      DateTime              @map("birth_date")
-  gender         String
-  avatarUrl      String?               @map("avatar_url")
-  height         Decimal?              @db.Decimal(10, 2)
-  weight         Decimal?              @db.Decimal(10, 2)
-  userId         BigInt                @map("user_id")
-  familyGroup    String?               @map("family_group")
-  createdAt      DateTime              @default(now()) @map("created_at")
-  updatedAt      DateTime              @updatedAt @map("updated_at")
-  deletedAt      DateTime?             @map("deleted_at")
-  user           User                  @relation("UserBabies", fields: [userId], references: [id])
-  collaborators  BabyCollaborator[]
-  vaccines       BabyVaccineSchedule[]
-  diaperRecords  DiaperRecord[]
-  feedingRecords FeedingRecord[]
+  id                BigInt                @id @default(autoincrement())
+  name              String
+  nickname          String?
+  birthDate         DateTime              @map("birth_date")
+  gender            String
+  avatarUrl         String?               @map("avatar_url")
+  height            Decimal?              @db.Decimal(10, 2)
+  weight            Decimal?              @db.Decimal(10, 2)
+  userId            BigInt                @map("user_id")
+  familyGroup       String?               @map("family_group")
+  createdAt         DateTime              @default(now()) @map("created_at")
+  updatedAt         DateTime              @updatedAt @map("updated_at")
+  deletedAt         DateTime?             @map("deleted_at")
+  user              User                  @relation("UserBabies", fields: [userId], references: [id])
+  collaborators     BabyCollaborator[]
+  vaccines          BabyVaccineSchedule[]
+  diaperRecords     DiaperRecord[]
+  feedingRecords    FeedingRecord[]
   growthRecords     GrowthRecord[]
   sleepRecords      SleepRecord[]
   medicationRecords MedicationRecord[]
   healthRecords     HealthRecord[]
-  albums         BabyAlbum[]
+  albums            BabyAlbum[]
 
   @@index([userId])
 }
@@ -120,24 +120,24 @@ model HealthRecord {
 }
 
 model BabyAlbum {
-  id          BigInt    @id @default(autoincrement())
-  babyId      BigInt    @map("baby_id")
-  userId      BigInt    @map("user_id")
+  id          BigInt         @id @default(autoincrement())
+  babyId      BigInt         @map("baby_id")
+  userId      BigInt         @map("user_id")
   title       String?
   description String?
   url         String
   filename    String
-  fileSize    Int?      @map("file_size")
+  fileSize    Int?           @map("file_size")
   mimeType    String?
   width       Int?
   height      Int?
-  albumType   String    @default("growth") @map("album_type")
+  albumType   String         @default("growth") @map("album_type")
   time        DateTime?
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
-  deletedAt   DateTime? @map("deleted_at")
-  baby        Baby      @relation(fields: [babyId], references: [id], onDelete: Cascade)
-  user        User      @relation(fields: [userId], references: [id])
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+  deletedAt   DateTime?      @map("deleted_at")
+  baby        Baby           @relation(fields: [babyId], references: [id], onDelete: Cascade)
+  user        User           @relation(fields: [userId], references: [id])
   comments    AlbumComment[]
   likes       AlbumLike[]
 
@@ -147,16 +147,16 @@ model BabyAlbum {
 }
 
 model AlbumComment {
-  id        BigInt    @id @default(autoincrement())
-  albumId   BigInt    @map("album_id")
-  userId    BigInt    @map("user_id")
+  id        BigInt         @id @default(autoincrement())
+  albumId   BigInt         @map("album_id")
+  userId    BigInt         @map("user_id")
   content   String
-  parentId  BigInt?   @map("parent_id")
-  createdAt DateTime  @default(now()) @map("created_at")
-  deletedAt DateTime? @map("deleted_at")
-  album     BabyAlbum @relation(fields: [albumId], references: [id], onDelete: Cascade)
-  user      User      @relation(fields: [userId], references: [id])
-  parent    AlbumComment? @relation("CommentReplies", fields: [parentId], references: [id])
+  parentId  BigInt?        @map("parent_id")
+  createdAt DateTime       @default(now()) @map("created_at")
+  deletedAt DateTime?      @map("deleted_at")
+  album     BabyAlbum      @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id])
+  parent    AlbumComment?  @relation("CommentReplies", fields: [parentId], references: [id])
   replies   AlbumComment[] @relation("CommentReplies")
 
   @@index([albumId, createdAt])
@@ -199,14 +199,14 @@ model GitHubConfig {
 }
 
 model SyncLog {
-  id          BigInt    @id @default(autoincrement())
-  userId      BigInt    @map("user_id")
+  id          BigInt   @id @default(autoincrement())
+  userId      BigInt   @map("user_id")
   status      String
   message     String
-  syncedCount Int       @default(0) @map("synced_count")
-  errorLog    String?   @map("error_log")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  user        User      @relation(fields: [userId], references: [id])
+  syncedCount Int      @default(0) @map("synced_count")
+  errorLog    String?  @map("error_log")
+  createdAt   DateTime @default(now()) @map("created_at")
+  user        User     @relation(fields: [userId], references: [id])
 
   @@index([userId, createdAt])
   @@map("sync_log")
@@ -315,17 +315,17 @@ model GrowthRecord {
 }
 
 model GrowthStandard {
-  id     Int     @id @default(autoincrement())
-  gender String  // 'male' | 'female'
-  type   String  // 'height' | 'weight' | 'head'
-  month  Int     // 0-60 月龄
+  id     Int    @id @default(autoincrement())
+  gender String // 'male' | 'female'
+  type   String // 'height' | 'weight' | 'head'
+  month  Int // 0-60 月龄
   p3     Float
   p15    Float
   p50    Float
   p85    Float
   p97    Float
-  source String  @default("WHO")
-  unit   String  // 'cm' | 'kg'
+  source String @default("WHO")
+  unit   String // 'cm' | 'kg'
 
   @@unique([gender, type, month, source])
   @@index([gender, type])
@@ -333,21 +333,21 @@ model GrowthStandard {
 }
 
 model VaccinePlanTemplate {
-  id           BigInt                @id @default(autoincrement())
-  vaccineType  String                @map("vaccine_type")
-  vaccineName  String                @map("vaccine_name")
-  description  String?
-  targetDisease String?              @map("target_disease")
-  tips         String?
-  ageInMonths  Int                   @map("age_in_months")
-  doseNumber   Int                   @map("dose_number")
-  isRequired   Boolean               @map("is_required")
-  reminderDays Int                   @default(7) @map("reminder_days")
-  sortOrder    Int                   @default(0) @map("sort_order")
-  createdAt    DateTime              @default(now()) @map("created_at")
-  updatedAt    DateTime              @updatedAt @map("updated_at")
-  deletedAt    DateTime?             @map("deleted_at")
-  schedules    BabyVaccineSchedule[]
+  id            BigInt                @id @default(autoincrement())
+  vaccineType   String                @map("vaccine_type")
+  vaccineName   String                @map("vaccine_name")
+  description   String?
+  targetDisease String?               @map("target_disease")
+  tips          String?
+  ageInMonths   Int                   @map("age_in_months")
+  doseNumber    Int                   @map("dose_number")
+  isRequired    Boolean               @map("is_required")
+  reminderDays  Int                   @default(7) @map("reminder_days")
+  sortOrder     Int                   @default(0) @map("sort_order")
+  createdAt     DateTime              @default(now()) @map("created_at")
+  updatedAt     DateTime              @updatedAt @map("updated_at")
+  deletedAt     DateTime?             @map("deleted_at")
+  schedules     BabyVaccineSchedule[]
 
   @@map("vaccine_plan_templates")
 }
@@ -385,7 +385,7 @@ model BabyVaccineSchedule {
   updatedAt         DateTime             @updatedAt @map("updated_at")
   deletedAt         DateTime?            @map("deleted_at")
   baby              Baby                 @relation(fields: [babyId], references: [id])
-  completer         User?               @relation("CompletedBy", fields: [completedBy], references: [id])
+  completer         User?                @relation("CompletedBy", fields: [completedBy], references: [id])
   creator           User                 @relation("CreatedBy", fields: [createdBy], references: [id])
   template          VaccinePlanTemplate? @relation(fields: [templateId], references: [id])
 
