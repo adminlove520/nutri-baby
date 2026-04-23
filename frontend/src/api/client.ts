@@ -30,22 +30,30 @@ let isRelogging = false
 let lastMessage = ''
 let messageTimer: any = null
 
+// 这些路径的错误由业务层自行处理，不在此处弹框
+const SILENT_PATHS = ['/auth/login', '/auth/register', '/auth/login_credential']
+
 client.interceptors.response.use(
     response => {
         return response.data
     },
-    error => {
+    err => {
+        const reqUrl: string = err?.config?.url || ''
+        const isSilent = SILENT_PATHS.some(p => reqUrl.includes(p))
+
         let msg = '服务器开小差了，请稍后再试'
-        
-        if (error.response) {
-            const { status, data } = error.response
-            msg = data.message || msg
-            
+
+        if (err.response) {
+            const { status, data } = err.response
+            msg = data?.message || msg
+
             if (status === 401) {
-                // Unauthorized - clear session and redirect to login
+                // 如果是登录/注册请求本身返回 401，让业务层处理，不跳转也不清 token
+                if (isSilent) return Promise.reject(err)
+
+                // 其他接口 401：token 过期，清除 session 并跳转登录
                 localStorage.removeItem('token')
                 localStorage.removeItem('user_info')
-                
                 if (!isRelogging) {
                     isRelogging = true
                     ElMessage({
@@ -57,7 +65,7 @@ client.interceptors.response.use(
                     })
                     router.push('/login')
                 }
-                return Promise.reject(error)
+                return Promise.reject(err)
             } else if (status === 403) {
                 msg = '您没有执行此操作的权限'
             } else if (status === 404) {
@@ -65,11 +73,14 @@ client.interceptors.response.use(
             } else if (status === 429) {
                 msg = '请求过于频繁，请稍后再试'
             }
-        } else if (error.request) {
+        } else if (err.request) {
             msg = '网络连接超时，请检查您的网络'
         }
 
-        // 简单的弹窗去重逻辑：相同消息在 2 秒内只显示一次
+        // 业务层自行处理的路径，不弹全局提示
+        if (isSilent) return Promise.reject(err)
+
+        // 相同消息 2 秒内只弹一次
         if (msg !== lastMessage) {
             lastMessage = msg
             ElMessage({
@@ -82,8 +93,8 @@ client.interceptors.response.use(
             if (messageTimer) clearTimeout(messageTimer)
             messageTimer = setTimeout(() => { lastMessage = '' }, 2000)
         }
-        
-        return Promise.reject(error)
+
+        return Promise.reject(err)
     }
 )
 

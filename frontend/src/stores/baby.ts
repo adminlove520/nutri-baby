@@ -96,6 +96,7 @@ export const useBabyStore = defineStore('baby', () => {
     return {
         babyList,
         currentBaby,
+        loading,
         fetchBabies,
         setCurrentBaby,
         addBaby,

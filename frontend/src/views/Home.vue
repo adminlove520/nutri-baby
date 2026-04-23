@@ -631,8 +631,27 @@ const handleSleep = () => router.push('/record/sleep')
 const handleDiaper = () => router.push('/record/diaper')
 const handleGrowth = () => router.push('/record/growth')
 
-onMounted(fetchData)
-watch(() => babyStore.currentBaby?.id, fetchData)
+onMounted(async () => {
+    // 等待 babyStore 完成加载（MainLayout 也会并发调用 fetchBabies）
+    if (babyStore.babyList.length === 0) {
+        if (babyStore.loading) {
+            // 已在加载中，等待完成
+            await new Promise<void>(resolve => {
+                const stop = watch(() => babyStore.loading, (v) => {
+                    if (!v) { stop(); resolve() }
+                })
+            })
+        } else {
+            await babyStore.fetchBabies()
+        }
+    }
+    fetchData()
+})
+
+// 切换宝宝时重新拉数据
+watch(() => babyStore.currentBaby?.id, (newId, oldId) => {
+    if (newId !== oldId) fetchData()
+})
 </script>
 
 <style scoped lang="scss">

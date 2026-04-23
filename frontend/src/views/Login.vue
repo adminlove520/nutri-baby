@@ -93,38 +93,52 @@ const loginForm = reactive({ account: '', password: '' })
 const registerForm = reactive({ account: '', password: '', nickname: '' })
 
 const handlePasswordLogin = async () => {
-    if (!loginForm.account || !loginForm.password) return ElMessage.warning('请输入账号密码')
+    if (!loginForm.account || !loginForm.password) {
+        ElMessage.warning('请输入账号密码')
+        return
+    }
     loading.value = true
     try {
         await userStore.loginCredential(loginForm.account, loginForm.password)
-        ElMessage.success('欢迎回来 👋')
-        // 确保 token 已写入后再跳转
-        await router.replace('/')
+        // 先显示提示，300ms 后跳转，确保用户能看到
+        ElMessage({ message: '欢迎回来 👋', type: 'success', duration: 1500 })
+        setTimeout(() => router.replace('/'), 300)
     } catch (e: any) {
-        const msg = e?.response?.data?.message || e?.message || '登录失败，请检查账号密码'
-        ElMessage.error(msg)
+        const serverMsg = e?.response?.data?.message
+        const msg = serverMsg || e?.message || '登录失败，请检查账号密码'
+        ElMessage({ message: msg, type: 'error', duration: 3000 })
     } finally {
         loading.value = false
     }
 }
 
 const handleRegister = async () => {
-    if (!registerForm.account || !registerForm.password) return ElMessage.warning('请填写完整信息')
-    
+    if (!registerForm.account || !registerForm.password) {
+        ElMessage.warning('请填写完整信息')
+        return
+    }
+
     const isEmail = registerForm.account.includes('@')
     const isPhone = /^\d{11}$/.test(registerForm.account)
-    
-    if (!isEmail && !isPhone) return ElMessage.warning('请输入正确的手机号或邮箱')
-    if (registerForm.password.length < 6) return ElMessage.warning('密码至少需要6位')
-    
+
+    if (!isEmail && !isPhone) {
+        ElMessage.warning('请输入正确的手机号或邮箱')
+        return
+    }
+    if (registerForm.password.length < 6) {
+        ElMessage.warning('密码至少需要6位')
+        return
+    }
+
     loading.value = true
     try {
         await userStore.register(registerForm.account, registerForm.password, registerForm.nickname)
-        ElMessage.success('注册成功，欢迎加入 🎉')
-        await router.replace('/')
+        ElMessage({ message: '注册成功，欢迎加入 🎉', type: 'success', duration: 1500 })
+        setTimeout(() => router.replace('/'), 300)
     } catch (e: any) {
-        const msg = e?.response?.data?.message || e?.message || '注册失败，请稍后再试'
-        ElMessage.error(msg)
+        const serverMsg = e?.response?.data?.message
+        const msg = serverMsg || e?.message || '注册失败，请稍后再试'
+        ElMessage({ message: msg, type: 'error', duration: 3000 })
     } finally {
         loading.value = false
     }

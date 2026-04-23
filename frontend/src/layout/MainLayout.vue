@@ -184,7 +184,10 @@ const handleUserAction = (command: string) => {
 
 onMounted(() => {
     if (userStore.isLoggedIn) {
-        babyStore.fetchBabies()
+        // 只在没有缓存数据时才拉取（Home.vue 也会触发，避免重复请求）
+        if (babyStore.babyList.length === 0 && !babyStore.loading) {
+            babyStore.fetchBabies()
+        }
         fetchUnread()
     }
 })
