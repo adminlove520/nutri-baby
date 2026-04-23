@@ -4,11 +4,13 @@ export class MinimaxProvider implements AIProvider {
     private apiKey: string;
     private groupId: string;
     private model: string;
+    private baseUrl?: string;
 
-    constructor(apiKey: string, groupId: string = '', model: string = 'MiniMax-M2.7') {
+    constructor(apiKey: string, groupId: string = '', model: string = 'MiniMax-M2.7', baseUrl?: string) {
         this.apiKey = apiKey;
         this.groupId = groupId;
         this.model = model;
+        this.baseUrl = baseUrl;
     }
 
     async analyze(request: AIAnalysisRequest): Promise<AIAnalysisResponse> {
@@ -32,7 +34,7 @@ ${babyInfo}
 
         try {
             // 支持 MiniMax 的 Anthropic 兼容接口
-            const anthropicBaseUrl = process.env.ANTHROPIC_BASE_URL || process.env.AI_BASE_URL;
+            const anthropicBaseUrl = this.baseUrl || process.env.ANTHROPIC_BASE_URL || process.env.AI_BASE_URL;
             const isAnthropic = anthropicBaseUrl?.includes('anthropic') || this.model.toLowerCase().includes('claude');
 
             if (isAnthropic) {

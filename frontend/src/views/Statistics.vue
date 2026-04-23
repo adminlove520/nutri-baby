@@ -213,6 +213,7 @@ import VChart from 'vue-echarts'
 import client from '@/api/client'
 import { useBabyStore } from '@/stores/baby'
 import { ElMessage } from 'element-plus'
+import { getBeijingNow } from '@/utils/beijing'
 
 // Echarts imports
 import { use } from 'echarts/core'
@@ -233,7 +234,7 @@ const growthForm = reactive({
   height: '',
   weight: '',
   headCircumference: '',
-  time: new Date().toISOString(),
+  time: getBeijingNow().toISOString(),
   imageUrl: '',
   note: ''
 })

@@ -302,6 +302,7 @@ import { useBabyStore } from '@/stores/baby'
 import { useUserStore } from '@/stores/user'
 import { getStatistics } from '@/api/statistics'
 import { getVaccines } from '@/api/baby'
+import { getBeijingNow } from '@/utils/beijing'
 
 const router = useRouter()
 const babyStore = useBabyStore()
@@ -317,7 +318,7 @@ let sleepTimer: any = null
 
 const updateSleepDuration = () => {
     if (!sleepStartTime.value) return
-    const diff = new Date().getTime() - new Date(sleepStartTime.value).getTime()
+    const diff = getBeijingNow().valueOf() - new Date(sleepStartTime.value).getTime()
     const h = Math.floor(diff / 3600000).toString().padStart(2, '0')
     const m = Math.floor((diff % 3600000) / 60000).toString().padStart(2, '0')
     const s = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0')
@@ -344,7 +345,7 @@ const quickFeeding = async (amount: number) => {
             babyId: babyStore.currentBaby.id,
             type: 'bottle',
             amount,
-            time: new Date().toISOString()
+            time: getBeijingNow().toISOString()
         })
         ElMessage.success(`闪电记录：瓶喂 ${amount}ml`)
         fetchData()
@@ -358,19 +359,19 @@ const quickSleepToggle = async () => {
             // Start Sleep
             const res: any = await client.post('/record/sleep', {
                 babyId: babyStore.currentBaby.id,
-                startTime: new Date().toISOString(),
+                startTime: getBeijingNow().toISOString(),
                 type: 'day'
             })
             isSleeping.value = true
             lastSleepId.value = (res as any).id
-            sleepStartTime.value = new Date().toISOString()
+            sleepStartTime.value = getBeijingNow().toISOString()
             startSleepTimer()
             ElMessage.success('宝宝开始睡觉了')
         } else {
             // End Sleep
             await client.patch('/record/sleep', {
                 id: lastSleepId.value,
-                endTime: new Date().toISOString()
+                endTime: getBeijingNow().toISOString()
             })
             isSleeping.value = false
             lastSleepId.value = null
@@ -387,7 +388,7 @@ const quickDiaper = async () => {
         await client.post('/record/diaper', {
             babyId: babyStore.currentBaby.id,
             type: 'dry',
-            time: new Date().toISOString()
+            time: getBeijingNow().toISOString()
         })
         ElMessage.success('闪电记录：干爽尿布')
         fetchData()
@@ -401,7 +402,7 @@ const quickVitaminD = async () => {
             babyId: babyStore.currentBaby.id,
             name: '维生素 D3',
             dosage: '1 滴',
-            time: new Date().toISOString()
+            time: getBeijingNow().toISOString()
         })
         ElMessage.success('闪电记录：补维D')
         fetchData()
@@ -411,7 +412,7 @@ const quickVitaminD = async () => {
 const babyAgeText = computed(() => {
     if (!babyStore.currentBaby?.birthDate) return ''
     const birth = new Date(babyStore.currentBaby.birthDate)
-    const now = new Date()
+    const now = getBeijingNow().toDate()
     let diffMonth = (now.getFullYear() - birth.getFullYear()) * 12 + (now.getMonth() - birth.getMonth())
     const diffDay = now.getDate() - birth.getDate()
     if (diffDay < 0) diffMonth--
@@ -426,7 +427,7 @@ const babyAgeText = computed(() => {
 
 const userInfo = computed(() => userStore.userInfo)
 const greeting = computed(() => {
-    const hour = new Date().getHours()
+    const hour = getBeijingNow().hour()
     if (hour < 6) return '凌晨好'
     if (hour < 12) return '早上好'
     if (hour < 18) return '下午好'
@@ -454,7 +455,6 @@ const manualGenerateTip = async () => {
         const tipsRes: any = await client.get('/tips', { params: { babyId } })
         todayTips.value = tipsRes
     } catch (e) {
-        // Handled
     } finally {
         tipsLoading.value = false
     }
@@ -467,30 +467,24 @@ const fetchData = async () => {
         const babyId = babyStore.currentBaby?.id
         console.log('[DEBUG Home] Fetching data for babyId:', babyId)
         
-        // 重置部分关键状态，防止旧数据干扰
         upcomingVaccines.value = []
         
-        // 并行请求：完全隔离 AI 接口与核心业务数据
         const results = await Promise.allSettled([
             client.get('/tips', { params: { babyId } }),
             babyId ? getStatistics(babyId) : Promise.reject('No babyId'),
             babyId ? getVaccines(babyId) : Promise.reject('No babyId'),
-            client.get('/user/stats'),
             babyId ? client.get('/record/sleep', { params: { babyId, limit: 1 } }) : Promise.reject('No babyId'),
             client.get('/notifications?unreadOnly=true')
         ])
 
-        // 0. Tips 数据处理
         if (results[0].status === 'fulfilled') {
             todayTips.value = results[0].value as any[]
-        } else {
-            console.error('[DEBUG Home] Tips fetch failed:', (results[0] as any).reason)
         }
-        tipsLoading.value = false // 及时关闭锦囊加载状态
+        tipsLoading.value = false 
 
-        // 1. Statistics 今日概览数据
         if (results[1].status === 'fulfilled') {
             const data = results[1].value as any
+            if (data.joinDays !== undefined) joinDays.value = data.joinDays
             if (data && data.today) {
                 const t = data.today
                 if (t.feeding) {
@@ -507,14 +501,8 @@ const fetchData = async () => {
             }
         }
         
-        // 3. User Stats
         if (results[3].status === 'fulfilled') {
-            joinDays.value = (results[3].value as any).joinDays || 0
-        }
-
-        // 4. Sleep Record (闪电状态)
-        if (results[4].status === 'fulfilled') {
-            const sleepRes = results[4].value as any
+            const sleepRes = results[3].value as any
             const lastSleep = sleepRes.records?.[0]
             if (lastSleep && !lastSleep.endTime) {
                 isSleeping.value = true
@@ -527,10 +515,8 @@ const fetchData = async () => {
             }
         }
 
-        // 2. Vaccines
         if (results[2].status === 'fulfilled') {
             const vaccineRes = results[2].value as any[]
-            console.log('[DEBUG Home] Vaccine data:', vaccineRes)
             if (Array.isArray(vaccineRes)) {
                 const pending = vaccineRes
                     .filter((v: any) => v.vaccinationStatus === 'pending')
@@ -550,9 +536,8 @@ const fetchData = async () => {
             }
         }
         
-        // 5. Notifications
-        if (results[5].status === 'fulfilled') {
-            const notifs = results[5].value as any[]
+        if (results[4].status === 'fulfilled') {
+            const notifs = results[4].value as any[]
             hasNewNotifications.value = notifs.length > 0
         }
     } catch (e) {
@@ -562,12 +547,11 @@ const fetchData = async () => {
         tipsLoading.value = false
     }
 }
-}
 
 const formatSleepDuration = (minutes: number) => {
-  const h = Math.floor(minutes / 60)
-  const m = minutes % 60
-  return h > 0 ? `${h}h ${m}m` : `${m}m`
+    const h = Math.floor(minutes / 60)
+    const m = minutes % 60
+    return h > 0 ? `${h}h ${m}m` : `${m}m`
 }
 
 const goToVaccine = () => router.push('/vaccine')
@@ -584,7 +568,7 @@ const healthDialogVisible = ref(false)
 const medForm = reactive({
     name: '',
     dosage: '',
-    time: new Date().toISOString(),
+    time: getBeijingNow().toISOString(),
     notes: ''
 })
 
@@ -592,7 +576,7 @@ const healthForm = reactive({
     type: 'TEMP',
     value: '',
     symptoms: '',
-    time: new Date().toISOString(),
+    time: getBeijingNow().toISOString(),
     notes: ''
 })
 

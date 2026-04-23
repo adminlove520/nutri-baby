@@ -8,7 +8,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!user) return error(res, '请先登录', 401);
     const uId = BigInt(user.userId);
 
-    const { action, babyId, range = '7' } = req.query;
+    const { action, babyId, range = '7', tz = '8' } = req.query;
     if (!babyId) return error(res, '宝宝 ID 缺失');
     
     let bId: bigint;
@@ -34,10 +34,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return success(res, standards);
         }
 
+        // 强制使用北京时间 (UTC+8)
+        const offset = 8;
+        const getStartOfToday = () => {
+            const date = new Date();
+            // 获取当前时间的 UTC 毫秒数，加上 8 小时偏移，计算出北京时间的 0 点
+            const beijingTime = new Date(date.getTime() + (offset * 60 * 60 * 1000));
+            beijingTime.setUTCHours(0, 0, 0, 0);
+            // 转回原始 UTC 时间用于 Prisma 查询
+            return new Date(beijingTime.getTime() - (offset * 60 * 60 * 1000));
+        };
+
         if (action === 'charts') {
-            const days = parseInt(range as string);
+            const days = parseInt(range as string) || 7;
             const startDate = new Date();
             startDate.setDate(startDate.getDate() - days);
+            startDate.setHours(0, 0, 0, 0);
 
             const [feedingRecords, sleepRecords, growthRecords, medicationRecords, healthRecords, baby, standards] = await Promise.all([
                 prisma.feedingRecord.findMany({ where: { babyId: bId, time: { gte: startDate } }, orderBy: { time: 'asc' } }),
@@ -102,19 +114,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         // Default: Today Summary
-        const startOfToday = new Date();
-        startOfToday.setHours(0, 0, 0, 0);
+        const startOfToday = getStartOfToday();
+        console.log(`[Stats] Local today start (TZ ${offset}): ${startOfToday.toISOString()}`);
 
-        const [feedingToday, sleepToday, diaperToday, latestGrowth] = await Promise.all([
+        const [feedingToday, sleepToday, diaperToday, latestGrowth, userData] = await Promise.all([
             prisma.feedingRecord.findMany({ where: { babyId: bId, time: { gte: startOfToday } } }),
             prisma.sleepRecord.findMany({ where: { babyId: bId, startTime: { gte: startOfToday } } }),
             prisma.diaperRecord.findMany({ where: { babyId: bId, time: { gte: startOfToday } } }),
-            prisma.growthRecord.findFirst({ where: { babyId: bId }, orderBy: { time: 'desc' } })
+            prisma.growthRecord.findFirst({ where: { babyId: bId }, orderBy: { time: 'desc' } }),
+            prisma.user.findUnique({ where: { id: uId }, select: { createdAt: true } })
         ]);
 
         const totalMl = feedingToday.reduce((acc, curr) => acc + (curr.amount || 0), 0);
         const totalSleepMinutes = sleepToday.reduce((acc, curr) => acc + (curr.duration || (curr.endTime ? Math.floor((curr.endTime.getTime() - curr.startTime.getTime()) / 60000) : 0)), 0);
         const lastFeeding = feedingToday.length > 0 ? feedingToday[feedingToday.length - 1].time : null;
+        const joinDays = userData ? Math.floor((new Date().getTime() - new Date(userData.createdAt).getTime()) / (1000 * 60 * 60 * 24)) : 0;
 
         return success(res, {
             today: {
@@ -122,7 +136,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 sleep: { totalMinutes: totalSleepMinutes },
                 diaper: { totalCount: diaperToday.length },
                 growth: { latestHeight: latestGrowth?.height ? Number(latestGrowth.height) : 0, latestWeight: latestGrowth?.weight ? Number(latestGrowth.weight) : 0 }
-            }
+            },
+            joinDays
         });
     } catch (err) {
         return error(res, '统计数据加载失败', 500);

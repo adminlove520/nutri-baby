@@ -9,17 +9,19 @@ export class AIFactory {
     static createProvider(type?: ProviderType): AIProvider {
         const providerType = (type || process.env.AI_PROVIDER || 'minimax') as ProviderType;
         
-        // 根据 Provider 类型精确选择 API Key，避免环境变量冲突
+        // 根据 Provider 类型精确选择 API Key，确保逻辑清晰
         let apiKey = process.env.AI_API_KEY;
+        const openaiKey = process.env.OPENAI_API_KEY;
+        const minimaxKey = process.env.ANTHROPIC_API_KEY || process.env.MINIMAX_API_KEY;
+
         if (providerType === 'openai') {
-            apiKey = process.env.OPENAI_API_KEY || process.env.AI_API_KEY;
+            apiKey = openaiKey || process.env.AI_API_KEY;
         } else if (providerType === 'minimax') {
-            apiKey = process.env.ANTHROPIC_API_KEY || process.env.MINIMAX_API_KEY || process.env.AI_API_KEY;
-        } else if (providerType === 'gemini') {
-            apiKey = process.env.AI_API_KEY;
+            apiKey = minimaxKey || process.env.AI_API_KEY;
         }
 
         const model = process.env.AI_MODEL || (providerType === 'openai' ? 'gpt-4o-mini' : 'MiniMax-M2.7');
+        // 确保 baseUrl 优先取 Anthropic 相关的，以便支持 MiniMax 的 Anthropic 接口
         const baseUrl = process.env.ANTHROPIC_BASE_URL || process.env.AI_BASE_URL;
         const groupId = process.env.MINIMAX_GROUP_ID || '';
 
@@ -41,7 +43,7 @@ export class AIFactory {
                 return new OpenAIProvider(apiKey, model, baseUrl);
             case 'minimax':
             default:
-                return new MinimaxProvider(apiKey, groupId, model);
+                return new MinimaxProvider(apiKey, groupId, model, baseUrl);
         }
     }
 }
