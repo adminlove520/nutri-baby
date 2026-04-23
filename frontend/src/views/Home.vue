@@ -465,37 +465,48 @@ const fetchData = async () => {
             return
         }
 
-        const [statsRes, vaccineRes, userStats, sleepRes] = await Promise.all([
+        // 使用更安全的并行请求方式，防止单接口失败导致全页空白
+        const results = await Promise.allSettled([
             getStatistics(babyId),
             getVaccines(babyId),
             client.get('/user/stats'),
             client.get('/record/sleep', { params: { babyId, limit: 1 } })
         ])
 
-        todayStats.value = statsRes.today
-        joinDays.value = (userStats as any).joinDays
-
-        // Update sleeping status
-        const lastSleep = (sleepRes as any).records?.[0]
-        if (lastSleep && !lastSleep.endTime) {
-            isSleeping.value = true
-            lastSleepId.value = lastSleep.id
-            sleepStartTime.value = lastSleep.startTime
-            startSleepTimer()
-        } else {
-            isSleeping.value = false
-            stopSleepTimer()
+        if (results[0].status === 'fulfilled') {
+            todayStats.value = (results[0].value as any).today
+        }
+        
+        if (results[2].status === 'fulfilled') {
+            joinDays.value = (results[2].value as any).joinDays
         }
 
-        const pending = vaccineRes
-            .filter((v: any) => v.vaccinationStatus === 'pending')
-            .sort((a: any, b: any) => new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime())
+        if (results[3].status === 'fulfilled') {
+            const sleepRes = results[3].value as any
+            const lastSleep = sleepRes.records?.[0]
+            if (lastSleep && !lastSleep.endTime) {
+                isSleeping.value = true
+                lastSleepId.value = lastSleep.id
+                sleepStartTime.value = lastSleep.startTime
+                startSleepTimer()
+            } else {
+                isSleeping.value = false
+                stopSleepTimer()
+            }
+        }
 
-        if (pending.length > 0) {
-            const next = pending[0]
-            upcomingVaccines.value = [`宝宝接种提醒：${next.vaccineName}（预计接种：${next.scheduledDate.split('T')[0]}）`]
-        } else {
-            upcomingVaccines.value = []
+        if (results[1].status === 'fulfilled') {
+            const vaccineRes = results[1].value as any[]
+            const pending = vaccineRes
+                .filter((v: any) => v.vaccinationStatus === 'pending')
+                .sort((a: any, b: any) => new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime())
+
+            if (pending.length > 0) {
+                const next = pending[0]
+                upcomingVaccines.value = [`宝宝接种提醒：${next.vaccineName}（预计接种：${next.scheduledDate.split('T')[0]}）`]
+            } else {
+                upcomingVaccines.value = []
+            }
         }
         
         // Check notifications

@@ -309,44 +309,50 @@ const fetchData = async () => {
   if (!babyStore.currentBaby?.id) return
 
   loading.value = true
-  try {
-    const res: any = await client.get('/statistics/charts', {
-      params: { babyId: babyStore.currentBaby.id, range: range.value }
-    })
-    
-    chartData.feeding = res.feeding
-    chartData.sleep = res.sleep
-    chartData.growth = res.growth
-    chartData.medication = res.medication || []
-    chartData.health = res.health || []
-    chartData.standards = res.standards
+    try {
+      const res: any = await client.get('/statistics/charts', {
+        params: { babyId: babyStore.currentBaby.id, range: range.value }
+      })
+      
+      // 使用可选链和默认值防止崩溃
+      chartData.feeding = res?.feeding || []
+      chartData.sleep = res?.sleep || []
+      chartData.growth = res?.growth || []
+      chartData.medication = res?.medication || []
+      chartData.health = res?.health || []
+      chartData.standards = res?.standards || []
 
-    // Stats Calculation
-    if (chartData.feeding.length > 0) {
-      const feedingSum = chartData.feeding.reduce((acc, curr) => acc + curr.amount, 0)
-      summary.avgFeeding = Math.round(feedingSum / chartData.feeding.length)
-    }
-    
-    if (chartData.sleep.length > 0) {
-      const sleepSum = chartData.sleep.reduce((acc, curr) => acc + curr.hours, 0)
-      summary.avgSleep = parseFloat((sleepSum / chartData.sleep.length).toFixed(1))
-    }
+      // Stats Calculation with safety checks
+      if (chartData.feeding && chartData.feeding.length > 0) {
+        const feedingSum = chartData.feeding.reduce((acc, curr) => acc + (curr.amount || 0), 0)
+        summary.avgFeeding = Math.round(feedingSum / chartData.feeding.length)
+      } else {
+        summary.avgFeeding = 0
+      }
+      
+      if (chartData.sleep && chartData.sleep.length > 0) {
+        const sleepSum = chartData.sleep.reduce((acc, curr) => acc + (curr.hours || 0), 0)
+        summary.avgSleep = parseFloat((sleepSum / chartData.sleep.length).toFixed(1))
+      } else {
+        summary.avgSleep = 0
+      }
 
-    if (chartData.growth.length >= 2) {
-       const sorted = [...chartData.growth].sort((a, b) => a.month - b.month)
-       const first = sorted[0]
-       const last = sorted[sorted.length - 1]
-       summary.weightGain = parseFloat((last.weight - first.weight).toFixed(2))
-       summary.heightGain = parseFloat((last.height - first.height).toFixed(1))
-    } else {
-       summary.weightGain = 0
-       summary.heightGain = 0
+      if (chartData.growth && chartData.growth.length >= 2) {
+         const sorted = [...chartData.growth].sort((a, b) => a.month - b.month)
+         const first = sorted[0]
+         const last = sorted[sorted.length - 1]
+         summary.weightGain = parseFloat(((last.weight || 0) - (first.weight || 0)).toFixed(2))
+         summary.heightGain = parseFloat(((last.height || 0) - (first.height || 0)).toFixed(1))
+      } else {
+         summary.weightGain = 0
+         summary.heightGain = 0
+      }
+    } catch (e) {
+      console.error('Fetch statistics error:', e)
+      ElMessage.error('无法同步最新数据，请检查网络')
+    } finally {
+      loading.value = false
     }
-  } catch (e) {
-    ElMessage.error('无法同步最新数据')
-  } finally {
-    loading.value = false
-  }
 }
 
 const feedingChartOption = computed(() => ({
