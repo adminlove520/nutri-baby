@@ -321,14 +321,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             ? feedingToday[feedingToday.length - 1].time
             : null;
 
-        const joinDays = userData
-            ? Math.max(1, Math.floor((Date.now() - new Date(userData.createdAt).getTime()) / (1000 * 60 * 60 * 24)))
-            : 0;
+        const userCreatedAt = userData?.createdAt ? new Date(userData.createdAt).getTime() : null;
+        const diffDays = userCreatedAt ? Math.floor((Date.now() - userCreatedAt) / (1000 * 60 * 60 * 24)) : null;
+        const joinDays = diffDays !== null && diffDays >= 0 ? Math.max(1, diffDays) : 1;
 
         console.log('[DEBUG Stats] joinDays calculation:', {
             userDataCreatedAt: userData?.createdAt,
+            userCreatedAt,
             now: Date.now(),
-            diffMs: Date.now() - new Date(userData?.createdAt).getTime(),
+            diffDays,
             result: joinDays
         });
 
