@@ -113,6 +113,31 @@ model HealthRecord {
   @@index([babyId, time])
 }
 
+model BabyAlbum {
+  id          BigInt    @id @default(autoincrement())
+  babyId      BigInt    @map("baby_id")
+  userId      BigInt    @map("user_id")
+  title       String?
+  description String?
+  url         String
+  filename    String
+  fileSize    Int?      @map("file_size")
+  mimeType    String?
+  width       Int?
+  height      Int?
+  albumType   String    @default("growth") @map("album_type")
+  time        DateTime?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  baby        Baby      @relation(fields: [babyId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id])
+
+  @@index([babyId, createdAt])
+  @@index([userId])
+  @@map("baby_album")
+}
+
 model BabyCollaborator {
   id           BigInt    @id @default(autoincrement())
   babyId       BigInt    @map("baby_id")

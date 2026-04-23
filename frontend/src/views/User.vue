@@ -75,6 +75,22 @@
                 <el-icon class="arrow-icon"><ArrowRight /></el-icon>
              </div>
              <div class="action-divider"></div>
+             <div class="action-item" @click="router.push('/gallery')">
+                <div class="action-left">
+                   <div class="icon-wrap color-1"><el-icon><Picture /></el-icon></div>
+                   <span>宝宝图库</span>
+                </div>
+                <el-icon class="arrow-icon"><ArrowRight /></el-icon>
+             </div>
+             <div class="action-divider"></div>
+             <div class="action-item" @click="router.push('/record/gallery')">
+                <div class="action-left">
+                   <div class="icon-wrap color-2"><el-icon><PictureFilled /></el-icon></div>
+                   <span>时光相册</span>
+                </div>
+                <el-icon class="arrow-icon"><ArrowRight /></el-icon>
+             </div>
+             <div class="action-divider"></div>
              <div class="action-item" @click="sendTestEmail">
                 <div class="action-left">
                    <div class="icon-wrap color-5"><el-icon><Message /></el-icon></div>
@@ -138,7 +154,7 @@
 import { computed, ref, onMounted, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { 
-  User as UserIcon, ArrowRight, Plus, Memo, Setting, InfoFilled, Camera, Message, Edit 
+  User as UserIcon, ArrowRight, Plus, Memo, Setting, InfoFilled, Camera, Message, Edit, Picture, PictureFilled 
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import client from '@/api/client'
