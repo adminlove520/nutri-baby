@@ -22,11 +22,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     include: { collaborators: true }
                 });
                 // 手动序列化 BigInt 字段，确保安全
-                const safeBabies = babies.map(b => ({
+                const safeBabies = babies.map((b: typeof babies[0]) => ({
                     ...b,
                     id: b.id.toString(),
                     userId: b.userId.toString(),
-                    collaborators: (b.collaborators || []).map((c: any) => ({
+                    collaborators: (b.collaborators || []).map((c: typeof babies[0]['collaborators'][0]) => ({
                         ...c,
                         id: c.id.toString(),
                         babyId: c.babyId.toString(),
@@ -107,7 +107,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     }
                 }
                 // 序列化 BigInt 字段
-                const safeSchedules = schedules.map((s: any) => ({
+                const safeSchedules = (schedules as any[]).map((s: any) => ({
                     ...s,
                     id: s.id.toString(),
                     babyId: s.babyId.toString(),

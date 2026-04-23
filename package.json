@@ -30,6 +30,7 @@
         "@types/bcryptjs": "^2.4.6",
         "@types/jsonwebtoken": "^9.0.10",
         "@types/node": "^20.11.20",
+        "@types/nodemailer": "^8.0.0",
         "@vercel/node": "^5.5.15",
         "prisma": "^5.22.0",
         "ts-node": "^10.9.2",

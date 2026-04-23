@@ -92,7 +92,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             total
         });
 
-    } catch (error) {
-        return error(res, 'Internal Server Error', 500);
+    } catch (err: any) {
+        console.error('[Timeline] Error:', err?.message);
+        return res.status(500).json({ message: 'Internal Server Error' });
     }
 }

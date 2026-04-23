@@ -153,7 +153,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
         });
 
-        const notifications = [];
+        const notifications: { userId: any; title: string; content: string; type: string }[] = [];
         for (const v of upcomingVaccines) {
             const title = `疫苗接种提醒: ${v.vaccineName}`;
             const content = `您的宝宝 ${v.baby.name} 预计将在 ${v.scheduledDate.toISOString().split('T')[0]} 接种 ${v.vaccineName}。请提前做好准备。`;

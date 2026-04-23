@@ -62,7 +62,7 @@ ${babyInfo}
                     throw new Error(`MiniMax Anthropic API Error (${response.status}): ${errorText}`);
                 }
 
-                const data = await response.json();
+                const data = await response.json() as any;
                 const content = data.content?.[0]?.text;
                 return this.parseContent(content);
             }
@@ -102,7 +102,7 @@ ${babyInfo}
                 throw new Error(`MiniMax API Error (${response.status}): ${errorText}`);
             }
 
-            const data = await response.json();
+            const data = await response.json() as any;
             const content = data.choices?.[0]?.message?.content;
             
             if (!content) throw new Error('Empty AI response');

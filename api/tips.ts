@@ -12,7 +12,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { babyId, forceAI } = req.query;
     
     try {
-        let baby = null;
+        let baby: any = null;
         let babyAgeMonth = -1;
         let prompt = '';
 
@@ -36,7 +36,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             格式要求为JSON数组：[{"title": "...", "content": "...", "category": "general|psychology|development|safety"}]`;
         }
 
-        let tips = [];
+        let tips: any[] = [];
         // Only try to find local expert tips if baby is present and it's not a force AI request
         if (baby && forceAI !== 'true') {
             tips = await prisma.expertTip.findMany({
@@ -63,7 +63,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     query: prompt
                 });
 
-                let aiTips = [];
+                let aiTips: any[] = [];
                 try {
                     // Clean AI response from markdown blocks
                     let cleanJson = aiResponse.insight.trim();
