@@ -352,7 +352,7 @@ import { useRouter } from 'vue-router'
 import { 
   Mug, Moon, ToiletPaper, TrendCharts, ArrowRight, Pouring, 
   Bell, WarningFilled, Opportunity, Refresh, FirstAidKit, DataLine, UserFilled,
-  StarFilled, Checked, Moon, Food, Coffee, Umbrella, Warning
+  StarFilled, Checked, Food, Coffee, Umbrella, Warning
 } from '@element-plus/icons-vue'
 import DailyTipsCard from '@/components/DailyTipsCard.vue'
 import AIInsightCard from './components/AIInsightCard.vue'
