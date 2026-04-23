@@ -148,6 +148,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
     } catch (err: any) {
         console.error('[Stats] Unhandled error:', err?.message, err?.stack);
+        // 特别处理 BigInt 序列化错误
+        if (err?.message?.includes('BigInt') || err?.message?.includes('serialize')) {
+            return error(res, '数据序列化错误，请联系管理员', 500);
+        }
         return error(res, `统计数据加载失败: ${err?.message || '未知错误'}`, 500);
     }
 }

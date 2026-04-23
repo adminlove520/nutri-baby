@@ -3,19 +3,34 @@ import { VercelResponse } from '@vercel/node';
 /**
  * Safely serialize data with BigInt support and sensitive field filtering
  */
+/**
+ * 递归替换对象中的 BigInt 为字符串，Decimal 为数字，过滤敏感字段
+ * 比 JSON.stringify replacer 更可靠（避免 Node.js 版本差异问题）
+ */
+const sanitize = (val: any, depth = 0): any => {
+    if (depth > 20) return val; // 防止循环引用
+    if (val === null || val === undefined) return val;
+    if (typeof val === 'bigint') return val.toString();
+    // Prisma Decimal
+    if (typeof val === 'object' && typeof val.toNumber === 'function') return val.toNumber();
+    if (Array.isArray(val)) return val.map(v => sanitize(v, depth + 1));
+    if (val instanceof Date) return val;
+    if (typeof val === 'object') {
+        const out: Record<string, any> = {};
+        for (const [k, v] of Object.entries(val)) {
+            if (k === 'password') continue; // 过滤密码
+            out[k] = sanitize(v, depth + 1);
+        }
+        return out;
+    }
+    return val;
+};
+
 export const safeJSON = (data: any) => {
     try {
-        return JSON.parse(JSON.stringify(data, (key, value) => {
-            if (typeof value === 'bigint') return value.toString();
-            if (key === 'password') return undefined;
-            // Handle Prisma Decimal objects (they have toNumber/toString methods)
-            if (value !== null && typeof value === 'object' && typeof value.toNumber === 'function') {
-                return value.toNumber();
-            }
-            return value;
-        }));
+        return sanitize(data);
     } catch (e) {
-        console.error('Serialization Error:', e);
+        console.error('[safeJSON] Serialization Error:', e);
         return { error: 'Serialization Failed' };
     }
 };
