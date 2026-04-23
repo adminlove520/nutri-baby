@@ -60,6 +60,12 @@ if (!user) return res.status(401).json({ message: 'Unauthorized' });
 -   `success(res, data)` -> 200 OK
 -   `error(res, message, status)` -> 错误返回
 
+### 4. AI 智能引擎开发
+项目支持多 AI 提供商，代码位于 `lib/ai/`。
+- `factory.ts`: 提供商工厂类，通过 `AI_PROVIDER` 环境变量切换。
+- `providers/`: 具体实现类（如 `openai.ts`, `minimax.ts`）。
+- **添加新模型**: 继承 `AIProvider` 接口并实现 `analyze` 方法，然后在工厂类中注册。
+
 ## 🎨 前端组件开发
 
 -   **图标库**: 使用 `@element-plus/icons-vue`。

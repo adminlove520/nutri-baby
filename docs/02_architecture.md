@@ -15,7 +15,7 @@ Nutri-Baby 采用了轻量化、现代化的云原生架构，特别针对 Verce
                                          |        |
                                          |    [Vercel Postgres] (DB)
                                          |
-                                         +---- [MiniMax AI API] (Intelligence)
+                                         +---- [OpenAI / MiniMax API] (Intelligence)
                                          |
                                          +---- [AMap API] (LBS)
 ```
@@ -35,9 +35,11 @@ Nutri-Baby 采用了轻量化、现代化的云原生架构，特别针对 Verce
 -   **连接池**: 集成 Prisma Accelerate，解决 Serverless 环境下频繁数据库连接导致的 500 错误。
 -   **对象存储**: 利用 Vercel Blob 处理头像上传，通过 `api/upload.ts` 实现安全的权限管理。
 
-### 4. AI 智能引擎 (MiniMax-M2.7)
--   **V2 协议适配**: 手写 `lib/ai/providers/minimax.ts` 适配最新的 MiniMax-M2.7 文本模型。
--   **JSON 强制约束**: 通过 `response_format: { type: 'json_object' }` 确保 AI 返回的数据能被后端直接解析，避免 Markdown 干扰导致的 JSON 解析失败。
+### 4. AI 智能引擎 (多提供商支持)
+-   **工厂模式**: 基于 `lib/ai/factory.ts` 实现多模型切换。
+-   **OpenAI 适配**: 首选 **GPT-4o-mini**，在 Vercel 美国节点下具备极低的延迟与极高的推理质量。
+-   **MiniMax 适配**: 针对国内用户优化的 **MiniMax-M2.7** 模型。
+-   **JSON 强制约束**: 通过 `response_format: { type: 'json_object' }` 确保 AI 返回的数据能被后端直接解析。
 
 ### 5. 地图服务 (AMap)
 -   **动态加载**: 前端根据需求异步加载高德地图 JS 库。
