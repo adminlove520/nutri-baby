@@ -270,7 +270,9 @@ watch(() => route.path, () => {
   .header-left {
       display: flex;
       align-items: center;
-      gap: 20px;
+      gap: 12px;
+      flex: 1;
+      min-width: 0;
   }
 
   .current-baby {
@@ -280,13 +282,22 @@ watch(() => route.path, () => {
       font-weight: 800;
       color: var(--el-text-color-primary);
       background: var(--el-color-warning-lighter, #fdf6ec);
-      padding: 6px 16px;
+      padding: 6px 12px;
       border-radius: 20px;
       font-size: 14px;
       border: 1px solid var(--el-color-warning-light-7, #ffd07744);
-      
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+
       &:hover {
           background: var(--el-color-warning-light-8, #fdf2e1);
+      }
+
+      @media (max-width: 480px) {
+          font-size: 13px;
+          padding: 5px 10px;
       }
   }
 
@@ -299,8 +310,13 @@ watch(() => route.path, () => {
   .header-right {
      display: flex;
      align-items: center;
-     gap: 16px;
+     gap: 8px;
      margin-left: auto;
+     flex-shrink: 0;
+
+     @media (max-width: 480px) {
+         gap: 4px;
+     }
 
      .theme-toggle-btn {
        background: transparent;
@@ -317,7 +333,7 @@ watch(() => route.path, () => {
         &:hover { color: var(--el-color-primary); }
      }
   }
-  
+
   .user-profile {
      display: flex;
      align-items: center;
@@ -325,16 +341,25 @@ watch(() => route.path, () => {
      padding: 4px 8px;
      border-radius: 20px;
      transition: background 0.2s;
+     max-width: 120px;
 
      &:hover {
        background: var(--el-fill-color-light);
      }
-     
+
      .username {
-        margin-left: 10px;
+        margin-left: 8px;
         font-size: 14px;
         font-weight: 500;
         color: var(--el-text-color-regular);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+
+        @media (max-width: 480px) {
+            max-width: 60px;
+            font-size: 12px;
+        }
      }
   }
 }

@@ -661,10 +661,18 @@ watch([range, () => babyStore.currentBaby?.id], fetchData)
   border-radius: 24px !important;
   .card-header {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
+    gap: 12px;
     .card-title { font-weight: 800; font-size: 16px; display: flex; align-items: center; gap: 10px; }
     .dot { width: 8px; height: 8px; border-radius: 50%; &.d1 { background: var(--el-color-primary); } &.d2 { background: var(--el-color-success); } &.d3 { background: var(--el-color-warning); } &.d4 { background: #409eff; } }
+    .header-right {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
   }
 }
 
@@ -782,6 +790,12 @@ watch([range, () => babyStore.currentBaby?.id], fetchData)
 
 .growth-main-card {
   margin-top: 10px;
+  .header-right {
+    @media (max-width: 768px) {
+      width: 100%;
+      justify-content: flex-start;
+    }
+  }
 }
 
 .custom-radio {

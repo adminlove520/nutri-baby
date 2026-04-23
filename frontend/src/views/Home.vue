@@ -841,14 +841,25 @@ onUnmounted(() => {
   margin-bottom: 30px;
   
   .welcome-text {
-    h1 { font-size: 26px; font-weight: 900; margin: 0 0 6px; color: var(--el-text-color-primary); }
+    h1 {
+      font-size: clamp(20px, 5vw, 26px);
+      font-weight: 900;
+      margin: 0 0 6px;
+      color: var(--el-text-color-primary);
+      word-break: break-word;
+    }
     .baby-quick-info {
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
       gap: 8px;
       margin-top: 4px;
-      .age-tag { background: var(--el-color-primary); border: none; }
-      .companion-text { font-size: 13px; color: var(--el-text-color-secondary); b { color: var(--el-color-primary); } }
+      .age-tag { background: var(--el-color-primary); border: none; font-size: 12px; }
+      .companion-text {
+        font-size: 12px;
+        color: var(--el-text-color-secondary);
+        b { color: var(--el-color-primary); }
+      }
     }
   }
 }
