@@ -8,7 +8,7 @@
         { "source": "/api/baby/:babyId/vaccines", "destination": "/api/baby?action=vaccines&babyId=:babyId" },
         { "source": "/api/baby/:babyId/invite", "destination": "/api/baby?action=invite&babyId=:babyId" },
         { "source": "/api/baby/join", "destination": "/api/baby?action=join" },
-        { "source": "/api/statistics/charts", "destination": "/api/statistics?type=charts" },
+        { "source": "/api/statistics/charts", "destination": "/api/statistics?action=charts" },
         { "source": "/api/statistics/standards", "destination": "/api/statistics?action=standards" },
         { "source": "/api/user/stats", "destination": "/api/user?action=stats" },
         { "source": "/api/user/update", "destination": "/api/user?action=update" },

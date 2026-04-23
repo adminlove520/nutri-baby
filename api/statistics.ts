@@ -11,7 +11,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { action, babyId, range = '7' } = req.query;
     if (!babyId) return error(res, '宝宝 ID 缺失');
     
-    const bId = BigInt(babyId as string);
+    let bId: bigint;
+    try {
+        bId = BigInt(babyId as string);
+    } catch (e) {
+        return error(res, '宝宝 ID 格式不正确');
+    }
+
     if (!(await hasBabyPermission(uId, bId))) return error(res, '权限不足', 403);
 
     try {

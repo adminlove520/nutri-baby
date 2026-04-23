@@ -31,7 +31,41 @@ ${babyInfo}
 用户提问：${(query || '分析现状').trim()}`;
 
         try {
-            // 使用标准 Fetch API 调用 MiniMax V2 接口
+            // 支持 MiniMax 的 Anthropic 兼容接口
+            const anthropicBaseUrl = process.env.ANTHROPIC_BASE_URL || process.env.AI_BASE_URL;
+            const isAnthropic = anthropicBaseUrl?.includes('anthropic') || this.model.toLowerCase().includes('claude');
+
+            if (isAnthropic) {
+                const url = anthropicBaseUrl?.endsWith('/messages') ? anthropicBaseUrl : `${anthropicBaseUrl?.replace(/\/$/, '')}/v1/messages`;
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': this.apiKey,
+                        'anthropic-version': '2023-06-01'
+                    },
+                    body: JSON.stringify({
+                        model: this.model,
+                        max_tokens: 1024,
+                        messages: [
+                            { role: 'user', content: systemPrompt }
+                        ],
+                        system: '你是一个专业的育儿助手，始终以简洁的 JSON 格式输出分析结果。'
+                    }),
+                    signal: AbortSignal.timeout(25000)
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`MiniMax Anthropic API Error (${response.status}): ${errorText}`);
+                }
+
+                const data = await response.json();
+                const content = data.content?.[0]?.text;
+                return this.parseContent(content);
+            }
+
+            // 使用标准 MiniMax V2 接口
             const url = this.groupId 
                 ? `https://api.minimax.chat/v1/text/chatcompletion_v2?GroupId=${this.groupId}`
                 : 'https://api.minimax.chat/v1/text/chatcompletion_v2';
@@ -70,26 +104,7 @@ ${babyInfo}
             const content = data.choices?.[0]?.message?.content;
             
             if (!content) throw new Error('Empty AI response');
-
-            let parsed;
-            try {
-                parsed = JSON.parse(content);
-            } catch (e) {
-                // 如果不是 JSON，尝试清洗
-                const jsonStart = content.indexOf('{');
-                const jsonEnd = content.lastIndexOf('}');
-                if (jsonStart !== -1 && jsonEnd !== -1) {
-                    parsed = JSON.parse(content.substring(jsonStart, jsonEnd + 1));
-                } else {
-                    throw e;
-                }
-            }
-            
-            return {
-                insight: parsed.insight || '分析完成',
-                recommendations: parsed.recommendations || [],
-                sentiment: parsed.sentiment || 'neutral'
-            };
+            return this.parseContent(content);
 
         } catch (error: any) {
             console.error('AI Analysis Error (Handled):', error);
@@ -110,5 +125,27 @@ ${babyInfo}
                 sentiment: "neutral"
             };
         }
+    }
+
+    private parseContent(content: string): AIAnalysisResponse {
+        let parsed;
+        try {
+            parsed = JSON.parse(content);
+        } catch (e) {
+            // 如果不是 JSON，尝试清洗
+            const jsonStart = content.indexOf('{');
+            const jsonEnd = content.lastIndexOf('}');
+            if (jsonStart !== -1 && jsonEnd !== -1) {
+                parsed = JSON.parse(content.substring(jsonStart, jsonEnd + 1));
+            } else {
+                throw e;
+            }
+        }
+        
+        return {
+            insight: parsed.insight || '分析完成',
+            recommendations: parsed.recommendations || [],
+            sentiment: parsed.sentiment || 'neutral'
+        };
     }
 }

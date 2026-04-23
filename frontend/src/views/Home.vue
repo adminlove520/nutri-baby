@@ -36,6 +36,19 @@
         <!-- AI Insight -->
         <AIInsightCard v-if="babyStore.currentBaby" class="mb-24" />
 
+        <!-- Expert Advice (Moved up for better visibility) -->
+        <div class="section-header" v-if="babyStore.currentBaby">
+           <div class="section-title">育儿锦囊</div>
+        </div>
+        <DailyTipsCard 
+            v-if="babyStore.currentBaby" 
+            :tips="todayTips" 
+            :loading="tipsLoading" 
+            class="mb-32" 
+            @tip-click="handleTipClick" 
+            @generate="manualGenerateTip" 
+        />
+
         <!-- Flash Actions -->
         <div class="section-header" v-if="babyStore.currentBaby">
            <div class="section-title">闪电记录</div>
@@ -139,11 +152,7 @@
             </div>
         </el-card>
 
-        <!-- Expert Advice -->
-        <div class="section-header mt-32">
-           <div class="section-title">育儿锦囊</div>
-        </div>
-        <DailyTipsCard :tips="todayTips" :loading="tipsLoading" @tip-click="handleTipClick" @generate="manualGenerateTip" />
+        <!-- Expert Advice Section Moved Up -->
 
         <!-- Tip Detail Dialog -->
         <el-dialog v-model="tipDetailVisible" :title="tipDetail?.title || '育儿锦囊'" width="90%" class="rounded-dialog">
@@ -453,45 +462,59 @@ const manualGenerateTip = async () => {
 
 const fetchData = async () => {
     loading.value = true
+    tipsLoading.value = true
     try {
         const babyId = babyStore.currentBaby?.id
+        console.log('[DEBUG Home] Fetching data for babyId:', babyId)
         
-        // Fetch tips even if no baby is selected
-        const tipsRes: any = await client.get('/tips', { params: { babyId } })
-        todayTips.value = tipsRes
-
-        if (!babyId) {
-            loading.value = false
-            return
-        }
-
-        // 使用更安全的并行请求方式，防止单接口失败导致全页空白
+        // 重置部分关键状态，防止旧数据干扰
+        upcomingVaccines.value = []
+        
+        // 并行请求：完全隔离 AI 接口与核心业务数据
         const results = await Promise.allSettled([
-            getStatistics(babyId),
-            getVaccines(babyId),
+            client.get('/tips', { params: { babyId } }),
+            babyId ? getStatistics(babyId) : Promise.reject('No babyId'),
+            babyId ? getVaccines(babyId) : Promise.reject('No babyId'),
             client.get('/user/stats'),
-            client.get('/record/sleep', { params: { babyId, limit: 1 } })
+            babyId ? client.get('/record/sleep', { params: { babyId, limit: 1 } }) : Promise.reject('No babyId'),
+            client.get('/notifications?unreadOnly=true')
         ])
 
+        // 0. Tips 数据处理
         if (results[0].status === 'fulfilled') {
-            const data = results[0].value as any
+            todayTips.value = results[0].value as any[]
+        } else {
+            console.error('[DEBUG Home] Tips fetch failed:', (results[0] as any).reason)
+        }
+        tipsLoading.value = false // 及时关闭锦囊加载状态
+
+        // 1. Statistics 今日概览数据
+        if (results[1].status === 'fulfilled') {
+            const data = results[1].value as any
             if (data && data.today) {
-                // 深度合并数据，保留默认结构
-                todayStats.value = {
-                    feeding: { ...todayStats.value.feeding, ...data.today.feeding },
-                    sleep: { ...todayStats.value.sleep, ...data.today.sleep },
-                    diaper: { ...todayStats.value.diaper, ...data.today.diaper },
-                    growth: { ...todayStats.value.growth, ...data.today.growth }
+                const t = data.today
+                if (t.feeding) {
+                    todayStats.value.feeding.totalCount = t.feeding.totalCount ?? 0
+                    todayStats.value.feeding.bottleMl = t.feeding.bottleMl ?? 0
+                    todayStats.value.feeding.lastFeedingTime = t.feeding.lastFeedingTime ?? null
+                }
+                if (t.sleep) todayStats.value.sleep.totalMinutes = t.sleep.totalMinutes ?? 0
+                if (t.diaper) todayStats.value.diaper.totalCount = t.diaper.totalCount ?? 0
+                if (t.growth) {
+                    todayStats.value.growth.latestHeight = t.growth.latestHeight ?? 0
+                    todayStats.value.growth.latestWeight = t.growth.latestWeight ?? 0
                 }
             }
         }
         
-        if (results[2].status === 'fulfilled') {
-            joinDays.value = (results[2].value as any).joinDays
+        // 3. User Stats
+        if (results[3].status === 'fulfilled') {
+            joinDays.value = (results[3].value as any).joinDays || 0
         }
 
-        if (results[3].status === 'fulfilled') {
-            const sleepRes = results[3].value as any
+        // 4. Sleep Record (闪电状态)
+        if (results[4].status === 'fulfilled') {
+            const sleepRes = results[4].value as any
             const lastSleep = sleepRes.records?.[0]
             if (lastSleep && !lastSleep.endTime) {
                 isSleeping.value = true
@@ -504,28 +527,41 @@ const fetchData = async () => {
             }
         }
 
-        if (results[1].status === 'fulfilled') {
-            const vaccineRes = results[1].value as any[]
-            const pending = vaccineRes
-                .filter((v: any) => v.vaccinationStatus === 'pending')
-                .sort((a: any, b: any) => new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime())
+        // 2. Vaccines
+        if (results[2].status === 'fulfilled') {
+            const vaccineRes = results[2].value as any[]
+            console.log('[DEBUG Home] Vaccine data:', vaccineRes)
+            if (Array.isArray(vaccineRes)) {
+                const pending = vaccineRes
+                    .filter((v: any) => v.vaccinationStatus === 'pending')
+                    .sort((a: any, b: any) => {
+                        const dateA = new Date(a.scheduledDate || a.scheduled_date || 0).getTime()
+                        const dateB = new Date(b.scheduledDate || b.scheduled_date || 0).getTime()
+                        return dateA - dateB
+                    })
 
-            if (pending.length > 0) {
-                const next = pending[0]
-                upcomingVaccines.value = [`宝宝接种提醒：${next.vaccineName}（预计接种：${next.scheduledDate.split('T')[0]}）`]
-            } else {
-                upcomingVaccines.value = []
+                if (pending.length > 0) {
+                    const next = pending[0]
+                    const vName = next.vaccineName || next.vaccine_name || '未知疫苗'
+                    const sDate = next.scheduledDate || next.scheduled_date
+                    const dateStr = sDate ? (typeof sDate === 'string' ? sDate.split('T')[0] : new Date(sDate).toISOString().split('T')[0]) : '待定'
+                    upcomingVaccines.value = [`宝宝接种提醒：${vName}（预计接种：${dateStr}）`]
+                }
             }
         }
         
-        // Check notifications
-        const notifs: any = await client.get('/notifications?unreadOnly=true')
-        hasNewNotifications.value = notifs.length > 0
+        // 5. Notifications
+        if (results[5].status === 'fulfilled') {
+            const notifs = results[5].value as any[]
+            hasNewNotifications.value = notifs.length > 0
+        }
     } catch (e) {
-        // Handled globally
+        console.error('[DEBUG Home] fetchData unexpected error:', e)
     } finally {
         loading.value = false
+        tipsLoading.value = false
     }
+}
 }
 
 const formatSleepDuration = (minutes: number) => {

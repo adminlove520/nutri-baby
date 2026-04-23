@@ -6,8 +6,10 @@ import type { BabyProfile } from '@/types'
 export const useBabyStore = defineStore('baby', () => {
     const babyList = ref<BabyProfile[]>([])
     const currentBaby = ref<BabyProfile | null>(null)
+    const loading = ref(false)
 
     const fetchBabies = async () => {
+        loading.value = true
         try {
             const data = await babyApi.getBabies()
             babyList.value = data.map((b: any) => ({
@@ -28,6 +30,8 @@ export const useBabyStore = defineStore('baby', () => {
             }
         } catch (error) {
             console.error('Failed to load babies', error)
+        } finally {
+            loading.value = false
         }
     }
 

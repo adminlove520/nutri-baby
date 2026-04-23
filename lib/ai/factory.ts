@@ -8,9 +8,19 @@ export type ProviderType = 'gemini' | 'openai' | 'doubao' | 'minimax';
 export class AIFactory {
     static createProvider(type?: ProviderType): AIProvider {
         const providerType = (type || process.env.AI_PROVIDER || 'minimax') as ProviderType;
-        const apiKey = process.env.AI_API_KEY || process.env.MINIMAX_API_KEY || process.env.OPENAI_API_KEY;
+        
+        // 根据 Provider 类型精确选择 API Key，避免环境变量冲突
+        let apiKey = process.env.AI_API_KEY;
+        if (providerType === 'openai') {
+            apiKey = process.env.OPENAI_API_KEY || process.env.AI_API_KEY;
+        } else if (providerType === 'minimax') {
+            apiKey = process.env.ANTHROPIC_API_KEY || process.env.MINIMAX_API_KEY || process.env.AI_API_KEY;
+        } else if (providerType === 'gemini') {
+            apiKey = process.env.AI_API_KEY;
+        }
+
         const model = process.env.AI_MODEL || (providerType === 'openai' ? 'gpt-4o-mini' : 'MiniMax-M2.7');
-        const baseUrl = process.env.AI_BASE_URL;
+        const baseUrl = process.env.ANTHROPIC_BASE_URL || process.env.AI_BASE_URL;
         const groupId = process.env.MINIMAX_GROUP_ID || '';
 
         if (!apiKey) {
