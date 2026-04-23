@@ -287,13 +287,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, reactive, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import client from '@/api/client'
 import { useRouter } from 'vue-router'
 import { 
   Mug, Moon, ToiletPaper, TrendCharts, ArrowRight, Pouring, 
-  Bell, WarningFilled, Opportunity, Refresh, FirstAidKit, DataLine
+  Bell, WarningFilled, Opportunity, Refresh, FirstAidKit, DataLine, UserFilled
 } from '@element-plus/icons-vue'
 import DailyTipsCard from '@/components/DailyTipsCard.vue'
 import AIInsightCard from './components/AIInsightCard.vue'
@@ -657,6 +657,10 @@ onMounted(async () => {
 // 切换宝宝时重新拉数据
 watch(() => babyStore.currentBaby?.id, (newId, oldId) => {
     if (newId !== oldId) fetchData()
+})
+
+onUnmounted(() => {
+    stopSleepTimer()
 })
 </script>
 
