@@ -125,6 +125,27 @@
         </div>
 
         
+        <!-- Gallery Overview -->
+        <div class="section-header" v-if="babyStore.currentBaby">
+           <div class="section-title">成长圈</div>
+           <el-button link type="primary" @click="router.push('/gallery')">查看全部</el-button>
+        </div>
+        <div class="gallery-overview" v-loading="albumsLoading" v-if="babyStore.currentBaby">
+          <div v-if="recentAlbums.length > 0" class="gallery-grid">
+            <div v-for="album in recentAlbums" :key="album.id" class="gallery-item" @click="router.push('/gallery')">
+              <el-image :src="album.url.split(',')[0]" fit="cover" class="gallery-img" loading="lazy" />
+              <div class="gallery-overlay">
+                <span class="album-title">{{ album.title || '成长记录' }}</span>
+              </div>
+            </div>
+          </div>
+          <div v-else class="gallery-empty">
+            <el-icon class="empty-icon"><Picture /></el-icon>
+            <p>还没有成长记录</p>
+            <el-button size="small" type="primary" round @click="router.push('/gallery')">发布第一条</el-button>
+          </div>
+        </div>
+
         <div class="section-header">
            <div class="section-title">今日概览</div>
            <el-button link type="primary" @click="router.push('/statistics')">详情数据</el-button>
@@ -345,7 +366,7 @@ import { useRouter } from 'vue-router'
 import {
   Mug, Moon, ToiletPaper, TrendCharts, ArrowRight, Pouring,
   WarningFilled, Opportunity, Refresh, FirstAidKit, DataLine,
-  StarFilled, Checked, Food, Coffee, Umbrella, Warning
+  StarFilled, Checked, Food, Coffee, Umbrella, Warning, Picture
 } from '@element-plus/icons-vue'
 import DailyTipsCard from '@/components/DailyTipsCard.vue'
 import AIInsightCard from './components/AIInsightCard.vue'
@@ -622,6 +643,27 @@ const todayStats = ref({
 const upcomingVaccines = ref<string[]>([])
 const todayTips = ref<any[]>([])
 const tipsLoading = ref(false)
+const recentAlbums = ref<any[]>([])
+const albumsLoading = ref(false)
+
+const fetchRecentAlbums = async () => {
+    if (!babyStore.currentBaby?.id) return
+    albumsLoading.value = true
+    try {
+        const res: any = await client.get('/album', {
+            params: {
+                babyId: babyStore.currentBaby.id,
+                limit: 4
+            }
+        })
+        const records = res.records || res || []
+        recentAlbums.value = Array.isArray(records) ? records.slice(0, 4) : []
+    } catch (e) {
+        console.error('Fetch albums error:', e)
+    } finally {
+        albumsLoading.value = false
+    }
+}
 
 const manualGenerateTip = async () => {
     tipsLoading.value = true
@@ -641,17 +683,19 @@ const manualGenerateTip = async () => {
 const fetchData = async () => {
     loading.value = true
     tipsLoading.value = true
+    albumsLoading.value = true
     try {
         const babyId = babyStore.currentBaby?.id
-        
+
         upcomingVaccines.value = []
-        
+
         const babyIdStr = babyId?.toString()
         const results = await Promise.allSettled([
             client.get('/tips', { params: { babyId: babyIdStr } }),
             babyIdStr ? getStatistics(babyIdStr) : Promise.reject('No babyId'),
             babyIdStr ? getVaccines(babyIdStr) : Promise.reject('No babyId'),
-            babyIdStr ? client.get('/record/sleep', { params: { babyId: babyIdStr, limit: 1 } }) : Promise.reject('No babyId')
+            babyIdStr ? client.get('/record/sleep', { params: { babyId: babyIdStr, limit: 1 } }) : Promise.reject('No babyId'),
+            babyIdStr ? client.get('/album', { params: { babyId: babyIdStr, limit: 4 } }) : Promise.reject('No babyId')
         ])
 
         if (results[0].status === 'fulfilled') {
@@ -716,11 +760,18 @@ const fetchData = async () => {
                 }
             }
         }
+
+        if (results[4]?.status === 'fulfilled') {
+            const albumRes = results[4].value as any
+            const records = albumRes?.records || albumRes || []
+            recentAlbums.value = Array.isArray(records) ? records.slice(0, 4) : []
+        }
     } catch (e) {
         console.error('Home fetchData error:', e)
     } finally {
         loading.value = false
         tipsLoading.value = false
+        albumsLoading.value = false
     }
 }
 
@@ -1080,6 +1131,76 @@ onUnmounted(() => {
 .mb-24 { margin-bottom: 24px; }
 .mt-32 { margin-top: 32px; }
 .clickable { cursor: pointer; }
+
+.gallery-overview {
+    margin-bottom: 24px;
+    background: white;
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+}
+
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+
+    .gallery-item {
+        position: relative;
+        aspect-ratio: 1;
+        border-radius: 12px;
+        overflow: hidden;
+        cursor: pointer;
+        transition: transform 0.2s;
+
+        &:hover {
+            transform: scale(1.03);
+        }
+
+        .gallery-img {
+            width: 100%;
+            height: 100%;
+        }
+
+        .gallery-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 8px;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.6));
+            display: flex;
+            align-items: flex-end;
+
+            .album-title {
+                font-size: 12px;
+                color: white;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+        }
+    }
+}
+
+.gallery-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px;
+    color: #909399;
+
+    .empty-icon {
+        font-size: 48px;
+        margin-bottom: 8px;
+        opacity: 0.5;
+    }
+
+    p {
+        margin: 0 0 12px 0;
+        font-size: 14px;
+    }
+}
 
 .tip-detail-content {
     .detail-tag { margin-bottom: 16px; }
