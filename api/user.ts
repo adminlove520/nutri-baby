@@ -39,12 +39,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const growthCount = await prisma.growthRecord.count({ where: { createdBy: uId } });
 
             const userData = await prisma.user.findUnique({ where: { id: uId } });
-            const joinDays = userData ? Math.floor((new Date().getTime() - new Date(userData.createdAt).getTime()) / (1000 * 60 * 60 * 24)) : 0;
+            const createdAtTime = userData?.createdAt ? new Date(userData.createdAt).getTime() : Date.now();
+            const diffMs = Date.now() - createdAtTime;
+            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+            const joinDays = diffDays >= 0 ? Math.max(0, diffDays) : 0;
 
             return success(res, {
                 babyCount,
                 totalRecords: feedingCount + sleepCount + diaperCount + growthCount,
-                joinDays: joinDays || 1
+                joinDays
             });
         }
 

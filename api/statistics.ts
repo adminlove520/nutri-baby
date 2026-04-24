@@ -322,7 +322,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const userCreatedAt = userData?.createdAt ? new Date(userData.createdAt).getTime() : null;
         const diffDays = userCreatedAt ? Math.floor((Date.now() - userCreatedAt) / (1000 * 60 * 60 * 24)) : null;
-        const joinDays = diffDays !== null && diffDays >= 0 ? Math.max(1, diffDays) : 1;
+        const joinDays = diffDays !== null && diffDays >= 0 ? Math.max(0, diffDays) : 0;
 
         return success(res, {
             today: {
