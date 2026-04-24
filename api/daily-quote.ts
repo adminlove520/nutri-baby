@@ -1,7 +1,16 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import axios from 'axios';
 
-const QUOTE_API_URL = 'https://apis.tianapi.com/qihuowenzhen/index';
+const HITOKOTO_API = 'https://v1.hitokoto.cn';
+
+interface HitokotoResponse {
+    id: number;
+    hitokoto: string;
+    type: string;
+    from: string;
+    from_who: string | null;
+    creator: string;
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'GET') {
@@ -9,53 +18,58 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
-        const { key = 'SCYrvkytJze9qyzOh' } = req.query;
-
-        const response = await axios.get(QUOTE_API_URL, {
-            params: { key },
+        const response = await axios.get<HitokotoResponse>(HITOKOTO_API, {
             timeout: 5000
         });
 
-        if (response.data?.code === 200 && response.data?.result?.content) {
-            const quote = response.data.result;
+        if (response.data?.hitokoto) {
+            const quote = response.data;
+            const typeMap: Record<string, string> = {
+                'a': '动画',
+                'b': '漫画',
+                'c': '游戏',
+                'd': '文学',
+                'e': '原创',
+                'f': '网络',
+                'g': '其他',
+                'h': '影视',
+                'i': '诗词',
+                'j': '歌词',
+                'k': '台词',
+                'l': '哲学'
+            };
 
             return res.status(200).json({
                 success: true,
                 data: {
-                    content: quote.content || quote.encontent || '每天进步一点点',
-                    author: quote.author || quote.source || '网络',
-                    translation: quote.translation || '',
-                    imgUrl: quote.imgUrl || '',
-                    type: '每日微情话'
+                    content: quote.hitokoto,
+                    author: quote.from_who || quote.from || '佚名',
+                    source: quote.from,
+                    type: typeMap[quote.type] || '名言',
+                    category: quote.type
                 }
             });
         }
 
-        return res.status(200).json({
-            success: true,
-            data: {
-                content: '陪伴是最长情的告白，守护是最沉默的陪伴。',
-                author: '育儿专家',
-                translation: '',
-                imgUrl: '',
-                type: '育儿寄语'
-            }
-        });
+        return fallbackQuote();
 
     } catch (error: any) {
         console.error('[DailyQuote] API Error:', error.message);
-
-        return res.status(200).json({
-            success: true,
-            data: {
-                content: '每一个宝宝都是上天赐予的最珍贵的礼物，愿每位父母都能珍惜这份缘分。',
-                author: '育儿专家',
-                translation: '',
-                imgUrl: '',
-                type: '育儿寄语'
-            }
-        });
+        return fallbackQuote();
     }
+}
+
+function fallbackQuote() {
+    return res.status(200).json({
+        success: true,
+        data: {
+            content: '陪伴是最长情的告白，守护是最沉默的陪伴。',
+            author: '育儿专家',
+            source: '育儿语录',
+            type: '育儿寄语',
+            category: 'original'
+        }
+    });
 }
 
 export const config = {
