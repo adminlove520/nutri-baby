@@ -127,28 +127,51 @@
         
         <!-- Gallery Overview -->
         <div class="section-header" v-if="babyStore.currentBaby">
-           <div class="section-title">成长圈</div>
-           <el-button link type="primary" @click="router.push('/gallery')">查看全部</el-button>
+           <div class="section-title">
+             <el-icon class="section-icon"><Picture /></el-icon>
+             成长圈
+           </div>
+           <el-button link type="primary" @click="router.push('/gallery')">查看全部 <el-icon><ArrowRight /></el-icon></el-button>
         </div>
-        <div class="gallery-overview" v-loading="albumsLoading" v-if="babyStore.currentBaby">
-          <div v-if="recentAlbums.length > 0" class="gallery-grid">
+        <div class="gallery-overview" v-loading="albumsLoading" v-if="babyStore.currentBaby && recentAlbums.length > 0">
+          <div class="gallery-grid">
             <div v-for="album in recentAlbums" :key="album.id" class="gallery-item" @click="router.push('/gallery')">
               <el-image :src="album.url.split(',')[0]" fit="cover" class="gallery-img" loading="lazy" />
               <div class="gallery-overlay">
-                <span class="album-title">{{ album.title || '成长记录' }}</span>
+                <div class="overlay-content">
+                  <p class="album-title">{{ album.title || '成长记录' }}</p>
+                  <div class="album-meta">
+                    <span class="meta-item">
+                      <el-icon><Star /></el-icon>
+                      {{ album._count?.likes || 0 }}
+                    </span>
+                    <span class="meta-item">
+                      <el-icon><ChatDotRound /></el-icon>
+                      {{ album._count?.comments || 0 }}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-          <div v-else class="gallery-empty">
+        </div>
+        <div class="gallery-empty-card" v-else-if="babyStore.currentBaby && !albumsLoading" v-loading="albumsLoading">
+          <div class="empty-content">
             <el-icon class="empty-icon"><Picture /></el-icon>
-            <p>还没有成长记录</p>
-            <el-button size="small" type="primary" round @click="router.push('/gallery')">发布第一条</el-button>
+            <p class="empty-title">还没有成长记录</p>
+            <p class="empty-desc">记录宝宝的每一个精彩瞬间</p>
+            <el-button size="small" type="primary" round @click="router.push('/gallery')">
+              <el-icon><Plus /></el-icon> 发布第一条
+            </el-button>
           </div>
         </div>
 
         <div class="section-header">
-           <div class="section-title">今日概览</div>
-           <el-button link type="primary" @click="router.push('/statistics')">详情数据</el-button>
+           <div class="section-title">
+             <el-icon class="section-icon"><DataLine /></el-icon>
+             今日概览
+           </div>
+           <el-button link type="primary" @click="router.push('/statistics')">详情数据 <el-icon><ArrowRight /></el-icon></el-button>
         </div>
         
         <el-row :gutter="16" class="stats-grid" v-loading="loading">
@@ -1137,13 +1160,13 @@ onUnmounted(() => {
     background: white;
     border-radius: 16px;
     padding: 16px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
 }
 
 .gallery-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 10px;
+    gap: 8px;
 
     .gallery-item {
         position: relative;
@@ -1151,10 +1174,16 @@ onUnmounted(() => {
         border-radius: 12px;
         overflow: hidden;
         cursor: pointer;
-        transition: transform 0.2s;
+        transition: all 0.3s;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 
         &:hover {
-            transform: scale(1.03);
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+
+            .gallery-overlay {
+                opacity: 1;
+            }
         }
 
         .gallery-img {
@@ -1164,42 +1193,89 @@ onUnmounted(() => {
 
         .gallery-overlay {
             position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            padding: 8px;
-            background: linear-gradient(transparent, rgba(0, 0, 0, 0.6));
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255,107,138,0.85) 0%, rgba(255,142,148,0.85) 100%);
             display: flex;
-            align-items: flex-end;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s;
 
-            .album-title {
-                font-size: 12px;
-                color: white;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
+            .overlay-content {
+                text-align: center;
+                padding: 12px;
+
+                .album-title {
+                    font-size: 13px;
+                    color: white;
+                    font-weight: 600;
+                    margin: 0 0 8px 0;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    display: -webkit-box;
+                    -webkit-line-clamp: 2;
+                    -webkit-box-orient: vertical;
+                }
+
+                .album-meta {
+                    display: flex;
+                    justify-content: center;
+                    gap: 16px;
+
+                    .meta-item {
+                        display: flex;
+                        align-items: center;
+                        gap: 4px;
+                        font-size: 12px;
+                        color: white;
+
+                        .el-icon {
+                            font-size: 14px;
+                        }
+                    }
+                }
             }
         }
     }
 }
 
-.gallery-empty {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 24px;
-    color: #909399;
+.gallery-empty-card {
+    margin-bottom: 24px;
+    background: linear-gradient(135deg, #fff5f6 0%, #fff9f9 100%);
+    border: 2px dashed #ffb4c0;
+    border-radius: 16px;
+    padding: 32px;
 
-    .empty-icon {
-        font-size: 48px;
-        margin-bottom: 8px;
-        opacity: 0.5;
-    }
+    .empty-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
 
-    p {
-        margin: 0 0 12px 0;
-        font-size: 14px;
+        .empty-icon {
+            font-size: 56px;
+            color: #ffb4c0;
+            margin-bottom: 12px;
+        }
+
+        .empty-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #606266;
+            margin: 0 0 4px 0;
+        }
+
+        .empty-desc {
+            font-size: 13px;
+            color: #909399;
+            margin: 0 0 16px 0;
+        }
     }
+}
+
+.section-icon {
+    margin-right: 6px;
+    vertical-align: middle;
 }
 
 .tip-detail-content {
