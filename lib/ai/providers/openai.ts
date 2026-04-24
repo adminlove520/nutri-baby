@@ -104,7 +104,7 @@ ${(query || '请分析宝宝现状并提供建议').trim()}
                     'Authorization': `Bearer ${this.apiKey}`
                 },
                 body: JSON.stringify(requestBody),
-                signal: AbortSignal.timeout(30000)
+                signal: AbortSignal.timeout(60000)
             });
 
             if (!response.ok) {
