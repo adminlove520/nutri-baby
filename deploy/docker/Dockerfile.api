@@ -1,0 +1,58 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Nutri-Baby API Backend Dockerfile
+# Multi-stage build for optimized production image
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── 构建阶段 ──────────────────────────────────────────────────────────────
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# 安装依赖
+COPY package*.json ./
+COPY prisma ./prisma/
+
+# 安装依赖 (包括 devDependencies 用于构建)
+RUN npm ci --include=dev
+
+# 生成 Prisma Client
+RUN npx prisma generate
+
+# ── 生产阶段 ──────────────────────────────────────────────────────────────
+FROM node:20-alpine AS production
+
+# 安全运行用户
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001 -G nodejs
+
+WORKDIR /app
+
+# 安装生产依赖
+COPY package*.json ./
+
+# 只安装生产依赖
+RUN npm ci --omit=dev --ignore-scripts && \
+    npm cache clean --force
+
+# 从构建阶段复制 Prisma 生成的文件
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/client
+
+# 复制应用代码
+COPY --chown=nodejs:nodejs . .
+
+# 创建上传目录
+RUN mkdir -p /app/uploads && chown -R nodejs:nodejs /app/uploads
+
+# 切换到非 root 用户
+USER nodejs
+
+# 暴露端口
+EXPOSE 3000
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
+
+# 启动命令 - 使用 pm2 保持进程活跃
+CMD ["sh", "-c", "npx prisma migrate deploy && node api/index.js"]

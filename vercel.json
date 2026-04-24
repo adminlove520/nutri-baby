@@ -16,6 +16,7 @@
         { "source": "/api/user/info", "destination": "/api/user?action=info" },
         { "source": "/api/user/change-password", "destination": "/api/user?action=change-password" },
         { "source": "/api/user/delete-account", "destination": "/api/user?action=delete-account" },
+        { "source": "/api/tips", "destination": "/api/ai?action=tips" },
         { "source": "/api/tips/daily", "destination": "/api/ai?action=tips" },
         { "source": "/api/share", "destination": "/api/album?action=share" },
         { "source": "/api/ai/analyze", "destination": "/api/ai" },
