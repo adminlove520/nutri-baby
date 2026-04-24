@@ -14,7 +14,7 @@
         </el-button>
       </div>
     </template>
-    
+
     <div class="insight-content">
         <div v-if="loading" class="loading-state">
             <el-skeleton :rows="4" animated />
@@ -23,23 +23,7 @@
              <div class="sentiment-badge" :class="result.sentiment">
                  {{ sentimentLabel }}
              </div>
-             <div class="summary-box">
-                <p class="insight-text">{{ result.insight }}</p>
-             </div>
-             
-             <!-- Recommendations Section -->
-             <div class="recommendations" v-if="result.recommendations && result.recommendations.length > 0">
-                <div class="rec-title">
-                    <el-icon><InfoFilled /></el-icon>
-                    <span>建议与对策</span>
-                </div>
-                <ul class="rec-list">
-                    <li v-for="(rec, index) in result.recommendations" :key="index">
-                        <span class="bullet">•</span>
-                        <span class="text">{{ rec }}</span>
-                    </li>
-                </ul>
-             </div>
+             <div class="summary-box markdown-body" v-html="renderedInsight"></div>
 
              <div class="update-time" v-if="lastUpdated">
                 <el-icon><Clock /></el-icon>
@@ -57,10 +41,22 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { MagicStick, Refresh, InfoFilled, Clock } from '@element-plus/icons-vue'
+import { MagicStick, Refresh, Clock } from '@element-plus/icons-vue'
+import { marked } from 'marked'
 import client from '@/api/client'
 import { useBabyStore } from '@/stores/baby'
 import { ElMessage } from 'element-plus'
+
+marked.setOptions({ breaks: true, gfm: true } as any)
+
+const renderMarkdown = (text: string): string => {
+    if (!text) return ''
+    try {
+        return marked.parse(text) as string
+    } catch {
+        return text.replace(/\n/g, '<br/>')
+    }
+}
 
 const loading = ref(false)
 const result = ref<any>(null)
@@ -138,6 +134,11 @@ const sentimentLabel = computed(() => {
     if (s === 'positive') return '状态优'
     if (s === 'concern') return '需关注'
     return '状态平稳'
+})
+
+const renderedInsight = computed(() => {
+    if (!result.value?.insight) return ''
+    return renderMarkdown(result.value.insight)
 })
 
 const analyze = async () => {
@@ -237,73 +238,57 @@ const analyze = async () => {
         border-radius: 20px;
         font-size: 12px;
         font-weight: bold;
-        
+
         &.positive { background: #f0f9eb; color: #67C23A; }
         &.concern { background: #fef0f0; color: #F56C6C; }
         &.neutral { background: #f4f4f5; color: #909399; }
     }
 
-    .summary-box {
-        margin-bottom: 20px;
-        .insight-text {
-            font-size: 15px;
-            line-height: 1.7;
-            color: #303133;
-            font-weight: 500;
-        }
-    }
-    
-    .recommendations {
-        background: #fafbff;
-        border-radius: 12px;
-        padding: 16px;
-        border: 1px dashed var(--el-color-primary-light-7);
-        margin-bottom: 12px;
+    :deep(.markdown-body) {
+        font-size: 14px;
+        line-height: 1.8;
+        color: #303133;
 
-        .rec-title {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 14px;
+        h2, h3 {
             font-weight: 700;
+            color: #2c3e50;
+            margin: 12px 0 8px;
+        }
+
+        h2 { font-size: 16px; }
+        h3 { font-size: 14px; }
+
+        p {
+            margin: 8px 0;
+        }
+
+        ul, ol {
+            padding-left: 20px;
+            margin: 8px 0;
+        }
+
+        li {
+            margin: 4px 0;
+        }
+
+        strong {
             color: var(--el-color-primary);
-            margin-bottom: 12px;
         }
-        
-        .rec-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            
-            li {
-                display: flex;
-                gap: 8px;
-                font-size: 13.5px;
-                color: #606266;
-                margin-bottom: 10px;
-                line-height: 1.6;
-                
-                &:last-child { margin-bottom: 0; }
-                
-                .bullet {
-                    color: var(--el-color-primary);
-                    font-weight: bold;
-                    flex-shrink: 0;
-                    margin-top: 1px;
-                }
-            }
+
+        em {
+            color: #909399;
         }
     }
+}
 
-    .update-time {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        font-size: 11px;
-        color: var(--el-text-color-placeholder);
+.update-time {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--el-text-color-placeholder);
 
-        .el-icon { font-size: 11px; }
-    }
+    .el-icon { font-size: 11px; }
 }
 
 .empty-state {
