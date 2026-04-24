@@ -125,14 +125,24 @@
       <el-form :model="uploadForm" label-position="top">
         <el-form-item label="选择宝宝">
           <el-select v-model="uploadForm.babyId" placeholder="请选择宝宝" style="width: 100%">
-            <el-option v-for="baby in babyStore.babies" :key="baby.id" :label="baby.name" :value="baby.id" />
+            <el-option v-for="baby in babyStore.babyList" :key="baby.id" :label="baby.name" :value="baby.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="标题">
-          <el-input v-model="uploadForm.title" placeholder="给动态起个标题" />
+          <div class="input-with-action">
+            <el-input v-model="uploadForm.title" placeholder="给动态起个标题" />
+            <el-tooltip content="AI 生成标题" placement="top" :show-after="300">
+              <el-button :icon="Magic" circle @click="generateTitle" :loading="generatingTitle" class="ai-btn" />
+            </el-tooltip>
+          </div>
         </el-form-item>
         <el-form-item label="内容">
-          <el-input v-model="uploadForm.description" type="textarea" :rows="3" placeholder="分享这一刻..." />
+          <div class="input-with-action">
+            <el-input v-model="uploadForm.description" type="textarea" :rows="3" placeholder="分享这一刻..." />
+            <el-tooltip content="AI 生成内容" placement="top" :show-after="300">
+              <el-button :icon="Magic" circle @click="generateContent" :loading="generatingContent" class="ai-btn" />
+            </el-tooltip>
+          </div>
         </el-form-item>
         <el-form-item label="分类">
           <el-radio-group v-model="uploadForm.albumType">
@@ -232,7 +242,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { UploadFilled, Delete, Edit, Back, MoreFilled, Star, ChatDotRound, Promotion, Plus, Close, Share, Link } from '@element-plus/icons-vue'
+import { UploadFilled, Delete, Edit, Back, MoreFilled, Star, ChatDotRound, Promotion, Plus, Close, Share, Link, Magic } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import client from '@/api/client'
 import { getAlbums, createAlbum, deleteAlbum, addComment, deleteComment as delComment, likeAlbum, unlikeAlbum, type AlbumRecord, type AlbumComment } from '@/api/album'
@@ -275,6 +285,52 @@ const replyingComment = ref<AlbumComment | null>(null)
 const showShareDialog = ref(false)
 const shareData = ref<any>(null)
 const generatedCaption = ref('')
+const generatingTitle = ref(false)
+const generatingContent = ref(false)
+
+const generateTitle = async () => {
+    if (!uploadForm.value.babyId) {
+        ElMessage.warning('请先选择宝宝')
+        return
+    }
+    generatingTitle.value = true
+    try {
+        const res: any = await client.post('/ai', {
+            babyId: uploadForm.value.babyId,
+            query: `为一个${uploadForm.value.albumType === 'growth' ? '成长记录' : '精彩瞬间'}生成一个吸引人的标题，不超过20字`
+        })
+        if (res.insight) {
+            uploadForm.value.title = res.insight.substring(0, 20)
+            ElMessage.success('标题已生成')
+        }
+    } catch (e) {
+        ElMessage.error('生成失败，请稍后再试')
+    } finally {
+        generatingTitle.value = false
+    }
+}
+
+const generateContent = async () => {
+    if (!uploadForm.value.babyId) {
+        ElMessage.warning('请先选择宝宝')
+        return
+    }
+    generatingContent.value = true
+    try {
+        const res: any = await client.post('/ai', {
+            babyId: uploadForm.value.babyId,
+            query: `为一个${uploadForm.value.albumType === 'growth' ? '成长记录' : '精彩瞬间'}生成一段温馨的内容描述，50字左右`
+        })
+        if (res.insight) {
+            uploadForm.value.description = res.insight.substring(0, 100)
+            ElMessage.success('内容已生成')
+        }
+    } catch (e) {
+        ElMessage.error('生成失败，请稍后再试')
+    } finally {
+        generatingContent.value = false
+    }
+}
 
 const fetchAlbums = async (reset = false) => {
     if (reset) {
@@ -759,6 +815,18 @@ onMounted(() => {
 }
 
 .hidden-input { display: none; }
+
+.input-with-action {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+
+    :deep(.el-input) { flex: 1; }
+    .ai-btn {
+        margin-top: 2px;
+        flex-shrink: 0;
+    }
+}
 
 .preview-grid {
     display: grid;

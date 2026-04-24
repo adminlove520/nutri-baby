@@ -212,16 +212,12 @@
 
     <!-- Changelog Dialog -->
     <el-dialog v-model="showChangelog" title="更新日志" width="90%" class="rounded-dialog" destroy-on-close>
-      <div class="changelog-content">
-        <pre>{{ changelog }}</pre>
-      </div>
+      <div class="changelog-content" v-html="changelogHtml" />
     </el-dialog>
 
     <!-- License Dialog -->
     <el-dialog v-model="showLicense" title="开源协议" width="90%" class="rounded-dialog" destroy-on-close>
-      <div class="license-content">
-        <pre>{{ license }}</pre>
-      </div>
+      <div class="license-content" v-html="licenseHtml" />
     </el-dialog>
 
     <!-- GitHub Config Dialog -->
@@ -299,6 +295,7 @@ import { ref, onMounted, reactive, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { marked } from 'marked'
 import client from '@/api/client'
 import { useUserStore } from '@/stores/user'
 import { useBabyStore } from '@/stores/baby'
@@ -306,10 +303,11 @@ import { getGitHubSettings, saveGitHubSettings, testGitHubConnection, syncToGitH
 import { VERSION, CHANGELOG, LICENSE } from '@/constants/version'
 
 const version = VERSION
-const changelog = CHANGELOG
-const license = LICENSE
 const showChangelog = ref(false)
 const showLicense = ref(false)
+
+const changelogHtml = computed(() => marked(CHANGELOG))
+const licenseHtml = computed(() => marked(LICENSE))
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -764,13 +762,21 @@ watch(showSyncLogs, (val) => {
 .license-content {
   max-height: 60vh;
   overflow-y: auto;
-  pre {
-    margin: 0;
-    white-space: pre-wrap;
-    word-break: break-word;
-    font-family: inherit;
-    font-size: 13px;
-    line-height: 1.6;
-  }
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--el-text-color-regular);
+
+  :deep(h1) { font-size: 20px; font-weight: 700; margin: 16px 0 12px; color: var(--el-text-color-primary); }
+  :deep(h2) { font-size: 16px; font-weight: 600; margin: 14px 0 10px; }
+  :deep(h3) { font-size: 14px; font-weight: 600; margin: 12px 0 8px; }
+  :deep(p) { margin: 8px 0; }
+  :deep(ul), :deep(ol) { padding-left: 20px; margin: 8px 0; }
+  :deep(li) { margin: 4px 0; }
+  :deep(code) { background: var(--el-fill-color-light); padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+  :deep(pre) { background: var(--el-fill-color-light); padding: 12px; border-radius: 8px; overflow-x: auto; margin: 12px 0; }
+  :deep(pre code) { background: none; padding: 0; }
+  :deep(hr) { border: none; border-top: 1px solid var(--el-border-color-light); margin: 16px 0; }
+  :deep(strong) { font-weight: 600; color: var(--el-text-color-primary); }
+  :deep(a) { color: var(--el-color-primary); text-decoration: none; &:hover { text-decoration: underline; } }
 }
 </style>
