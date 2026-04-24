@@ -47,7 +47,7 @@
                 <div class="user-row">
                   <span class="user-name">{{ item.user?.nickname || '匿名用户' }}</span>
                   <span class="baby-tag">
-                    <el-icon><Baby /></el-icon>
+                    <el-icon><User /></el-icon>
                     {{ item.baby?.name }}
                   </span>
                 </div>
@@ -181,7 +181,7 @@
           <div class="input-with-action">
             <el-input v-model="uploadForm.title" placeholder="给动态起个标题" />
             <el-tooltip content="AI 生成标题" placement="top" :show-after="300">
-              <el-button :icon="Magic" circle @click="generateTitle" :loading="generatingTitle" class="ai-btn" />
+              <el-button :icon="MagicStick" circle @click="generateTitle" :loading="generatingTitle" class="ai-btn" />
             </el-tooltip>
           </div>
         </el-form-item>
@@ -189,7 +189,7 @@
           <div class="input-with-action">
             <el-input v-model="uploadForm.description" type="textarea" :rows="3" placeholder="分享这一刻..." />
             <el-tooltip content="AI 生成内容" placement="top" :show-after="300">
-              <el-button :icon="Magic" circle @click="generateContent" :loading="generatingContent" class="ai-btn" />
+              <el-button :icon="MagicStick" circle @click="generateContent" :loading="generatingContent" class="ai-btn" />
             </el-tooltip>
           </div>
         </el-form-item>
@@ -291,7 +291,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { UploadFilled, Delete, Edit, ArrowLeft, MoreFilled, Star, ChatDotRound, Promotion, Plus, Close, Share, Link, Magic, Picture, TrendCharts, Grid, Baby, Clock, Collection, ChatLineSquare, CaretRight, More, RefreshRight } from '@element-plus/icons-vue'
+import { UploadFilled, Delete, Edit, ArrowLeft, MoreFilled, Star, ChatDotRound, Promotion, Plus, Close, Share, Link, MagicStick, Picture, TrendCharts, Grid, User, Clock, Collection, ChatLineSquare, CaretRight, More, RefreshRight } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import client from '@/api/client'
 import { getAlbums, createAlbum, deleteAlbum, addComment, deleteComment as delComment, likeAlbum, unlikeAlbum, type AlbumRecord, type AlbumComment } from '@/api/album'
