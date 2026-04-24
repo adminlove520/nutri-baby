@@ -2,24 +2,20 @@ import { VercelRequest, VercelResponse } from '@vercel/node';
 import prisma from '../lib/prisma';
 import { getUserFromRequest, hasBabyPermission } from '../lib/auth';
 import { AIFactory } from '../lib/ai/factory';
-import { success, error } from '../lib/utils';
+import { success } from '../lib/utils';
 
-// POST /api/ai/analyze - AI analysis with baby context
-// GET /api/ai?action=tips - Get AI-powered daily tips
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     const user = await getUserFromRequest(req);
     if (!user) {
         return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    // GET - Tips functionality (merged from tips.ts)
     if (req.method === 'GET' && req.query.action === 'tips') {
         const { babyId, forceAI } = req.query;
 
         try {
             let baby: any = null;
             let babyAgeMonth = -1;
-            let prompt = '';
 
             if (babyId && babyId !== 'null' && babyId !== 'undefined') {
                 const bId = BigInt(babyId.toString());
@@ -29,18 +25,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     baby = await prisma.baby.findUnique({ where: { id: bId } });
                     if (baby) {
                         babyAgeMonth = Math.floor((new Date().getTime() - new Date(baby.birthDate).getTime()) / (30 * 24 * 60 * 60 * 1000));
-                        prompt = `你是一位专业的育儿专家。请针对一位 ${babyAgeMonth} 个月大的宝宝（性别：${baby.gender === 'male' ? '男' : '女'}），提供3条科学、具体的每日育儿建议。
-                        格式要求为JSON数组：[{"title": "...", "content": "...", "category": "feeding|sleep|development|safety"}]`;
                     }
                 }
             }
 
-            if (!baby) {
-                prompt = `你是一位专业的育儿专家。目前用户还没有添加宝宝的信息，请提供3条通用的、针对新生儿到3岁阶段家长的科学育儿心理或日常通用建议。
-                格式要求为JSON数组：[{"title": "...", "content": "...", "category": "general|psychology|development|safety"}]`;
-            }
-
             let tips: any[] = [];
+
             if (baby && forceAI !== 'true') {
                 tips = await prisma.expertTip.findMany({
                     where: {
@@ -54,37 +44,105 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             if (tips.length === 0 || forceAI === 'true' || !baby) {
                 try {
                     const ai = AIFactory.createProvider();
+
+                    const babyAgeStr = baby
+                        ? babyAgeMonth >= 1
+                            ? `${babyAgeMonth}个月大的${baby.gender === 'male' ? '男宝宝' : '女宝宝'}（${baby.name}）`
+                            : `${Math.floor((Date.now() - new Date(baby.birthDate).getTime()) / (1000 * 60 * 60 * 24))}天大的宝宝（${baby.name}）`
+                        : '';
+
+                    let recentRecords = { feeding: [] as any[], sleep: [] as any[], growth: [] as any[] };
+                    if (baby) {
+                        const sevenDaysAgo = new Date();
+                        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+                        const [feeding, sleep, growth] = await Promise.all([
+                            prisma.feedingRecord.findMany({
+                                where: { babyId: baby.id, time: { gte: sevenDaysAgo } },
+                                orderBy: { time: 'desc' },
+                                take: 10
+                            }),
+                            prisma.sleepRecord.findMany({
+                                where: { babyId: baby.id, startTime: { gte: sevenDaysAgo } },
+                                orderBy: { startTime: 'desc' },
+                                take: 10
+                            }),
+                            prisma.growthRecord.findMany({
+                                where: { babyId: baby.id, time: { gte: sevenDaysAgo } },
+                                orderBy: { time: 'desc' },
+                                take: 5
+                            })
+                        ]);
+                        const serialize = (data: any) => JSON.parse(JSON.stringify(data, (_, v) => typeof v === 'bigint' ? v.toString() : v));
+                        recentRecords = {
+                            feeding: serialize(feeding),
+                            sleep: serialize(sleep),
+                            growth: serialize(growth)
+                        };
+                    }
+
                     const aiResponse = await ai.analyze({
                         babyProfile: baby ? {
                             name: baby.name,
                             birthDate: baby.birthDate,
                             gender: baby.gender,
-                            month: babyAgeMonth
+                            month: babyAgeMonth,
+                            days: Math.floor((Date.now() - new Date(baby.birthDate).getTime()) / (1000 * 60 * 60 * 24)),
+                            ageStr: babyAgeMonth >= 1 ? `${babyAgeMonth}个月` : `${Math.floor((Date.now() - new Date(baby.birthDate).getTime()) / (1000 * 60 * 60 * 24))}天`
                         } : undefined,
-                        recentRecords: { feeding: [], sleep: [], growth: [] },
-                        query: prompt
+                        recentRecords,
+                        query: baby ? `请为${babyAgeStr}提供3条科学、具体的每日育儿建议，每条建议要有标题和详细说明` : '请为新生儿到3岁阶段的宝宝家长提供3条科学的育儿建议'
                     });
 
-                    let aiTips: any[] = [];
-                    try {
-                        let cleanJson = aiResponse.insight.trim();
-                        if (cleanJson.startsWith('```')) {
-                            const match = cleanJson.match(/```(?:json)?\n?([\s\S]*?)\n?```/);
-                            if (match && match[1]) {
-                                cleanJson = match[1].trim();
-                            }
-                        }
-                        aiTips = JSON.parse(cleanJson);
-                    } catch (e) {
-                        aiTips = [{ title: baby ? '宝宝专属建议' : '科学育儿建议', content: aiResponse.insight, category: 'general' }];
+                    const content = aiResponse.insight;
+
+                    const tipMatches = content.match(/(?:^|\n)[-*•]?\s*(.+?)(?:\n|$)/g) || [];
+                    const titleMatches = content.match(/(?:^|\n)(?:#+\s*)?(.+?)(?:\n|$)/g) || [];
+
+                    if (tipMatches.length > 0) {
+                        tips = tipMatches.slice(0, 3).map((match, idx) => {
+                            const text = match.replace(/^[-*•]\s*/, '').trim();
+                            return {
+                                title: text.substring(0, 30),
+                                content: text,
+                                category: 'general'
+                            };
+                        });
+                    } else if (titleMatches.length > 0) {
+                        tips = titleMatches.slice(0, 3).map((match, idx) => {
+                            const text = match.replace(/^#+\s*/, '').trim();
+                            return {
+                                title: text.substring(0, 30),
+                                content: text,
+                                category: 'general'
+                            };
+                        });
+                    } else {
+                        const paragraphs = content.split(/\n\n+/).filter(p => p.trim().length > 10);
+                        tips = paragraphs.slice(0, 3).map((p, idx) => {
+                            const lines = p.trim().split('\n');
+                            const title = lines[0]?.replace(/^[-*#\s]+/, '').substring(0, 30) || `建议${idx + 1}`;
+                            return {
+                                title,
+                                content: p.trim(),
+                                category: 'general'
+                            };
+                        });
                     }
 
-                    if (Array.isArray(aiTips)) {
-                        tips = aiTips;
+                    if (tips.length === 0) {
+                        tips = [{
+                            title: '育儿建议',
+                            content: content.substring(0, 200),
+                            category: 'general'
+                        }];
                     }
                 } catch (aiErr) {
                     console.error('AI Tips Error:', aiErr);
-                    tips = [{ title: '欢迎开启育儿之旅', content: '请先在"宝宝设置"中添加宝宝信息，获取更精准的每日建议。', category: 'general' }];
+                    tips = [{
+                        title: '欢迎开启育儿之旅',
+                        content: '请先在"宝宝设置"中添加宝宝信息，获取更精准的每日建议。',
+                        category: 'general'
+                    }];
                 }
             }
 
@@ -103,7 +161,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
     }
 
-    // POST - AI Analysis
     if (req.method !== 'POST') {
         return res.status(405).json({ message: 'Method Not Allowed' });
     }

@@ -242,8 +242,9 @@ const generateAiPlan = async () => {
         }
         aiPlan.value = renderMarkdown(parts.join(''))
         ElMessage.success('AI 接种推荐已生成')
-    } catch (e) {
-        // Handled
+    } catch (e: any) {
+        console.error('AI Plan Error:', e)
+        ElMessage.error(e?.message || e?.response?.data?.message || '网络连接超时，请检查您的网络')
     } finally {
         aiPlanLoading.value = false
     }
@@ -477,8 +478,9 @@ const generateAiKnowledge = async () => {
         }
         aiKnowledge.value = renderMarkdown(parts.join(''))
         ElMessage.success('知识库已优化')
-    } catch (e) {
-        // Handled
+    } catch (e: any) {
+        console.error('AI Knowledge Error:', e)
+        ElMessage.error(e?.message || e?.response?.data?.message || '网络连接超时，请检查您的网络')
     } finally {
         aiLoading.value = false
     }

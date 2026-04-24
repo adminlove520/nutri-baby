@@ -352,8 +352,9 @@ const generateTitle = async () => {
             uploadForm.value.title = res.insight.substring(0, 20)
             ElMessage.success('标题已生成')
         }
-    } catch (e) {
-        ElMessage.error('生成失败，请稍后再试')
+    } catch (e: any) {
+        console.error('Generate Title Error:', e)
+        ElMessage.error(e?.message || e?.response?.data?.message || '生成失败，请稍后再试')
     } finally {
         generatingTitle.value = false
     }
@@ -374,8 +375,9 @@ const generateContent = async () => {
             uploadForm.value.description = res.insight.substring(0, 100)
             ElMessage.success('内容已生成')
         }
-    } catch (e) {
-        ElMessage.error('生成失败，请稍后再试')
+    } catch (e: any) {
+        console.error('Generate Content Error:', e)
+        ElMessage.error(e?.message || e?.response?.data?.message || '生成失败，请稍后再试')
     } finally {
         generatingContent.value = false
     }
