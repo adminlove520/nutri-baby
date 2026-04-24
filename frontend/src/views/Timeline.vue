@@ -2,86 +2,116 @@
   <div class="timeline-page">
     <div class="page-header">
       <div class="header-content">
-        <h2 class="title">成长时光轴</h2>
-        <p class="subtitle">记录宝宝的点滴进步</p>
+        <h2 class="title">
+          <el-icon class="title-icon"><Timer /></el-icon>
+          成长时光轴
+        </h2>
+        <p class="subtitle">记录宝宝的每一个珍贵瞬间</p>
       </div>
-      <el-button type="primary" round @click="fetchTimeline(true)" :loading="loading">
-        <el-icon><Refresh /></el-icon> 刷新
-      </el-button>
+      <div class="header-actions">
+        <el-button type="primary" round @click="fetchTimeline(true)" :loading="loading" class="refresh-btn">
+          <el-icon><Refresh /></el-icon>
+          刷新
+        </el-button>
+      </div>
     </div>
 
     <div class="timeline-container" v-loading="loading && entries.length === 0">
-      <el-timeline v-if="entries.length > 0">
-        <el-timeline-item
-          v-for="(entry, index) in entries"
-          :key="index"
-          :timestamp="formatTime(entry.time)"
-          :type="getTimelineItemType(entry.type)"
-          :hollow="true"
-          placement="top"
-        >
-          <el-card class="timeline-card" shadow="hover">
-            <div class="card-body">
-              <div class="record-icon" :class="entry.type">
-                 <el-icon :size="20"><component :is="getIcon(entry.type)" /></el-icon>
-              </div>
-              <div class="record-details">
-                <div class="record-title">
-                  <div class="title-left">
-                    <span class="type-label">{{ getTypeName(entry.type) }}</span>
-                    <span class="creator-tag" v-if="entry.data.creator">
-                      by {{ entry.data.creator.nickname }}
+      <div v-if="entries.length > 0" class="timeline-content">
+        <el-timeline>
+          <el-timeline-item
+            v-for="(entry, index) in entries"
+            :key="index"
+            :timestamp="formatDate(entry.time)"
+            :type="getTimelineItemType(entry.type)"
+            :hollow="true"
+            placement="top"
+          >
+            <el-card class="timeline-card" shadow="hover">
+              <div class="card-body">
+                <div class="record-icon" :class="entry.type">
+                  <el-icon :size="22"><component :is="getIcon(entry.type)" /></el-icon>
+                </div>
+                <div class="record-details">
+                  <div class="record-header">
+                    <div class="title-left">
+                      <span class="type-badge" :class="entry.type">
+                        <el-icon :size="12"><component :is="getIcon(entry.type)" /></el-icon>
+                        {{ getTypeName(entry.type) }}
+                      </span>
+                      <span class="creator-tag" v-if="entry.data.creator">
+                        <el-icon><User /></el-icon>
+                        {{ entry.data.creator.nickname }}
+                      </span>
+                    </div>
+                    <span class="time-ago">
+                      <el-icon><Clock /></el-icon>
+                      {{ formatRelative(entry.time) }}
                     </span>
                   </div>
-                  <span class="time-ago">{{ formatRelative(entry.time) }}</span>
+                  <div class="record-content">
+                    <p v-if="entry.type === 'feeding'" class="content-text">
+                      <span class="emoji">🍼</span> {{ getFeedingText(entry.data) }}
+                    </p>
+                    <p v-else-if="entry.type === 'sleep'" class="content-text">
+                      <span class="emoji">🌙</span> {{ getSleepText(entry.data) }}
+                    </p>
+                    <p v-else-if="entry.type === 'diaper'" class="content-text">
+                      <span class="emoji">👶</span> {{ getDiaperText(entry.data) }}
+                    </p>
+                    <p v-else-if="entry.type === 'growth'" class="content-text">
+                      <span class="emoji">📈</span> {{ getGrowthText(entry.data) }}
+                    </p>
+                    <p v-else-if="entry.type === 'medication'" class="content-text">
+                      <span class="emoji">💊</span> {{ entry.data.name }} - {{ entry.data.dosage }}
+                    </p>
+                    <p v-else-if="entry.type === 'health'" class="content-text">
+                      <span class="emoji">🏥</span> {{ getHealthText(entry.data) }}
+                    </p>
+                    <div class="remark" v-if="entry.data.remark || entry.data.note">
+                      <el-icon><ChatLineSquare /></el-icon>
+                      {{ entry.data.remark || entry.data.note }}
+                    </div>
+                  </div>
                 </div>
-                <div class="record-content">
-                   <p v-if="entry.type === 'feeding'">
-                     {{ getFeedingText(entry.data) }}
-                   </p>
-                   <p v-else-if="entry.type === 'sleep'">
-                     {{ getSleepText(entry.data) }}
-                   </p>
-                   <p v-else-if="entry.type === 'diaper'">
-                     {{ getDiaperText(entry.data) }}
-                   </p>
-                   <p v-else-if="entry.type === 'growth'">
-                     {{ getGrowthText(entry.data) }}
-                   </p>
-                   <p v-else-if="entry.type === 'medication'">
-                     💊 {{ entry.data.name }} - {{ entry.data.dosage }}
-                   </p>
-                   <p v-else-if="entry.type === 'health'">
-                     {{ getHealthText(entry.data) }}
-                   </p>
-                   <div class="remark" v-if="entry.data.remark || entry.data.note">
-                     <el-icon><ChatDotRound /></el-icon> {{ entry.data.remark || entry.data.note }}
-                   </div>
-                </div>
-              </div>
-              <div class="card-actions">
-                  <el-dropdown trigger="click">
-                     <el-icon class="more-icon"><MoreFilled /></el-icon>
-                     <template #dropdown>
-                        <el-dropdown-menu>
-                           <el-dropdown-item :icon="Edit" @click="handleEdit(entry)">编辑</el-dropdown-item>
-                           <el-dropdown-item :icon="Delete" @click="handleDelete(entry)" class="delete-item">删除</el-dropdown-item>
-                        </el-dropdown-menu>
-                     </template>
+                <div class="card-actions">
+                  <el-dropdown trigger="click" @command="(cmd: string) => handleCommand(cmd, entry)">
+                    <el-icon class="more-icon"><MoreFilled /></el-icon>
+                    <template #dropdown>
+                      <el-dropdown-menu>
+                        <el-dropdown-item command="edit">
+                          <el-icon><Edit /></el-icon> 编辑
+                        </el-dropdown-item>
+                        <el-dropdown-item command="delete" class="delete-item">
+                          <el-icon><Delete /></el-icon> 删除
+                        </el-dropdown-item>
+                      </el-dropdown-menu>
+                    </template>
                   </el-dropdown>
+                </div>
               </div>
-            </div>
-          </el-card>
-        </el-timeline-item>
-      </el-timeline>
+            </el-card>
+          </el-timeline-item>
+        </el-timeline>
 
-      <div class="load-more" v-if="hasMore">
-         <el-button link @click="fetchTimeline(false)" :loading="loading">加载更多记录...</el-button>
+        <div class="load-more" v-if="hasMore">
+          <el-button link @click="fetchTimeline(false)" :loading="loading">
+            <el-icon><RefreshRight /></el-icon>
+            加载更多记录...
+          </el-button>
+        </div>
       </div>
 
-      <el-empty v-else-if="!loading && entries.length === 0" description="暂无记录，快去记录宝宝的生活吧！">
-         <el-button type="primary" round @click="router.push('/')">去记录</el-button>
-      </el-empty>
+      <div v-else-if="!loading && entries.length === 0" class="empty-state">
+        <div class="empty-illustration">
+          <el-icon class="empty-icon"><Calendar /></el-icon>
+        </div>
+        <el-empty description="暂无记录，快去记录宝宝的生活吧！">
+          <el-button type="primary" round @click="router.push('/')">
+            <el-icon><Plus /></el-icon> 去记录
+          </el-button>
+        </el-empty>
+      </div>
     </div>
   </div>
 </template>
@@ -90,9 +120,10 @@
 import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
-import { 
-  Refresh, Mug, Moon, ToiletPaper, TrendCharts, 
-  ChatDotRound, MoreFilled, Edit, Delete, FirstAidKit, DataLine
+import {
+  Refresh, Mug, Moon, ToiletPaper, TrendCharts,
+  ChatDotRound, ChatLineSquare, MoreFilled, Edit, Delete,
+  FirstAidKit, DataLine, User, Clock, Timer, RefreshRight, Plus, Calendar
 } from '@element-plus/icons-vue'
 import { useBabyStore } from '@/stores/baby'
 import { formatTime, formatRelative } from '@/utils/date'
@@ -107,9 +138,19 @@ const hasMore = ref(true)
 const offset = ref(0)
 const limit = 20
 
+const formatDate = (time: string) => {
+  const d = new Date(time)
+  return d.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'long'
+  })
+}
+
 const fetchTimeline = async (reset = false) => {
   if (!babyStore.currentBaby?.id) return
-  
+
   if (reset) {
     offset.value = 0
     entries.value = []
@@ -120,19 +161,19 @@ const fetchTimeline = async (reset = false) => {
   try {
     const token = localStorage.getItem('token')
     const res = await axios.get('/api/timeline', {
-      params: { 
+      params: {
         babyId: babyStore.currentBaby.id,
         limit,
         offset: offset.value
       },
       headers: { Authorization: `Bearer ${token}` }
     })
-    
+
     const newRecords = res.data.records
     if (newRecords.length < limit) {
       hasMore.value = false
     }
-    
+
     entries.value = [...entries.value, ...newRecords]
     offset.value += limit
   } catch (e) {
@@ -183,7 +224,7 @@ const getFeedingText = (data: any) => {
   let text = ''
   const detail = data.detail || {}
   if (data.feedingType === 'breast') {
-    text = `母乳喂养 ${detail.leftBreastMinutes || 0}m(左) / ${detail.rightBreastMinutes || 0}m(右)`
+    text = `母乳喂养 ${detail.leftBreastMinutes || 0}分钟(左) / ${detail.rightBreastMinutes || 0}分钟(右)`
   } else if (data.feedingType === 'bottle') {
     text = `瓶喂 ${detail.milkType === 'formula' ? '奶粉' : '母乳'} ${data.amount}ml`
   } else {
@@ -196,12 +237,12 @@ const getSleepText = (data: any) => {
   const start = new Date(data.startTime)
   const end = data.endTime ? new Date(data.endTime) : null
   const duration = data.duration || (end ? Math.floor((end.getTime() - start.getTime()) / 60000) : 0)
-  return `睡眠时长: ${Math.floor(duration / 60)}h ${duration % 60}m`
+  return `睡眠 ${Math.floor(duration / 60)}小时${duration % 60}分钟`
 }
 
 const getDiaperText = (data: any) => {
   const types: Record<string, string> = { 'pee': '嘘嘘', 'poop': '臭臭', 'both': '嘘嘘 + 臭臭', 'dry': '干爽' }
-  return `尿布状态: ${types[data.type] || data.type}`
+  return `尿布: ${types[data.type] || data.type}`
 }
 
 const getGrowthText = (data: any) => {
@@ -209,12 +250,12 @@ const getGrowthText = (data: any) => {
   if (data.height) parts.push(`身高 ${data.height}cm`)
   if (data.weight) parts.push(`体重 ${data.weight}kg`)
   if (data.headCircumference) parts.push(`头围 ${data.headCircumference}cm`)
-  return parts.join(' / ')
+  return parts.join(' / ') || '暂无数据'
 }
 
 const getHealthText = (data: any) => {
   if (data.type === 'TEMP') {
-    return `体温: ${data.value}°C`
+    return `体温 ${data.value}°C`
   } else if (data.type === 'ILLNESS') {
     return `症状: ${data.symptoms || '未填写'}`
   } else {
@@ -222,27 +263,35 @@ const getHealthText = (data: any) => {
   }
 }
 
+const handleCommand = (cmd: string, entry: any) => {
+  if (cmd === 'edit') {
+    handleEdit(entry)
+  } else if (cmd === 'delete') {
+    handleDelete(entry)
+  }
+}
+
 const handleEdit = (entry: any) => {
-    router.push(`/record/${entry.type}?id=${entry.data.id}`)
+  router.push(`/record/${entry.type}?id=${entry.data.id}`)
 }
 
 const handleDelete = (entry: any) => {
-  ElMessageBox.confirm('确定要删除这条记录吗？', '提醒', {
+  ElMessageBox.confirm('确定要删除这条记录吗？此操作不可恢复。', '删除确认', {
     confirmButtonText: '确认删除',
     cancelButtonText: '取消',
     confirmButtonClass: 'el-button--danger',
     type: 'warning'
   }).then(async () => {
     try {
-        const token = localStorage.getItem('token')
-        await axios.delete('/api/record', {
-            params: { type: entry.type, id: entry.data.id },
-            headers: { Authorization: `Bearer ${token}` }
-        })
-        ElMessage.success('已删除记录')
-        fetchTimeline(true)
+      const token = localStorage.getItem('token')
+      await axios.delete('/api/record', {
+        data: { type: entry.type, id: entry.data.id },
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      ElMessage.success('已删除')
+      fetchTimeline(true)
     } catch (e) {
-        ElMessage.error('删除失败')
+      ElMessage.error('删除失败')
     }
   }).catch(() => {})
 }
@@ -258,140 +307,313 @@ watch(() => babyStore.currentBaby?.id, () => {
 
 <style scoped lang="scss">
 .timeline-page {
-  padding-bottom: 60px;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #f8f9fa 0%, var(--el-fill-color-light) 100%);
+  padding-bottom: 80px;
 }
 
 .page-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   display: flex;
-  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 30px;
+  padding: 16px 20px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  margin-bottom: 20px;
 
-  .title {
-    font-size: clamp(18px, 4vw, 24px);
-    font-weight: 800;
-    color: #2c3e50;
-    margin-bottom: 4px;
+  .header-content {
+    .title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 22px;
+      font-weight: 800;
+      margin: 0;
+      background: linear-gradient(135deg, var(--el-color-primary) 0%, #ff6b8a 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+
+      .title-icon {
+        -webkit-text-fill-color: var(--el-color-primary);
+      }
+    }
+
+    .subtitle {
+      font-size: 13px;
+      color: #909399;
+      margin: 4px 0 0 0;
+    }
   }
 
-  .subtitle {
-    font-size: clamp(12px, 2vw, 14px);
-    color: #909399;
+  .refresh-btn {
+    background: linear-gradient(135deg, var(--el-color-primary) 0%, #ff6b8a 100%);
+    border: none;
+
+    &:hover {
+      opacity: 0.9;
+      transform: scale(1.02);
+    }
   }
 }
 
 .timeline-container {
-  padding: 0 4px;
-  @media (max-width: 480px) {
-    padding: 0;
-  }
+  padding: 0 16px;
+}
+
+.timeline-content {
+  padding: 8px 0;
 }
 
 .timeline-card {
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   border-radius: 16px !important;
+  border: none;
+  transition: all 0.3s;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08) !important;
+  }
 
   .card-body {
     display: flex;
-    gap: 12px;
+    gap: 14px;
     align-items: flex-start;
-    @media (max-width: 480px) {
-      gap: 10px;
-    }
   }
 }
 
 .record-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  
-  &.feeding { background-color: #fff5f5; color: #ff8e94; }
-  &.sleep { background-color: #f0f9eb; color: #88d498; }
-  &.diaper { background-color: #fdf6ec; color: #ffd077; }
-  &.growth { background-color: #f4f4f5; color: #909399; }
+  transition: transform 0.2s;
+
+  &:hover {
+    transform: scale(1.1);
+  }
+
+  &.feeding {
+    background: linear-gradient(135deg, #fff5f5 0%, #ffe5e5 100%);
+    color: #ff8e94;
+  }
+  &.sleep {
+    background: linear-gradient(135deg, #f0f9eb 0%, #d8f3dc 100%);
+    color: #88d498;
+  }
+  &.diaper {
+    background: linear-gradient(135deg, #fdf6ec 0%, #fef0d9 100%);
+    color: #ffc97d;
+  }
+  &.growth {
+    background: linear-gradient(135deg, #f4f4f5 0%, #e8e8ed 100%);
+    color: #909399;
+  }
+  &.medication {
+    background: linear-gradient(135deg, #fef0f0 0%, #ffe0e0 100%);
+    color: #ff7875;
+  }
+  &.health {
+    background: linear-gradient(135deg, #ecf5ff 0%, #d4ecff 100%);
+    color: #69b1ff;
+  }
 }
 
 .record-details {
   flex: 1;
-  
-  .record-title {
+
+  .record-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 8px;
-    
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 8px;
+
     .title-left {
-        display: flex;
-        align-items: center;
-        gap: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
-    .type-label {
-      font-weight: 700;
-      font-size: 16px;
-      color: #303133;
+    .type-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+
+      &.feeding {
+        background: #fff5f5;
+        color: #ff8e94;
+      }
+      &.sleep {
+        background: #f0f9eb;
+        color: #88d498;
+      }
+      &.diaper {
+        background: #fdf6ec;
+        color: #ffc97d;
+      }
+      &.growth {
+        background: #f4f4f5;
+        color: #909399;
+      }
+      &.medication {
+        background: #fef0f0;
+        color: #ff7875;
+      }
+      &.health {
+        background: #ecf5ff;
+        color: #69b1ff;
+      }
     }
 
     .creator-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      background: var(--el-fill-color-light);
+      padding: 3px 8px;
+      border-radius: 10px;
+      color: #909399;
+
+      .el-icon {
         font-size: 11px;
-        background: #f0f2f5;
-        padding: 2px 6px;
-        border-radius: 4px;
-        color: #909399;
+      }
     }
-    
+
     .time-ago {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
       font-size: 12px;
-      color: #C0C4CC;
+      color: #c0c4cc;
+
+      .el-icon {
+        font-size: 12px;
+      }
     }
   }
-  
+
   .record-content {
-    font-size: 14px;
-    color: #606266;
-    line-height: 1.6;
-    
+    .content-text {
+      font-size: 14px;
+      color: #606266;
+      line-height: 1.6;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+
+      .emoji {
+        font-size: 16px;
+      }
+    }
+
     .remark {
-      margin-top: 8px;
+      margin-top: 10px;
       font-size: 13px;
       color: #909399;
       display: flex;
-      align-items: center;
-      gap: 5px;
-      font-style: italic;
+      align-items: flex-start;
+      gap: 6px;
+      padding: 8px 10px;
+      background: var(--el-fill-color-light);
+      border-radius: 8px;
+      font-style: normal;
+      line-height: 1.5;
+
+      .el-icon {
+        color: var(--el-color-primary);
+        margin-top: 2px;
+        flex-shrink: 0;
+      }
     }
   }
 }
 
 .card-actions {
   padding-top: 2px;
+
   .more-icon {
-    color: #C0C4CC;
+    color: #d0d4db;
     cursor: pointer;
-    &:hover { color: var(--el-color-primary); }
+    padding: 8px;
+    border-radius: 50%;
+    transition: all 0.2s;
+
+    &:hover {
+      color: var(--el-color-primary);
+      background: var(--el-color-primary-light-9);
+    }
   }
 }
 
 .delete-item {
-    color: var(--el-color-danger);
+  color: var(--el-color-danger);
 }
 
 .load-more {
   text-align: center;
-  padding: 20px 0;
+  padding: 24px 0;
+
+  .el-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--el-color-primary);
+  }
+}
+
+.empty-state {
+  margin-top: 60px;
+
+  .empty-illustration {
+    text-align: center;
+    margin-bottom: 20px;
+
+    .empty-icon {
+      font-size: 80px;
+      color: var(--el-color-primary-light-5);
+      opacity: 0.5;
+    }
+  }
+}
+
+:deep(.el-timeline-item__wrapper) {
+  padding-left: 28px;
 }
 
 :deep(.el-timeline-item__timestamp) {
-  font-weight: bold;
+  font-weight: 600;
   font-size: 14px;
-  color: #2c3e50;
+  color: #606266 !important;
   margin-bottom: 12px !important;
+  padding: 6px 12px;
+  background: var(--el-fill-color-light);
+  border-radius: 20px;
+  display: inline-block;
+}
+
+:deep(.el-timeline-item__node) {
+  background: linear-gradient(135deg, var(--el-color-primary) 0%, #ff6b8a 100%);
+  border: 2px solid white;
+  box-shadow: 0 2px 8px rgba(255, 107, 138, 0.3);
+}
+
+:deep(.el-timeline-item__tail) {
+  border-left: 2px dashed var(--el-color-primary-light-6);
 }
 </style>

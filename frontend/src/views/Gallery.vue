@@ -2,49 +2,81 @@
   <div class="gallery-page">
     <div class="page-header">
       <div class="header-left">
-        <el-button link :icon="Back" @click="router.back()">返回</el-button>
-        <h2 class="title">成长圈</h2>
+        <el-button link :icon="ArrowLeft" @click="router.back()">返回</el-button>
+        <div class="title-area">
+          <h2 class="title">
+            <el-icon class="title-icon"><Picture /></el-icon>
+            成长圈
+          </h2>
+          <p class="subtitle">记录美好瞬间</p>
+        </div>
       </div>
       <div class="header-actions">
         <el-radio-group v-model="albumType" size="small" class="type-filter">
-          <el-radio-button label="growth">成长</el-radio-button>
-          <el-radio-button label="moment">瞬间</el-radio-button>
-          <el-radio-button label="all">全部</el-radio-button>
+          <el-radio-button label="growth">
+            <el-icon><TrendCharts /></el-icon> 成长
+          </el-radio-button>
+          <el-radio-button label="moment">
+            <el-icon><Star /></el-icon> 瞬间
+          </el-radio-button>
+          <el-radio-button label="all">
+            <el-icon><Grid /></el-icon> 全部
+          </el-radio-button>
         </el-radio-group>
       </div>
     </div>
 
     <div v-loading="loading && records.length === 0" class="feeds-container">
       <div v-if="records.length === 0 && !loading" class="empty-state">
+        <div class="empty-illustration">
+          <el-icon class="empty-icon"><Picture /></el-icon>
+        </div>
         <el-empty description="还没有动态，快来发布第一条吧！">
-          <el-button type="primary" round @click="showUpload = true">发布动态</el-button>
+          <el-button type="primary" round @click="showUpload = true">
+            <el-icon><Plus /></el-icon> 发布动态
+          </el-button>
         </el-empty>
       </div>
 
       <div v-else class="feeds-list">
-        <div v-for="item in records" :key="item.id" class="feed-card">
+        <div v-for="item in records" :key="item.id" class="feed-card" :class="{ 'with-title': !!item.title }">
           <div class="feed-header">
-            <el-avatar :size="44" :src="item.user?.avatar || 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'" />
-            <div class="header-info">
-              <div class="user-name">{{ item.user?.nickname || '匿名用户' }}</div>
-              <div class="feed-meta">
-                <span class="baby-tag">{{ item.baby?.name }}</span>
-                <span class="time">{{ formatTime(item.createdAt) }}</span>
+            <div class="user-info">
+              <el-avatar :size="48" :src="item.user?.avatar || 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'" class="user-avatar" />
+              <div class="header-info">
+                <div class="user-row">
+                  <span class="user-name">{{ item.user?.nickname || '匿名用户' }}</span>
+                  <span class="baby-tag">
+                    <el-icon><Baby /></el-icon>
+                    {{ item.baby?.name }}
+                  </span>
+                </div>
+                <div class="time-row">
+                  <el-icon><Clock /></el-icon>
+                  <span class="time">{{ formatTime(item.createdAt) }}</span>
+                </div>
               </div>
             </div>
             <el-dropdown trigger="click" @command="(cmd: string) => handleCommand(cmd, item)">
               <el-icon class="more-icon"><MoreFilled /></el-icon>
               <template #dropdown>
                 <el-dropdown-menu>
-                  <el-dropdown-item command="edit">编辑</el-dropdown-item>
-                  <el-dropdown-item command="delete" divided style="color: var(--el-color-danger)">删除</el-dropdown-item>
+                  <el-dropdown-item command="edit">
+                    <el-icon><Edit /></el-icon> 编辑
+                  </el-dropdown-item>
+                  <el-dropdown-item command="delete" divided style="color: var(--el-color-danger)">
+                    <el-icon><Delete /></el-icon> 删除
+                  </el-dropdown-item>
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
           </div>
 
           <div class="feed-content">
-            <p v-if="item.title" class="feed-title">{{ item.title }}</p>
+            <p v-if="item.title" class="feed-title">
+              <el-icon class="title-icon"><Collection /></el-icon>
+              {{ item.title }}
+            </p>
             <p v-if="item.description" class="feed-desc">{{ item.description }}</p>
             <div class="feed-images" :class="{ 'multi': item.url.includes(',') }">
               <el-image
@@ -55,28 +87,35 @@
                 class="feed-img"
                 :preview-src-list="item.url.split(',').map((s: string) => s.trim())"
                 :initial-index="idx"
+                loading="lazy"
               />
             </div>
           </div>
 
           <div class="feed-actions">
             <div class="action-item" :class="{ active: item.isLiked }" @click="toggleLike(item)">
-              <el-icon><Star /></el-icon>
+              <el-icon class="action-icon"><Star /></el-icon>
               <span>{{ item._count?.likes || 0 }}</span>
+              <span class="action-label">{{ item.isLiked ? '已收藏' : '收藏' }}</span>
             </div>
             <div class="action-item" @click="openComments(item)">
-              <el-icon><ChatDotRound /></el-icon>
+              <el-icon class="action-icon"><ChatDotRound /></el-icon>
               <span>{{ item._count?.comments || 0 }}</span>
+              <span class="action-label">评论</span>
             </div>
             <div class="action-item" @click="openShare(item)">
-              <el-icon><Share /></el-icon>
+              <el-icon class="action-icon"><Share /></el-icon>
               <span>分享</span>
             </div>
           </div>
 
           <div v-if="item.comments && item.comments.length > 0" class="feed-comments">
-            <div v-for="comment in item.comments" :key="comment.id" class="comment-item">
-              <el-avatar :size="28" :src="comment.user?.avatar" class="comment-avatar" />
+            <div class="comments-header">
+              <el-icon><ChatLineSquare /></el-icon>
+              <span>评论 ({{ item._count?.comments }})</span>
+            </div>
+            <div v-for="comment in item.comments.slice(0, 2)" :key="comment.id" class="comment-item">
+              <el-avatar :size="32" :src="comment.user?.avatar" class="comment-avatar" />
               <div class="comment-content">
                 <div class="comment-header">
                   <span class="comment-author">{{ comment.user?.nickname }}</span>
@@ -84,18 +123,24 @@
                 </div>
                 <div class="comment-text">{{ comment.content }}</div>
                 <div v-if="comment.replies && comment.replies.length > 0" class="comment-replies">
-                  <div v-for="reply in comment.replies" :key="reply.id" class="reply-item">
+                  <div v-for="reply in comment.replies.slice(0, 1)" :key="reply.id" class="reply-item">
+                    <el-icon class="reply-icon"><CaretRight /></el-icon>
                     <span class="reply-author">{{ reply.user?.nickname }}：</span>
                     <span class="reply-text">{{ reply.content }}</span>
                   </div>
                 </div>
                 <div class="comment-actions">
-                  <span class="reply-btn" @click="openReplyInput(item, comment)">回复</span>
-                  <span v-if="comment.user?.id === currentUserId" class="delete-btn" @click="deleteComment(comment.id, item)">删除</span>
+                  <span class="reply-btn" @click="openReplyInput(item, comment)">
+                    <el-icon><ChatLineSquare /></el-icon> 回复
+                  </span>
+                  <span v-if="comment.user?.id === currentUserId" class="delete-btn" @click="deleteComment(comment.id, item)">
+                    <el-icon><Delete /></el-icon> 删除
+                  </span>
                 </div>
               </div>
             </div>
-            <div v-if="(item._count?.comments || 0) > 3" class="view-more" @click="openComments(item)">
+            <div v-if="(item._count?.comments || 0) > 2" class="view-more" @click="openComments(item)">
+              <el-icon><More /></el-icon>
               查看全部 {{ item._count?.comments }} 条评论
             </div>
           </div>
@@ -110,7 +155,10 @@
         </div>
 
         <div v-if="hasMore" class="load-more">
-          <el-button link @click="loadMore" :loading="loadingMore">加载更多...</el-button>
+          <el-button link @click="loadMore" :loading="loadingMore">
+            <el-icon><RefreshRight /></el-icon>
+            加载更多...
+          </el-button>
         </div>
       </div>
     </div>
@@ -119,6 +167,7 @@
       <el-button circle size="large" type="primary" class="publish-btn" @click="showUpload = true">
         <el-icon><Plus /></el-icon>
       </el-button>
+      <div class="fab-hint">发布动态</div>
     </div>
 
     <el-drawer v-model="showUpload" title="发布动态" direction="btt" size="80%" class="upload-drawer">
@@ -242,7 +291,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { UploadFilled, Delete, Edit, Back, MoreFilled, Star, ChatDotRound, Promotion, Plus, Close, Share, Link, Magic } from '@element-plus/icons-vue'
+import { UploadFilled, Delete, Edit, ArrowLeft, MoreFilled, Star, ChatDotRound, Promotion, Plus, Close, Share, Link, Magic, Picture, TrendCharts, Grid, Baby, Clock, Collection, ChatLineSquare, CaretRight, More, RefreshRight } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import client from '@/api/client'
 import { getAlbums, createAlbum, deleteAlbum, addComment, deleteComment as delComment, likeAlbum, unlikeAlbum, type AlbumRecord, type AlbumComment } from '@/api/album'
@@ -612,80 +661,187 @@ onMounted(() => {
 <style scoped lang="scss">
 .gallery-page {
     min-height: 100vh;
-    background: var(--el-fill-color-light);
-    padding-bottom: 80px;
+    background: linear-gradient(180deg, var(--el-fill-color-light) 0%, #f8f9fa 100%);
+    padding-bottom: 100px;
 }
 
 .page-header {
     position: sticky;
     top: 0;
     z-index: 10;
-    background: white;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
 
     .header-left {
         display: flex;
         align-items: center;
         gap: 12px;
-        .title { font-size: 18px; font-weight: 800; margin: 0; }
+    }
+
+    .title-area {
+        .title {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 20px;
+            font-weight: 800;
+            margin: 0;
+            background: linear-gradient(135deg, var(--el-color-primary) 0%, #ff6b8a 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+
+            .title-icon {
+                -webkit-text-fill-color: var(--el-color-primary);
+            }
+        }
+
+        .subtitle {
+            font-size: 12px;
+            color: #999;
+            margin: 2px 0 0 0;
+        }
+    }
+
+    .type-filter {
+        :deep(.el-radio-button__inner) {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
     }
 }
 
 .feeds-container {
-    padding: 12px;
+    padding: 16px;
 }
 
 .feed-card {
     background: white;
-    border-radius: 12px;
-    margin-bottom: 12px;
+    border-radius: 16px;
+    margin-bottom: 16px;
     overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+    transition: transform 0.2s, box-shadow 0.2s;
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    }
+
+    &.with-title {
+        border-top: 3px solid var(--el-color-primary);
+    }
 }
 
 .feed-header {
     display: flex;
     align-items: center;
-    padding: 12px;
+    padding: 14px;
+
+    .user-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex: 1;
+    }
+
+    .user-avatar {
+        border: 2px solid var(--el-color-primary-light-8);
+    }
 
     .header-info {
         flex: 1;
-        margin-left: 12px;
-        .user-name { font-weight: 600; font-size: 15px; }
-        .feed-meta {
+
+        .user-row {
             display: flex;
             align-items: center;
             gap: 8px;
-            margin-top: 2px;
-            .baby-tag {
-                font-size: 11px;
-                background: var(--el-color-primary-light-9);
-                color: var(--el-color-primary);
-                padding: 1px 6px;
-                border-radius: 4px;
+            flex-wrap: wrap;
+        }
+
+        .user-name {
+            font-weight: 700;
+            font-size: 15px;
+            color: #2c3e50;
+        }
+
+        .baby-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            font-size: 11px;
+            background: linear-gradient(135deg, var(--el-color-primary-light-9) 0%, #fff5f6 100%);
+            color: var(--el-color-primary);
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+
+        .time-row {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 3px;
+            font-size: 12px;
+            color: #b0b0b0;
+
+            .el-icon {
+                font-size: 12px;
             }
-            .time { font-size: 12px; color: #999; }
         }
     }
 
-    .more-icon { color: #999; cursor: pointer; padding: 8px; }
+    .more-icon {
+        color: #ccc;
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 50%;
+        transition: all 0.2s;
+
+        &:hover {
+            color: var(--el-color-primary);
+            background: var(--el-color-primary-light-9);
+        }
+    }
 }
 
 .feed-content {
-    padding: 0 12px 12px;
+    padding: 0 14px 14px;
 
-    .feed-title { font-weight: 600; font-size: 15px; margin-bottom: 6px; }
-    .feed-desc { font-size: 14px; color: #666; line-height: 1.5; margin-bottom: 10px; }
+    .feed-title {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 700;
+        font-size: 16px;
+        color: #2c3e50;
+        margin-bottom: 8px;
+
+        .title-icon {
+            color: var(--el-color-primary);
+        }
+    }
+
+    .feed-desc {
+        font-size: 14px;
+        color: #606266;
+        line-height: 1.6;
+        margin-bottom: 12px;
+    }
 }
 
 .feed-images {
     display: grid;
     gap: 4px;
-    border-radius: 8px;
+    border-radius: 12px;
     overflow: hidden;
+    background: var(--el-fill-color-light);
 
     &.multi {
         grid-template-columns: repeat(2, 1fr);
@@ -695,12 +851,17 @@ onMounted(() => {
         width: 100%;
         aspect-ratio: 1;
         cursor: pointer;
+        transition: transform 0.3s;
+
+        &:hover {
+            transform: scale(1.02);
+        }
     }
 }
 
 .feed-actions {
     display: flex;
-    padding: 8px 12px;
+    padding: 10px 14px;
     border-top: 1px solid var(--el-fill-color-light);
 
     .action-item {
@@ -708,76 +869,200 @@ onMounted(() => {
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 6px;
-        padding: 8px;
-        color: #666;
+        gap: 5px;
+        padding: 10px;
+        color: #909399;
         cursor: pointer;
-        transition: color 0.2s;
+        transition: all 0.2s;
+        border-radius: 8px;
 
-        &:hover { color: var(--el-color-primary); }
-        &.active { color: var(--el-color-danger); }
+        .action-icon {
+            font-size: 18px;
+            transition: transform 0.2s;
+        }
+
+        .action-label {
+            font-size: 13px;
+        }
+
+        &:hover {
+            color: var(--el-color-primary);
+            background: var(--el-color-primary-light-9);
+
+            .action-icon {
+                transform: scale(1.15);
+            }
+        }
+
+        &.active {
+            color: #ff6b8a;
+
+            .action-icon {
+                animation: heartBeat 0.3s ease-in-out;
+            }
+        }
     }
 }
 
+@keyframes heartBeat {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.3); }
+    100% { transform: scale(1); }
+}
+
 .feed-comments {
-    padding: 8px 12px;
-    background: var(--el-fill-color-light);
+    padding: 12px 14px;
+    background: linear-gradient(180deg, var(--el-fill-color-light) 0%, #fff 100%);
+    border-top: 1px solid var(--el-fill-color-light);
+
+    .comments-header {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #909399;
+        margin-bottom: 10px;
+        padding-bottom: 8px;
+        border-bottom: 1px dashed var(--el-border-color-light);
+    }
 }
 
 .comment-item {
     display: flex;
+    gap: 10px;
     padding: 8px 0;
 
-    .comment-avatar { flex-shrink: 0; }
+    .comment-avatar {
+        flex-shrink: 0;
+        border: 1px solid var(--el-border-color-light);
+    }
 
     .comment-content {
         flex: 1;
-        margin-left: 10px;
 
         .comment-header {
             display: flex;
             align-items: center;
             gap: 8px;
-            .comment-author { font-weight: 600; font-size: 13px; }
-            .comment-time { font-size: 11px; color: #999; }
+            margin-bottom: 4px;
+
+            .comment-author {
+                font-weight: 600;
+                font-size: 13px;
+                color: #2c3e50;
+            }
+
+            .comment-time {
+                font-size: 11px;
+                color: #c0c4cc;
+            }
         }
 
-        .comment-text { font-size: 13px; color: #444; margin-top: 4px; line-height: 1.4; }
+        .comment-text {
+            font-size: 14px;
+            color: #606266;
+            line-height: 1.5;
+        }
 
         .comment-replies {
-            margin-top: 6px;
-            padding: 6px 8px;
+            margin-top: 8px;
+            padding: 8px 10px;
             background: white;
-            border-radius: 6px;
-            font-size: 12px;
+            border-radius: 8px;
+            font-size: 13px;
 
-            .reply-item { margin-bottom: 4px; &:last-child { margin-bottom: 0; } }
-            .reply-author { color: #666; font-weight: 500; }
-            .reply-text { color: #333; }
+            .reply-item {
+                display: flex;
+                align-items: flex-start;
+                gap: 4px;
+                margin-bottom: 6px;
+
+                &:last-child {
+                    margin-bottom: 0;
+                }
+
+                .reply-icon {
+                    color: var(--el-color-primary);
+                    font-size: 12px;
+                    margin-top: 2px;
+                }
+
+                .reply-author {
+                    color: #606266;
+                    font-weight: 500;
+                }
+
+                .reply-text {
+                    color: #303133;
+                }
+            }
         }
 
         .comment-actions {
             display: flex;
             gap: 16px;
-            margin-top: 6px;
+            margin-top: 8px;
             font-size: 12px;
 
-            .reply-btn { color: #666; cursor: pointer; &:hover { color: var(--el-color-primary); } }
-            .delete-btn { color: #999; cursor: pointer; &:hover { color: var(--el-color-danger); } }
+            .reply-btn,
+            .delete-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                padding: 4px 8px;
+                border-radius: 4px;
+                cursor: pointer;
+                transition: all 0.2s;
+
+                .el-icon {
+                    font-size: 12px;
+                }
+            }
+
+            .reply-btn {
+                color: #909399;
+
+                &:hover {
+                    color: var(--el-color-primary);
+                    background: var(--el-color-primary-light-9);
+                }
+            }
+
+            .delete-btn {
+                color: #c0c4cc;
+
+                &:hover {
+                    color: var(--el-color-danger);
+                    background: #fef0f0;
+                }
+            }
         }
     }
 }
 
 .view-more {
-    text-align: center;
-    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 10px;
     color: var(--el-color-primary);
     font-size: 13px;
     cursor: pointer;
+    transition: all 0.2s;
+
+    .el-icon {
+        font-size: 14px;
+    }
+
+    &:hover {
+        color: var(--el-color-primary-dark);
+    }
 }
 
 .feed-input {
-    padding: 8px 12px;
+    padding: 10px 14px;
     border-top: 1px solid var(--el-fill-color-light);
 }
 
@@ -786,11 +1071,70 @@ onMounted(() => {
     bottom: 24px;
     right: 24px;
     z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
 
     .publish-btn {
-        width: 56px;
-        height: 56px;
-        box-shadow: 0 4px 16px rgba(255, 142, 148, 0.4);
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(135deg, var(--el-color-primary) 0%, #ff6b8a 100%);
+        border: none;
+        box-shadow: 0 6px 20px rgba(255, 107, 138, 0.4);
+        transition: all 0.3s;
+
+        &:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 28px rgba(255, 107, 138, 0.5);
+        }
+
+        .el-icon {
+            font-size: 28px;
+        }
+    }
+
+    .fab-hint {
+        font-size: 12px;
+        color: #909399;
+        background: white;
+        padding: 4px 12px;
+        border-radius: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        opacity: 0;
+        transform: translateY(10px);
+        transition: all 0.3s;
+    }
+
+    &:hover .fab-hint {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.empty-state {
+    margin-top: 60px;
+
+    .empty-illustration {
+        text-align: center;
+        margin-bottom: 20px;
+
+        .empty-icon {
+            font-size: 80px;
+            color: var(--el-color-primary-light-5);
+            opacity: 0.6;
+        }
+    }
+}
+
+.load-more {
+    text-align: center;
+    padding: 20px;
+
+    .el-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
     }
 }
 
@@ -881,15 +1225,6 @@ onMounted(() => {
 .rounded-dialog {
     :deep(.el-dialog) { border-radius: 20px 20px 0 0 !important; max-height: 80vh; }
     :deep(.el-dialog__body) { padding: 0 16px 16px; }
-}
-
-.empty-state {
-    margin-top: 80px;
-}
-
-.load-more {
-    text-align: center;
-    padding: 20px;
 }
 
 .share-dialog {
