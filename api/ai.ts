@@ -90,33 +90,63 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                             ageStr: babyAgeMonth >= 1 ? `${babyAgeMonth}个月` : `${Math.floor((Date.now() - new Date(baby.birthDate).getTime()) / (1000 * 60 * 60 * 24))}天`
                         } : undefined,
                         recentRecords,
-                        query: baby ? `请为${babyAgeStr}提供3条科学、具体的每日育儿建议，每条建议要有标题和详细说明` : '请为新生儿到3岁阶段的宝宝家长提供3条科学的育儿建议'
+                        query: baby ? `请为${babyAgeStr}提供3条科学、具体的每日育儿建议，每条建议要有标题和详细说明。重要：不要返回JSON或任何结构化数据格式，只返回普通文本格式的建议，每条建议用数字或符号开头。` : '请为新生儿到3岁阶段的宝宝家长提供3条科学的育儿建议。重要：不要返回JSON，只返回普通文本格式的建议。'
                     });
 
                     const content = aiResponse.insight;
 
-                    const tipMatches = content.match(/(?:^|\n)[-*•]?\s*(.+?)(?:\n|$)/g) || [];
-                    const titleMatches = content.match(/(?:^|\n)(?:#+\s*)?(.+?)(?:\n|$)/g) || [];
+                    // 检查是否返回了JSON格式
+                    const jsonMatch = content.match(/^\s*\{[\s\S]*\}\s*$/);
+                    if (jsonMatch) {
+                        // 如果是JSON格式，尝试解析并生成结构化建议
+                        try {
+                            const jsonData = JSON.parse(content);
+                            // 从JSON数据中提取信息生成建议
+                            const feedingTip = jsonData.feeding ? `喂养提醒：${jsonData.feeding}` : null;
+                            const sleepTip = jsonData.sleep ? `睡眠提醒：${jsonData.sleep}` : null;
+                            const healthTip = jsonData.health ? `健康提醒：${jsonData.health}` : null;
 
-                    if (tipMatches.length > 0) {
-                        tips = tipMatches.slice(0, 3).map((match, idx) => {
-                            const text = match.replace(/^[-*•]\s*/, '').trim();
-                            return {
-                                title: text.substring(0, 30),
-                                content: text,
-                                category: 'general'
-                            };
-                        });
-                    } else if (titleMatches.length > 0) {
-                        tips = titleMatches.slice(0, 3).map((match, idx) => {
-                            const text = match.replace(/^#+\s*/, '').trim();
-                            return {
-                                title: text.substring(0, 30),
-                                content: text,
-                                category: 'general'
-                            };
-                        });
-                    } else {
+                            const extractedTips = [feedingTip, sleepTip, healthTip].filter(Boolean);
+                            if (extractedTips.length > 0) {
+                                tips = extractedTips.slice(0, 3).map((text, idx) => ({
+                                    title: text.substring(0, 25) + (text.length > 25 ? '...' : ''),
+                                    content: text,
+                                    category: 'general'
+                                }));
+                            }
+                        } catch {
+                            // JSON解析失败，忽略
+                        }
+                    }
+
+                    // 如果还没解析出tips，尝试Markdown格式解析
+                    if (tips.length === 0) {
+                        const tipMatches = content.match(/(?:^|\n)[-*•]?\s*(.+?)(?:\n|$)/g) || [];
+                        const titleMatches = content.match(/(?:^|\n)(?:#+\s*)?(.+?)(?:\n|$)/g) || [];
+
+                        if (tipMatches.length > 0) {
+                            tips = tipMatches.slice(0, 3).map((match, idx) => {
+                                const text = match.replace(/^[-*•]\s*/, '').trim();
+                                return {
+                                    title: text.substring(0, 30),
+                                    content: text,
+                                    category: 'general'
+                                };
+                            });
+                        } else if (titleMatches.length > 0) {
+                            tips = titleMatches.slice(0, 3).map((match, idx) => {
+                                const text = match.replace(/^#+\s*/, '').trim();
+                                return {
+                                    title: text.substring(0, 30),
+                                    content: text,
+                                    category: 'general'
+                                };
+                            });
+                        }
+                    }
+
+                    // 最终fallback：如果还是没解析出来
+                    if (tips.length === 0) {
                         const paragraphs = content.split(/\n\n+/).filter(p => p.trim().length > 10);
                         tips = paragraphs.slice(0, 3).map((p, idx) => {
                             const lines = p.trim().split('\n');
