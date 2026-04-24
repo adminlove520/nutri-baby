@@ -21,10 +21,12 @@ export async function getUserFromRequest(req: VercelRequest) {
     const token = authHeader.split(' ')[1];
     try {
         const decoded = jwt.verify(token, JWT_SECRET!) as DecodedToken;
-        return decoded;
+        return {
+            ...decoded,
+            id: parseInt(decoded.userId)
+        };
     } catch (error: any) {
         console.error('[Auth] JWT verification failed:', error.message);
-        // Special log to check if secret is mismatching
         if (error.message === 'invalid signature') {
             console.error('[Auth] Secret key mismatch. Check JWT_SECRET environment variable.');
         }

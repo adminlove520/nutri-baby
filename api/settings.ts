@@ -153,7 +153,7 @@ async function handleSync(req: VercelRequest, res: VercelResponse, userId: numbe
             owner: config.owner,
             repo: config.repo,
             branch: config.branch,
-            basePath: config.basePath
+            basePath: config.basePath ?? undefined
         });
 
         const connectionTest = await uploader.testConnection();

@@ -56,19 +56,19 @@ async function handleGet(req: VercelRequest, res: VercelResponse, userId: number
                 take: limitNum,
                 include: {
                     baby: { select: { id: true, name: true } },
-                    user: { select: { id: true, nickname: true, avatar: true } },
+                    user: { select: { id: true, nickname: true, avatarUrl: true } },
                     comments: {
                         where: { deletedAt: null, parentId: null },
                         orderBy: { createdAt: 'asc' },
                         take: 3,
                         include: {
-                            user: { select: { id: true, nickname: true, avatar: true } },
+                            user: { select: { id: true, nickname: true, avatarUrl: true } },
                             replies: {
                                 where: { deletedAt: null },
                                 orderBy: { createdAt: 'asc' },
                                 take: 2,
                                 include: {
-                                    user: { select: { id: true, nickname: true, avatar: true } }
+                                    user: { select: { id: true, nickname: true, avatarUrl: true } }
                                 }
                             }
                         }
@@ -87,10 +87,10 @@ async function handleGet(req: VercelRequest, res: VercelResponse, userId: number
             prisma.babyAlbum.count({ where })
         ]);
 
-        const formatted = records.map(r => ({
+        const formatted = records.map((r: any) => ({
             ...r,
-            isLiked: r.likes.some(l => l.userId === userId),
-            comments: r.comments.map(c => ({
+            isLiked: r.likes.some((l: any) => l.userId === userId),
+            comments: r.comments.map((c: any) => ({
                 ...c,
                 replyCount: c.replies.length,
                 replies: c.replies
@@ -220,7 +220,7 @@ async function handleComment(req: VercelRequest, res: VercelResponse, userId: nu
                     parentId: parentId ? parseInt(parentId) : null
                 },
                 include: {
-                    user: { select: { id: true, nickname: true, avatar: true } }
+                    user: { select: { id: true, nickname: true, avatarUrl: true } }
                 }
             });
 

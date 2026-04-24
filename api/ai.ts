@@ -18,7 +18,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { babyId, query } = req.body;
 
     try {
-        let babyProfile: { name: string; gender: string; birthDate: Date; month: number } | undefined = undefined;
+        let babyProfile: { name: string; gender: string; birthDate: Date; month: number; days: number; ageStr: string } | undefined = undefined;
         let records: any = { feeding: [], sleep: [], growth: [], medication: [], health: [] };
 
         const babyIdStr = babyId != null ? String(babyId) : '';

@@ -1,7 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { PrismaClient } from '@prisma/client';
 import { getUserFromRequest } from '../lib/auth';
-import { generateCaption } from '../lib/ai';
 
 const prisma = new PrismaClient();
 
