@@ -124,6 +124,23 @@
            </div>
         </div>
 
+        <!-- Daily Quote Card -->
+        <div class="section-header">
+           <div class="section-title">每日情话</div>
+        </div>
+        <div class="daily-quote-card" v-loading="quoteLoading">
+          <div class="quote-icon">
+            <el-icon><Comment /></el-icon>
+          </div>
+          <div class="quote-content" v-if="dailyQuote">
+            <p class="quote-text">{{ dailyQuote.content }}</p>
+            <p class="quote-author" v-if="dailyQuote.author">— {{ dailyQuote.author }}</p>
+          </div>
+          <div class="quote-placeholder" v-else>
+            <p>正在获取今日情话...</p>
+          </div>
+        </div>
+
         <!-- Daily Statistics -->
         <div class="section-header">
            <div class="section-title">今日概览</div>
@@ -345,7 +362,7 @@ import { useRouter } from 'vue-router'
 import {
   Mug, Moon, ToiletPaper, TrendCharts, ArrowRight, Pouring,
   WarningFilled, Opportunity, Refresh, FirstAidKit, DataLine,
-  StarFilled, Checked, Food, Coffee, Umbrella, Warning
+  StarFilled, Checked, Food, Coffee, Umbrella, Warning, Comment
 } from '@element-plus/icons-vue'
 import DailyTipsCard from '@/components/DailyTipsCard.vue'
 import AIInsightCard from './components/AIInsightCard.vue'
@@ -622,6 +639,22 @@ const todayStats = ref({
 const upcomingVaccines = ref<string[]>([])
 const todayTips = ref<any[]>([])
 const tipsLoading = ref(false)
+const dailyQuote = ref<any>(null)
+const quoteLoading = ref(false)
+
+const fetchDailyQuote = async () => {
+    quoteLoading.value = true
+    try {
+        const res: any = await client.get('/daily-quote')
+        if (res.data?.content) {
+            dailyQuote.value = res.data
+        }
+    } catch (e) {
+        console.error('Fetch quote error:', e)
+    } finally {
+        quoteLoading.value = false
+    }
+}
 
 const manualGenerateTip = async () => {
     tipsLoading.value = true
@@ -819,6 +852,7 @@ onMounted(async () => {
         }
     }
     fetchData()
+    fetchDailyQuote()
 })
 
 // 切换宝宝时重新拉数据
@@ -1075,6 +1109,70 @@ onUnmounted(() => {
     .empty-img { width: 100px; margin-bottom: 8px; opacity: 0.6; }
     p { font-size: 12px; color: var(--el-text-color-secondary); margin: 0; }
   }
+}
+
+.daily-quote-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 20px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.25);
+    transition: transform 0.2s;
+
+    &:hover {
+        transform: translateY(-2px);
+    }
+
+    .quote-icon {
+        width: 44px;
+        height: 44px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+
+        .el-icon {
+            font-size: 22px;
+            color: white;
+        }
+    }
+
+    .quote-content {
+        flex: 1;
+
+        .quote-text {
+            font-size: 15px;
+            color: white;
+            line-height: 1.7;
+            margin: 0 0 8px 0;
+            font-weight: 500;
+        }
+
+        .quote-author {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.8);
+            margin: 0;
+            text-align: right;
+        }
+    }
+
+    .quote-placeholder {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        p {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+            margin: 0;
+        }
+    }
 }
 
 .mb-24 { margin-bottom: 24px; }
