@@ -176,8 +176,22 @@ const showAgreement = (type: string) => {
   showDialog.value = true
 }
 
-const handleForgotPassword = () => {
-  ElMessage.info('请联系客服重置密码：support@nutri-baby.com')
+const handleForgotPassword = async () => {
+  const account = loginForm.account?.trim()
+  if (!account) {
+    ElMessage.warning('请先输入要找回的账号（手机号或邮箱）')
+    return
+  }
+  try {
+    await fetch('/api/auth?action=forgot-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ account })
+    })
+    ElMessage.success('如果该账号存在，重置链接已发送到您的邮箱或手机')
+  } catch (e: any) {
+    ElMessage.error(e?.message || '发送重置链接失败，请稍后重试')
+  }
 }
 
 const handlePasswordLogin = async () => {
