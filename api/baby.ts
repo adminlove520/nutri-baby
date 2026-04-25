@@ -4,7 +4,11 @@ import { getUserFromRequest, hasBabyPermission } from '../lib/auth';
 import jwt from 'jsonwebtoken';
 import { success, error } from '../lib/utils';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-dev';
+// JWT_SECRET 必须设置，不允许 fallback
+if (!process.env.JWT_SECRET) {
+    console.error('[Baby API] FATAL: JWT_SECRET environment variable is not set!');
+}
+const JWT_SECRET = process.env.JWT_SECRET || 'INSECURE-FALLBACK-ONLY-FOR-DEVELOPMENT';
 
 // 2021国家免疫规划疫苗儿童免疫程序（内联，避免模块解析问题）
 const VACCINE_STANDARDS_2021 = [
@@ -110,9 +114,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             if (req.method === 'DELETE' && babyId) {
                 const bId = BigInt(babyId as string);
-                const baby = await prisma.baby.findUnique({ where: { id: bId } });
-                if (!baby) return error(res, '记录不存在', 404);
-                if (baby.userId !== uId) return error(res, '只有创建者可以删除档案', 403);
+                // 使用 hasBabyPermission 检查（创建者或协作者都可以删除）
+                if (!(await hasBabyPermission(uId, bId))) return error(res, '您没有删除权限', 403);
 
                 await prisma.baby.delete({ where: { id: bId } });
                 return res.status(204).end();
@@ -175,6 +178,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
 
             if (req.method === 'POST') {
+                // 权限检查
+                if (!(await hasBabyPermission(uId, bId))) return error(res, '权限不足', 403);
+                
                 const { id, status, vaccineDate, hospital, note, batchNumber, doctor, reaction } = req.body;
                 if (!id) {
                     // Create new record (manual add)
@@ -225,6 +231,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
 
             if (req.method === 'PUT') {
+                // 权限检查
+                if (!(await hasBabyPermission(uId, bId))) return error(res, '权限不足', 403);
+                
                 const { id, vaccineName, doseNumber, vaccineDate, hospital, batchNumber, doctor, reaction, note } = req.body;
                 if (!id) return error(res, '记录 ID 缺失');
                 const result = await prisma.babyVaccineSchedule.update({
@@ -248,6 +257,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
 
             if (req.method === 'DELETE') {
+                // 权限检查
+                if (!(await hasBabyPermission(uId, bId))) return error(res, '权限不足', 403);
+                
                 const scheduleId = req.query.scheduleId as string;
                 if (!scheduleId) return error(res, '记录 ID 缺失');
                 await prisma.babyVaccineSchedule.delete({ where: { id: BigInt(scheduleId) } });

@@ -2,7 +2,11 @@ import { VercelRequest } from '@vercel/node';
 import jwt from 'jsonwebtoken';
 import prisma from './prisma';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-for-dev-only';
+// JWT_SECRET 必须设置，不允许 fallback
+if (!process.env.JWT_SECRET) {
+    console.error('[Auth] FATAL: JWT_SECRET environment variable is not set!');
+}
+const JWT_SECRET = process.env.JWT_SECRET || 'INSECURE-FALLBACK-ONLY-FOR-DEVELOPMENT';
 
 interface DecodedToken {
     userId: string;

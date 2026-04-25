@@ -5,8 +5,36 @@ import jwt from 'jsonwebtoken';
 import { success, error, validate } from '../lib/utils';
 import { sendEmail } from '../lib/mail';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-dev';
+// JWT_SECRET 必须设置，不允许 fallback
+if (!process.env.JWT_SECRET) {
+    console.error('[Auth] FATAL: JWT_SECRET environment variable is not set!');
+}
+const JWT_SECRET = process.env.JWT_SECRET || 'INSECURE-FALLBACK-ONLY-FOR-DEVELOPMENT';
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://baby.dfyx.xyz';
+
+// 简单的登录限流（基于 IP + 账号）
+// 注意：serverless 环境下每次请求都是新进程，所以这只是临时方案
+const loginAttempts = new Map<string, { count: number; lastAttempt: number }>();
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOGIN_WINDOW_MS = 15 * 60 * 1000; // 15分钟
+
+function checkLoginRateLimit(key: string): { allowed: boolean; remaining: number } {
+    const now = Date.now();
+    const record = loginAttempts.get(key);
+    
+    if (!record || now - record.lastAttempt > LOGIN_WINDOW_MS) {
+        loginAttempts.set(key, { count: 1, lastAttempt: now });
+        return { allowed: true, remaining: MAX_LOGIN_ATTEMPTS - 1 };
+    }
+    
+    if (record.count >= MAX_LOGIN_ATTEMPTS) {
+        return { allowed: false, remaining: 0 };
+    }
+    
+    record.count++;
+    record.lastAttempt = now;
+    return { allowed: true, remaining: MAX_LOGIN_ATTEMPTS - record.count };
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { action } = req.query;
@@ -23,6 +51,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const targetAccount = account || phone;
 
             if (!targetAccount || !password) return error(res, '请输入账号和密码');
+
+            // 登录限流检查
+            const clientIP = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown';
+            const rateKey = `${clientIP}:${targetAccount}`;
+            const rateCheck = checkLoginRateLimit(rateKey);
+            if (!rateCheck.allowed) {
+                return error(res, '登录尝试过于频繁，请15分钟后再试', 429);
+            }
 
             const user = await prisma.user.findFirst({
                 where: { 
