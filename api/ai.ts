@@ -235,40 +235,53 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }));
 
             // 手动触发时，存储到 ExpertTip 并创建通知
+            // 注意：只在 forceAI=true 时才执行存储，避免增加响应时间
             if (forceAI === 'true' && safeTips.length > 0) {
-                try {
-                    const babyIdBigInt = baby ? BigInt(baby.id) : null;
-                    
-                    // 存储到 ExpertTip
-                    const tip = safeTips[0];
-                    const expertTip = await prisma.expertTip.create({
-                        data: {
-                            title: tip.title,
-                            content: tip.description,
-                            category: tip.type || '每日推荐',
-                            minAgeMonth: 0,
-                            maxAgeMonth: 36,
-                            source: 'AI Daily (Manual)'
+                // 异步存储，不阻塞响应
+                const tip = safeTips[0];
+                const userId = BigInt(user.userId);
+                const babyIdBigInt = baby ? BigInt(baby.id) : null;
+                
+                // 使用 setImmediate 异步执行存储，不阻塞主流程
+                setImmediate(async () => {
+                    try {
+                        await prisma.expertTip.create({
+                            data: {
+                                title: tip.title,
+                                content: tip.description,
+                                category: tip.type || '每日推荐',
+                                minAgeMonth: 0,
+                                maxAgeMonth: 36,
+                                source: 'AI Daily (Manual)'
+                            }
+                        });
+                        
+                        await prisma.notification.create({
+                            data: {
+                                userId,
+                                title: `✨ ${tip.title}`,
+                                content: tip.description,
+                                type: 'tips'
+                            }
+                        });
+                        
+                        // 如果有 babyId，也创建 AIAnalysis 记录
+                        if (babyIdBigInt) {
+                            await prisma.aIAnalysis.create({
+                                data: {
+                                    userId,
+                                    babyId: babyIdBigInt,
+                                    type: 'tips',
+                                    query: '每日锦囊',
+                                    response: tip.description,
+                                    sentiment: 'positive'
+                                }
+                            });
                         }
-                    });
-                    
-                    // 创建通知
-                    await prisma.notification.create({
-                        data: {
-                            userId: BigInt(user.userId),
-                            title: `✨ ${tip.title}`,
-                            content: tip.description,
-                            type: 'tips'
-                        }
-                    });
-                    
-                    return res.status(200).json({
-                        tips: safeTips,
-                        notificationId: expertTip.id.toString()
-                    });
-                } catch (storeErr) {
-                    console.error('Failed to store tips:', storeErr);
-                }
+                    } catch (storeErr) {
+                        console.error('Failed to store tips:', storeErr);
+                    }
+                });
             }
 
             return res.status(200).json(safeTips);
