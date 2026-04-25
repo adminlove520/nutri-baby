@@ -5,11 +5,94 @@ import { safeJSON } from '../lib/utils';
 
 const prisma = new PrismaClient();
 
+// 公开的分享页面获取（不需要登录）
+async function handleGetShare(req: VercelRequest, res: VercelResponse) {
+    const { token } = req.query;
+
+
+    if (!token || typeof token !== 'string') {
+        return res.status(400).json({ message: '缺少分享 token' });
+    }
+
+    try {
+        // 解码 token: base64url(id-timestamp)
+        let albumId: number;
+        try {
+            const decoded = Buffer.from(token, 'base64url').toString('utf-8');
+            const parts = decoded.split('-');
+            albumId = parseInt(parts[0]);
+            if (isNaN(albumId)) {
+                throw new Error('Invalid token format');
+            }
+        } catch (e) {
+            return res.status(400).json({ message: '无效的分享链接' });
+        }
+
+        // 查询相册记录
+        const album = await prisma.babyAlbum.findFirst({
+            where: {
+                id: albumId,
+                deletedAt: null
+            },
+            include: {
+                baby: {
+                    select: {
+                        id: true,
+                        name: true,
+                        birthDate: true,
+                        gender: true
+                    }
+                },
+                user: {
+                    select: {
+                        nickname: true
+                    }
+                }
+            }
+        });
+
+        if (!album) {
+            return res.status(404).json({ message: '分享内容不存在或已被删除' });
+        }
+
+        // 返回分享信息
+        return res.status(200).json({
+            type: album.albumType,
+            title: album.title || getDefaultShareTitle(album.albumType),
+            description: album.description,
+            url: album.url.split(',')[0],
+            allUrls: album.url.split(','),
+            babyName: album.baby?.name,
+            babyBirthDate: album.baby?.birthDate,
+            userName: album.user?.nickname,
+            createdAt: album.createdAt
+        });
+
+    } catch (err: any) {
+        console.error('Share API error:', err);
+        return res.status(500).json({ message: '获取分享内容失败' });
+    }
+}
+
+function getDefaultShareTitle(type: string): string {
+    switch (type) {
+        case 'growth': return '成长记录';
+        case 'moment': return '精彩瞬间';
+        case 'vaccine': return '疫苗接种';
+        default: return '宝宝记录';
+    }
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+    // 分享页面的 GET 请求不需要登录
+    const { action } = req.query;
+    
+    if (action === 'share' && req.method === 'GET') {
+        return handleGetShare(req, res);
+    }
+    
     const user = await getUserFromRequest(req);
     if (!user) return res.status(401).json({ message: 'Unauthorized' });
-
-    const { action } = req.query;
 
     if (action === 'comment') {
         if (req.method === 'POST') return handleComment(req, res, user.id);
@@ -335,9 +418,8 @@ async function handleShare(req: VercelRequest, res: VercelResponse, userId: numb
         }
 
         // 优先使用环境变量，否则从请求 origin 推断
-        const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 
-            `https://${req.headers.get('host')}` || 
-            'https://baby.dfyx.xyz';
+        const host = req.headers.get('host') || 'baby.dfyx.xyz';
+        const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || `https://${host}`;
         const shareToken = Buffer.from(`${album.id}-${Date.now()}`).toString('base64url');
         const shareUrl = `${BASE_URL}/share/${shareToken}`;
 
