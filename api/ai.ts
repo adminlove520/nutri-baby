@@ -273,7 +273,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                                     babyId: babyIdBigInt,
                                     type: 'tips',
                                     query: '每日锦囊',
-                                    response: tip.description,
+                                    response: tip.description || '每日锦囊生成完成',
                                     sentiment: 'positive'
                                 }
                             });
@@ -389,6 +389,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // 存储 AI 分析结果到数据库
         try {
             const babyIdBigInt = babyIdStr ? BigInt(babyIdStr) : null;
+            const responseContent = normalized.insight || 'AI 分析完成';
             
             const analysis = await prisma.aIAnalysis.create({
                 data: {
@@ -396,8 +397,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     babyId: babyIdBigInt,
                     type: 'health',
                     query: query || '',
-                    response: normalized.insight,
-                    sentiment: normalized.sentiment
+                    response: responseContent,
+                    sentiment: normalized.sentiment || 'neutral'
                 }
             });
 

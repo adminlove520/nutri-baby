@@ -53,6 +53,7 @@ model AIAnalysis {
   createdAt   DateTime @default(now()) @map("created_at")
   
   user        User     @relation(fields: [userId], references: [id])
+  baby        Baby?    @relation(fields: [babyId], references: [id])
   @@index([userId, createdAt])
   @@index([babyId])
 }
@@ -106,6 +107,7 @@ model Baby {
   medicationRecords MedicationRecord[]
   healthRecords     HealthRecord[]
   albums            BabyAlbum[]
+  aiAnalyses       AIAnalysis[]
 
   @@index([userId])
 }
