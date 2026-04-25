@@ -12,32 +12,36 @@
        </div>
     </div>
 
-    <!-- Important Alerts -->
-    <transition name="el-zoom-in-top">
-      <div v-if="nextVaccineAlert" class="vaccine-alert-card" @click="showVaccineDetail = true">
-         <div class="alert-icon"><el-icon><WarningFilled /></el-icon></div>
-         <div class="alert-body">
-            <div class="alert-title">💉 疫苗接种预警</div>
-            <div class="alert-desc">{{ nextVaccineAlert }}</div>
-         </div>
-         <el-icon class="alert-arrow"><ArrowRight /></el-icon>
+    <!-- 疫苗预警 -->
+    <div v-if="vaccineStats.total > 0" class="vaccine-alert-section" @click="goToVaccine">
+      <div class="vaccine-stats-row">
+        <div class="stat-item completed">
+          <div class="stat-num">{{ vaccineStats.completed }}</div>
+          <div class="stat-label">已接种</div>
+        </div>
+        <div class="stat-item pending">
+          <div class="stat-num">{{ vaccineStats.pending }}</div>
+          <div class="stat-label">待接种</div>
+        </div>
+        <div class="stat-next" v-if="nextVaccineData">
+          <div class="next-label">下次接种</div>
+          <div class="next-name">{{ nextVaccineData.vaccineName }}
+            <span v-if="nextVaccineData.doseNumber">第{{ nextVaccineData.doseNumber }}针</span>
+          </div>
+          <div class="next-date" v-if="nextVaccineAlert">{{ nextVaccineAlert }}</div>
+        </div>
       </div>
-    </transition>
+      <div class="vaccine-ai-tip" v-if="babyStore.currentBaby">
+        <div class="ai-tip-icon">✨</div>
+        <div class="ai-tip-text">AI 接种疫苗推荐</div>
+        <el-button size="small" round type="primary" class="ai-tip-btn">智能推荐</el-button>
+      </div>
+    </div>
 
     <el-row :gutter="24" class="main-content">
       <el-col :xs="24" :sm="15" :md="16" :lg="17">
         <!-- AI Insight -->
         <AIInsightCard v-if="babyStore.currentBaby" class="mb-24" />
-
-        <!-- 小溪AI助手入口 -->
-        <div v-if="babyStore.currentBaby" class="xiaoxi-entry-card mb-24" @click="router.push('/chat')">
-           <div class="entry-icon">🦞</div>
-           <div class="entry-body">
-              <div class="entry-title">咨询小溪</div>
-              <div class="entry-desc">育儿问题随时问，24小时贴心陪伴</div>
-           </div>
-           <el-icon class="entry-arrow"><ArrowRight /></el-icon>
-        </div>
 
         <!-- Expert Advice (Moved up for better visibility) -->
         <div class="section-header" v-if="babyStore.currentBaby">
@@ -430,6 +434,7 @@ import {
 } from '@element-plus/icons-vue'
 import DailyTipsCard from '@/components/DailyTipsCard.vue'
 import AIInsightCard from './components/AIInsightCard.vue'
+import ChatModal from '@/components/chat/ChatModal.vue'
 import { formatRelative } from '@/utils/date'
 import { useBabyStore } from '@/stores/baby'
 import { useUserStore } from '@/stores/user'
@@ -810,10 +815,15 @@ const fetchData = async () => {
         if (results[2].status === 'fulfilled') {
             const vaccineRes = results[2].value as any[]
             if (Array.isArray(vaccineRes)) {
+                // 计算疫苗统计数据
+                const completed = vaccineRes.filter((v: any) => v.vaccinationStatus === 'completed').length
+                const pending = vaccineRes.filter((v: any) => v.vaccinationStatus === 'pending').length
+                vaccineStats.value = { total: vaccineRes.length, completed, pending }
+
                 // 只显示未来3个月内的 pending 疫苗（与疫苗管家一致）
                 const now = new Date()
                 const threeMonthsLater = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000)
-                const pending = vaccineRes
+                const pendingList = vaccineRes
                     .filter((v: any) => {
                         if (v.vaccinationStatus !== 'pending') return false
                         if (!v.scheduledDate) return false
@@ -826,8 +836,8 @@ const fetchData = async () => {
                         return dateA - dateB
                     })
 
-                if (pending.length > 0) {
-                    nextVaccineData.value = pending[0]
+                if (pendingList.length > 0) {
+                    nextVaccineData.value = pendingList[0]
                 } else {
                     nextVaccineData.value = null
                 }
@@ -857,6 +867,7 @@ const formatSleepDuration = (minutes: number) => {
 const goToVaccine = () => router.push('/vaccine')
 const showVaccineDetail = ref(false)
 const nextVaccineData = ref<any>(null)
+const vaccineStats = ref({ total: 0, completed: 0, pending: 0 })
 
 const nextVaccineAlert = computed(() => {
     if (!nextVaccineData.value) return null
@@ -1383,46 +1394,93 @@ onUnmounted(() => {
   padding-top: 10px;
 }
 
-.xiaoxi-entry-card {
+/* 疫苗预警区块 */
+.vaccine-alert-section {
+  background: linear-gradient(135deg, #fef9fb 0%, #fdf2f8 100%);
+  border: 1px solid #fce7f3;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 20px;
+  cursor: pointer;
+  transition: all 0.3s;
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(236, 72, 153, 0.15);
+  }
+}
+
+.vaccine-stats-row {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 16px 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 16px;
-  cursor: pointer;
-  transition: all 0.3s;
-  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+}
 
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 30px rgba(102, 126, 234, 0.4);
-  }
-
-  .entry-icon {
-    font-size: 40px;
-  }
-
-  .entry-body {
-    flex: 1;
-    color: white;
-  }
-
-  .entry-title {
-    font-size: 18px;
-    font-weight: 600;
-    margin-bottom: 4px;
-  }
-
-  .entry-desc {
-    font-size: 13px;
-    opacity: 0.9;
-  }
-
-  .entry-arrow {
+.stat-item {
+  text-align: center;
+  min-width: 60px;
+  .stat-num {
     font-size: 24px;
-    color: white;
-    opacity: 0.8;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .stat-label {
+    font-size: 12px;
+    color: #666;
+    margin-top: 2px;
+  }
+  &.completed .stat-num {
+    color: #10b981;
+  }
+  &.pending .stat-num {
+    color: #f43f5e;
+  }
+}
+
+.stat-next {
+  flex: 1;
+  border-left: 1px solid #fce7f3;
+  padding-left: 16px;
+  .next-label {
+    font-size: 12px;
+    color: #999;
+  }
+  .next-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1e40af;
+    margin-top: 4px;
+    span {
+      font-weight: 400;
+    }
+  }
+  .next-date {
+    font-size: 12px;
+    color: #666;
+    margin-top: 4px;
+  }
+}
+
+.vaccine-ai-tip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #fce7f3;
+  .ai-tip-icon {
+    font-size: 16px;
+  }
+  .ai-tip-text {
+    flex: 1;
+    font-size: 13px;
+    color: #666;
+  }
+  .ai-tip-btn {
+    font-size: 12px;
+    padding: 4px 12px;
   }
 }
 </style>
+
+<!-- 小溪AI助手 -->
+<ChatModal />
