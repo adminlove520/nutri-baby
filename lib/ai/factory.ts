@@ -12,7 +12,7 @@ export class AIFactory {
         // 根据 Provider 类型精确选择 API Key，确保逻辑清晰
         let apiKey = process.env.AI_API_KEY;
         const openaiKey = process.env.OPENAI_API_KEY;
-        const minimaxKey = process.env.ANTHROPIC_API_KEY || process.env.MINIMAX_API_KEY;
+        const minimaxKey = process.env.MINIMAX_API_KEY || process.env.ANTHROPIC_API_KEY;
 
         if (providerType === 'openai') {
             apiKey = openaiKey || process.env.AI_API_KEY;
