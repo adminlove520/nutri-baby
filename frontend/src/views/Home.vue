@@ -810,8 +810,16 @@ const fetchData = async () => {
         if (results[2].status === 'fulfilled') {
             const vaccineRes = results[2].value as any[]
             if (Array.isArray(vaccineRes)) {
+                // 只显示未来3个月内的 pending 疫苗（与疫苗管家一致）
+                const now = new Date()
+                const threeMonthsLater = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000)
                 const pending = vaccineRes
-                    .filter((v: any) => v.vaccinationStatus === 'pending')
+                    .filter((v: any) => {
+                        if (v.vaccinationStatus !== 'pending') return false
+                        if (!v.scheduledDate) return false
+                        const scheduled = new Date(v.scheduledDate)
+                        return scheduled >= now && scheduled <= threeMonthsLater
+                    })
                     .sort((a: any, b: any) => {
                         const dateA = new Date(a.scheduledDate || a.scheduled_date || 0).getTime()
                         const dateB = new Date(b.scheduledDate || b.scheduled_date || 0).getTime()
@@ -820,6 +828,8 @@ const fetchData = async () => {
 
                 if (pending.length > 0) {
                     nextVaccineData.value = pending[0]
+                } else {
+                    nextVaccineData.value = null
                 }
             }
         }
