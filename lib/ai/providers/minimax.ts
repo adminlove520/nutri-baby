@@ -1,4 +1,5 @@
 import { AIProvider, AIAnalysisRequest, AIAnalysisResponse } from '../types';
+import { OpenAIProvider } from './openai';
 
 export class MinimaxProvider implements AIProvider {
     private apiKey: string;
@@ -171,7 +172,26 @@ ${(query || '请分析宝宝现状并提供建议').trim()}
             };
 
         } catch (error: any) {
-            console.error('AI Analysis Error (Handled):', error);
+            console.error('AI Analysis Error (Handled):', error.message);
+
+            // 如果是超时或 MiniMax 认证失败，尝试 OpenAI 作为 Fallback
+            const isAuthError = error.message.includes('login fail') || 
+                                error.message.includes('Unauthorized') ||
+                                error.message.includes('401');
+            
+            if (isAuthError || error.name === 'TimeoutError' || error.message.includes('timeout')) {
+                // 尝试用 OpenAI 作为 Fallback
+                const openaiKey = process.env.OPENAI_API_KEY || process.env.AI_API_KEY;
+                if (openaiKey) {
+                    console.log('MiniMax failed, trying OpenAI as fallback...');
+                    try {
+                        const openaiProvider = new OpenAIProvider(openaiKey, 'gpt-4o-mini', this.baseUrl);
+                        return await openaiProvider.analyze(request);
+                    } catch (fallbackError: any) {
+                        console.error('OpenAI Fallback also failed:', fallbackError.message);
+                    }
+                }
+            }
 
             if (error.name === 'TimeoutError' || error.message.includes('timeout')) {
                 return {
