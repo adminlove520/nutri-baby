@@ -45,33 +45,25 @@ const XIAOXI_SYSTEM_PROMPT = `你是小溪 🦞，一位温暖、有爱的智能
 - "让我帮您查查"
 - "作为参考..."`;
 
-// 获取宝宝信息用于个性化
-async function getBabyContext(userId: BigInt, babyId?: BigInt) {
-    if (!babyId) {
-        // 获取用户的第一个宝宝
-        const babies = await prisma.baby.findMany({
-            where: { userId },
-            orderBy: { createdAt: 'asc' },
-            take: 1
-        });
-        if (babies.length > 0) {
-            const baby = babies[0];
-            const birthDate = new Date(baby.birthDate);
-            const now = new Date();
-            const days = Math.floor((now.getTime() - birthDate.getTime()) / (1000 * 60 * 60 * 24));
-            const months = Math.floor(days / 30);
-            return {
-                name: baby.name,
-                gender: baby.gender === 'male' ? '男宝宝' : '女宝宝',
-                month: months,
-                days,
-                ageStr: months >= 1 ? `${months}个月` : `${days}天`
-            };
-        }
+// 获取宝宝信息用于个性化（自动获取当前用户的主要宝宝）
+async function getBabyContext(userId: BigInt) {
+    // 获取用户的主要宝宝（defaultBabyId 指定的，或者第一个创建的）
+    const user = await prisma.user.findUnique({
+        where: { id: userId },
+        include: { babies: { where: { deletedAt: null }, orderBy: { createdAt: 'asc' } } }
+    });
+
+    if (!user || user.babies.length === 0) {
         return null;
     }
 
-    const baby = await prisma.baby.findUnique({ where: { id: babyId } });
+    // 优先使用 defaultBabyId 指定的宝宝
+    let baby = user.babies.find(b => b.id === user.defaultBabyId);
+    // 如果没有 defaultBabyId 或者找不到，使用第一个宝宝
+    if (!baby) {
+        baby = user.babies[0];
+    }
+
     if (!baby) return null;
 
     const birthDate = new Date(baby.birthDate);
@@ -80,6 +72,7 @@ async function getBabyContext(userId: BigInt, babyId?: BigInt) {
     const months = Math.floor(days / 30);
 
     return {
+        id: baby.id.toString(),
         name: baby.name,
         gender: baby.gender === 'male' ? '男宝宝' : '女宝宝',
         month: months,
@@ -226,7 +219,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // POST - 发送消息
     if (req.method === 'POST') {
-        const { conversationId, message, babyId } = req.body;
+        const { conversationId, message } = req.body;
 
         if (!message || typeof message !== 'string' || message.trim().length === 0) {
             return error(res, '消息内容不能为空', 400);
@@ -235,8 +228,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const messageContent = message.trim();
 
         try {
-            // 获取宝宝上下文
-            const babyContext = await getBabyContext(uId, babyId ? BigInt(babyId) : undefined);
+            // 自动获取宝宝上下文
+            const babyContext = await getBabyContext(uId);
 
             // 获取或创建对话
             let convId: BigInt;
@@ -257,7 +250,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 conversation = await prisma.chatConversation.create({
                     data: {
                         userId: uId,
-                        babyId: babyContext ? (babyId ? BigInt(babyId) : undefined) : undefined,
                         title: messageContent.substring(0, 50) + (messageContent.length > 50 ? '...' : '')
                     }
                 });
@@ -287,6 +279,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             try {
                 const result = await provider.analyze({
                     babyProfile: babyContext ? {
+                        id: babyContext.id,
                         name: babyContext.name,
                         gender: babyContext.gender === '男宝宝' ? 'male' : 'female',
                         birthDate: new Date(),

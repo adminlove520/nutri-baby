@@ -29,6 +29,16 @@
         <!-- AI Insight -->
         <AIInsightCard v-if="babyStore.currentBaby" class="mb-24" />
 
+        <!-- 小溪AI助手入口 -->
+        <div v-if="babyStore.currentBaby" class="xiaoxi-entry-card mb-24" @click="router.push('/chat')">
+           <div class="entry-icon">🦞</div>
+           <div class="entry-body">
+              <div class="entry-title">咨询小溪</div>
+              <div class="entry-desc">育儿问题随时问，24小时贴心陪伴</div>
+           </div>
+           <el-icon class="entry-arrow"><ArrowRight /></el-icon>
+        </div>
+
         <!-- Expert Advice (Moved up for better visibility) -->
         <div class="section-header" v-if="babyStore.currentBaby">
            <div class="section-title">育儿锦囊</div>
@@ -405,9 +415,6 @@
           </div>
        </template>
     </el-dialog>
-
-    <!-- 小溪AI助手 -->
-    <ChatModal />
   </div>
 </template>
 
@@ -423,7 +430,6 @@ import {
 } from '@element-plus/icons-vue'
 import DailyTipsCard from '@/components/DailyTipsCard.vue'
 import AIInsightCard from './components/AIInsightCard.vue'
-import ChatModal from '@/components/chat/ChatModal.vue'
 import { formatRelative } from '@/utils/date'
 import { useBabyStore } from '@/stores/baby'
 import { useUserStore } from '@/stores/user'
@@ -1365,5 +1371,48 @@ onUnmounted(() => {
   display: flex;
   justify-content: flex-end;
   padding-top: 10px;
+}
+
+.xiaoxi-entry-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 30px rgba(102, 126, 234, 0.4);
+  }
+
+  .entry-icon {
+    font-size: 40px;
+  }
+
+  .entry-body {
+    flex: 1;
+    color: white;
+  }
+
+  .entry-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .entry-desc {
+    font-size: 13px;
+    opacity: 0.9;
+  }
+
+  .entry-arrow {
+    font-size: 24px;
+    color: white;
+    opacity: 0.8;
+  }
 }
 </style>
