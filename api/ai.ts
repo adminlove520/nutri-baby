@@ -234,6 +234,43 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 priority: baby ? 'high' : 'medium'
             }));
 
+            // 手动触发时，存储到 ExpertTip 并创建通知
+            if (forceAI === 'true' && safeTips.length > 0) {
+                try {
+                    const babyIdBigInt = baby ? BigInt(baby.id) : null;
+                    
+                    // 存储到 ExpertTip
+                    const tip = safeTips[0];
+                    const expertTip = await prisma.expertTip.create({
+                        data: {
+                            title: tip.title,
+                            content: tip.description,
+                            category: tip.type || '每日推荐',
+                            minAgeMonth: 0,
+                            maxAgeMonth: 36,
+                            source: 'AI Daily (Manual)'
+                        }
+                    });
+                    
+                    // 创建通知
+                    await prisma.notification.create({
+                        data: {
+                            userId: BigInt(user.userId),
+                            title: `✨ ${tip.title}`,
+                            content: tip.description,
+                            type: 'tips'
+                        }
+                    });
+                    
+                    return res.status(200).json({
+                        tips: safeTips,
+                        notificationId: expertTip.id.toString()
+                    });
+                } catch (storeErr) {
+                    console.error('Failed to store tips:', storeErr);
+                }
+            }
+
             return res.status(200).json(safeTips);
         } catch (error: any) {
             console.error('Tips API Error:', error);
@@ -335,7 +372,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     ? (result.recommendations as string).split(/[;\n]/).map((s: string) => s.trim()).filter(Boolean)
                     : []
         };
-        return success(res, normalized);
+
+        // 存储 AI 分析结果到数据库
+        try {
+            const babyIdBigInt = babyIdStr ? BigInt(babyIdStr) : null;
+            
+            const analysis = await prisma.aIAnalysis.create({
+                data: {
+                    userId: BigInt(user.userId),
+                    babyId: babyIdBigInt,
+                    type: 'health',
+                    query: query || '',
+                    response: normalized.insight,
+                    sentiment: normalized.sentiment
+                }
+            });
+
+            // 创建站内通知
+            const babyName = babyProfile?.name ? `（${babyProfile.name}）` : '';
+            await prisma.notification.create({
+                data: {
+                    userId: BigInt(user.userId),
+                    title: `✨ AI 健康分析${babyName}`,
+                    content: normalized.insight.substring(0, 500) + (normalized.insight.length > 500 ? '...' : ''),
+                    type: 'ai_analysis'
+                }
+            });
+
+            return success(res, {
+                id: analysis.id.toString(),
+                ...normalized
+            });
+        } catch (storeErr) {
+            // 存储失败不影响返回
+            console.error('Failed to store AI analysis:', storeErr);
+            return success(res, normalized);
+        }
 
     } catch (err: any) {
         console.error('AI Analyze Error:', err);
