@@ -16,6 +16,8 @@
         { "source": "/api/user/info", "destination": "/api/user?action=info" },
         { "source": "/api/user/change-password", "destination": "/api/user?action=change-password" },
         { "source": "/api/user/delete-account", "destination": "/api/user?action=delete-account" },
+        { "source": "/api/user/test-email", "destination": "/api/user?action=test-email" },
+        { "source": "/api/user/trigger-notify", "destination": "/api/user?action=trigger-notify" },
         { "source": "/api/tips", "destination": "/api/ai?action=tips" },
         { "source": "/api/tips/daily", "destination": "/api/ai?action=tips" },
         { "source": "/api/share", "destination": "/api/album?action=share" },
@@ -28,5 +30,11 @@
         { "source": "/api/growth-records", "destination": "/api/record?type=growth" },
         { "source": "/api/baby/:babyId", "destination": "/api/baby?babyId=:babyId" },
         { "source": "/api/(.*)", "destination": "/api/$1" }
+    ],
+    "crons": [
+        {
+            "path": "/api/cron/reminders",
+            "schedule": "0 8 * * *"
+        }
     ]
 }

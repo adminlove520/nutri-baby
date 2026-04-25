@@ -72,19 +72,19 @@
       </div>
 
       <div class="setting-group">
-        <h3 class="group-title">定时任务 (Cron)</h3>
+        <h3 class="group-title">⏰ 定时任务设置</h3>
         <el-card class="setting-card" shadow="never">
           <div class="setting-item">
             <div class="item-info">
-              <span class="label">疫苗接种提醒</span>
-              <span class="desc">在预计接种前 1 天发送站内通知和邮件</span>
+              <span class="label">💉 疫苗接种提醒</span>
+              <span class="desc">接种前 1 天发送站内通知和邮件</span>
             </div>
             <el-switch v-model="settings.vaccineNotify" @change="saveSettings" />
           </div>
           <div class="divider"></div>
           <div class="setting-item">
             <div class="item-info">
-              <span class="label">每日 AI 育儿锦囊</span>
+              <span class="label">📚 每日 AI 育儿锦囊</span>
               <span class="desc">每天生成一则科学育儿建议</span>
             </div>
             <el-switch v-model="settings.aiTipsNotify" @change="saveSettings" />
@@ -92,24 +92,45 @@
           <div class="divider"></div>
           <div class="setting-item">
             <div class="item-info">
-              <span class="label">邮件通知</span>
-              <span class="desc">发送疫苗提醒等邮件通知</span>
+              <span class="label">▶️ 立即执行定时任务</span>
+              <span class="desc">手动触发执行所有已开启的定时任务</span>
             </div>
-            <el-switch v-model="settings.emailNotify" @change="saveSettings" />
-          </div>
-          <div class="divider"></div>
-          <div class="setting-item">
-            <div class="item-info">
-              <span class="label">定时任务执行</span>
-              <span class="desc">系统每日凌晨自动执行定时任务</span>
-            </div>
-            <el-button type="primary" size="small" :loading="syncing" @click="handleManualSync" plain round>立即执行</el-button>
+            <el-button type="primary" size="small" :loading="syncing" @click="handleManualSync" plain round>执行</el-button>
           </div>
         </el-card>
       </div>
 
       <div class="setting-group">
-        <h3 class="group-title">GitHub 图床同步</h3>
+        <h3 class="group-title">📧 邮件推送配置</h3>
+        <el-card class="setting-card" shadow="never">
+          <div class="setting-item">
+            <div class="item-info">
+              <span class="label">📧 当前邮箱</span>
+              <span class="desc">{{ userStore.userInfo.email || '未配置邮箱' }}</span>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <div class="setting-item">
+            <div class="item-info">
+              <span class="label">📤 发送测试邮件</span>
+              <span class="desc">验证邮件通道是否畅通</span>
+            </div>
+            <el-button type="primary" size="small" :loading="testingEmail" @click="handleTestEmail" plain round>发送测试</el-button>
+          </div>
+          <div class="divider"></div>
+          <div class="setting-item">
+            <div class="item-info">
+              <span class="label">📊 推送状态</span>
+              <span class="desc" :class="{ 'text-success': lastEmailTime, 'text-muted': !lastEmailTime }">
+                {{ lastEmailTime ? `上次发送: ${lastEmailTime}` : '暂无发送记录' }}
+              </span>
+            </div>
+          </div>
+        </el-card>
+      </div>
+
+      <div class="setting-group">
+        <h3 class="group-title">🔗 GitHub 图床同步</h3>
         <el-card class="setting-card" shadow="never">
           <div class="setting-item">
             <div class="item-info">
@@ -357,6 +378,9 @@ const githubForm = reactive({
 const testingConnection = ref(false)
 const savingGithub = ref(false)
 const syncingGithub = ref(false)
+const testingEmail = ref(false)
+const lastEmailTime = ref('')
+const emailTestResult = ref<'success' | 'error' | ''>('')
 const showSyncLogs = ref(false)
 const syncLogs = ref<Array<{
     id: number
@@ -439,14 +463,32 @@ const changePassword = async () => {
 const handleManualSync = async () => {
     syncing.value = true
     try {
-        // Trigger the cron endpoint (assuming it allows manual trigger for the logged-in user's baby or general)
-        // In this implementation, api/cron.ts processes all babies.
-        await client.get('/cron')
-        ElMessage.success('定时任务同步完成')
-    } catch (e) {
-        ElMessage.error('同步失败')
+        await client.post('/user/trigger-notify', { type: 'all' })
+        ElMessage.success('定时任务执行完成')
+        lastEmailTime.value = new Date().toLocaleString('zh-CN')
+    } catch (e: any) {
+        ElMessage.error(e?.message || '执行失败')
     } finally {
         syncing.value = false
+    }
+}
+
+const handleTestEmail = async () => {
+    if (!userStore.userInfo.email) {
+        ElMessage.warning('请先在个人中心设置邮箱')
+        return
+    }
+    testingEmail.value = true
+    try {
+        await client.post('/user/test-email')
+        lastEmailTime.value = new Date().toLocaleString('zh-CN')
+        emailTestResult.value = 'success'
+        ElMessage.success('测试邮件已发送，请查收')
+    } catch (e: any) {
+        emailTestResult.value = 'error'
+        ElMessage.error(e?.message || '发送失败，请检查邮箱是否正确')
+    } finally {
+        testingEmail.value = false
     }
 }
 
@@ -654,6 +696,9 @@ watch(showSyncLogs, (val) => {
 }
 
 .divider { height: 1px; background: var(--el-border-color-lighter); margin: 0 20px; }
+
+.text-success { color: var(--el-color-success); }
+.text-muted { color: var(--el-text-color-placeholder); }
 
 .footer-info {
     text-align: center;
