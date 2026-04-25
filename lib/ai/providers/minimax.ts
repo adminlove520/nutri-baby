@@ -121,7 +121,21 @@ ${(query || '请分析宝宝现状并提供建议').trim()}
                 }
 
                 const data = await response.json() as any;
-                const content = data.content?.[0]?.text;
+                console.log('[MinimaxProvider] 原始响应:', JSON.stringify(data, null, 2).substring(0, 1000));
+                
+                // MiniMax Anthropic 格式: content 是数组，可能包含 thinking 和 text
+                let content: string | undefined;
+                if (data.content && Array.isArray(data.content)) {
+                    // 找 text 类型的内容
+                    const textBlock = data.content.find((c: any) => c.type === 'text');
+                    content = textBlock?.text;
+                }
+                content = content || data.content?.[0]?.text || data.text || data.message?.content;
+
+                if (!content) {
+                    console.error('[MinimaxProvider] 无法解析响应 content:', data.content);
+                    throw new Error('Empty AI response');
+                }
 
                 return {
                     insight: content || '分析完成',
