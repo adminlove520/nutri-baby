@@ -97,7 +97,7 @@
               <el-tag round effect="light" type="warning" size="small">{{ upcoming.length }} 个待办</el-tag>
            </div>
            
-           <el-empty v-if="upcoming.length === 0" description="恭喜！目前没有待接种的疫苗" :image-size="60" />
+           <el-empty v-if="upcoming.length === 0" description="恭喜！近一个月内没有待接种的疫苗" :image-size="60" />
            
            <div class="upcoming-grid">
               <el-card v-for="v in upcoming" :key="v.id" class="vaccine-card upcoming" shadow="hover">
@@ -114,6 +114,7 @@
                            {{ v.isRequired ? '免费' : '自费' }}
                          </el-tag>
                          <span class="v-age">{{ formatAge(v.ageInMonths) }}</span>
+                         <el-tag v-if="isNew(v.scheduledDate)" type="danger" size="small" effect="dark" round class="new-tag">NEW</el-tag>
                       </div>
                    </div>
                    <div class="v-date-badge" :class="{ 'is-near': isNear(v.scheduledDate) }">
@@ -521,8 +522,16 @@ const currentWiki = reactive({
 })
 
 const upcoming = computed(() => {
+    const now = new Date()
+    const oneMonthLater = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
     return vaccines.value
-        .filter(v => v.vaccinationStatus === 'pending')
+        .filter(v => {
+            if (v.vaccinationStatus !== 'pending') return false
+            if (!v.scheduledDate) return false
+            const scheduled = new Date(v.scheduledDate)
+            // 只显示未来1个月内的
+            return scheduled >= now && scheduled <= oneMonthLater
+        })
         .sort((a, b) => {
             const dateA = a.scheduledDate ? new Date(a.scheduledDate).getTime() : 0
             const dateB = b.scheduledDate ? new Date(b.scheduledDate).getTime() : 0
@@ -744,6 +753,13 @@ const isNear = (dateStr: string) => {
     return diff > 0 && diff < 7 * 24 * 60 * 60 * 1000 // Within 7 days
 }
 
+const isNew = (dateStr: string) => {
+    if (!dateStr) return false
+    const diff = new Date(dateStr).getTime() - new Date().getTime()
+    // NEW标签：7天内即将接种
+    return diff > 0 && diff <= 7 * 24 * 60 * 60 * 1000
+}
+
 const getMonth = (dateStr: string) => dateStr ? new Date(dateStr).getMonth() + 1 + '月' : '-'
 const getDay = (dateStr: string) => dateStr ? new Date(dateStr).getDate() : '-'
 const formatDate = (dateStr: string) => {
@@ -876,7 +892,8 @@ watch(() => babyStore.currentBaby?.id, fetchVaccines)
     .v-main-info {
         flex: 1;
         .v-name { font-weight: 800; font-size: 16px; color: var(--el-text-color-primary); margin-bottom: 4px; }
-        .v-tags { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--el-text-color-secondary); }
+        .v-tags { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--el-text-color-secondary); flex-wrap: wrap; }
+        .new-tag { font-size: 10px; padding: 0 4px; font-weight: 900; letter-spacing: 1px; animation: pulse 1.5s infinite; }
     }
     .v-date-badge {
         text-align: center;
@@ -969,6 +986,11 @@ watch(() => babyStore.currentBaby?.id, fetchVaccines)
     align-items: center;
     margin-bottom: 16px;
     .section-title { font-size: 17px; font-weight: 800; color: var(--el-text-color-primary); }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
 }
 
 .mb-24 { margin-bottom: 24px; }
