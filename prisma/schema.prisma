@@ -82,6 +82,7 @@ model Baby {
   user              User                  @relation("UserBabies", fields: [userId], references: [id])
   collaborators     BabyCollaborator[]
   vaccines          BabyVaccineSchedule[]
+  conversations    ChatConversation[]
   diaperRecords     DiaperRecord[]
   feedingRecords    FeedingRecord[]
   growthRecords     GrowthRecord[]
