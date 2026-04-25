@@ -184,7 +184,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                             babyId: bId,
                             vaccineName: req.body.vaccineName || '手动添加',
                             doseNumber: req.body.doseNumber || 1,
-                            ageInMonths: 0,
+                            ageInMonths: req.body.ageInMonths || 0,
                             vaccineType: 'custom',
                             isRequired: false,
                             isCustom: true,
@@ -195,6 +195,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                             doctor,
                             reaction,
                             note,
+                            scheduledDate: vaccineDate ? new Date(vaccineDate) : new Date(),
                             createdBy: uId
                         }
                     });
