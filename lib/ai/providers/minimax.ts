@@ -105,17 +105,30 @@ ${(query || '请分析宝宝现状并提供建议').trim()}
                     ]
                 };
                 console.log('[MinimaxProvider] 正在调用 MiniMax API...');
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${this.apiKey}`,
-                        'anthropic-version': '2023-06-01'
-                    },
-                    body: JSON.stringify(body),
-                    signal: AbortSignal.timeout(60000)
-                });
-                console.log('[MinimaxProvider] API 调用完成，开始解析响应');
+                console.log('[MinimaxProvider] URL:', url);
+                
+                let response: Response;
+                try {
+                    response = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${this.apiKey}`,
+                            'anthropic-version': '2023-06-01'
+                        },
+                        body: JSON.stringify(body),
+                        signal: AbortSignal.timeout(60000)
+                    });
+                } catch (fetchError: any) {
+                    console.error('[MinimaxProvider] Fetch 失败:', fetchError.message);
+                    console.error('[MinimaxProvider] Fetch 错误类型:', fetchError.name);
+                    if (fetchError.name === 'AbortError') {
+                        throw new Error('请求超时 (60秒内未响应)');
+                    }
+                    throw fetchError;
+                }
+                
+                console.log('[MinimaxProvider] API 调用完成，状态:', response.status);
 
                 if (!response.ok) {
                     const errorText = await response.text();
