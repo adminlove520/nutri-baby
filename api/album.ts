@@ -340,10 +340,10 @@ async function handleShare(req: VercelRequest, res: VercelResponse, userId: numb
 
         if (type === 'caption') {
             const caption = generateCaption(album);
-            return res.status(200).json({ caption, shareUrl });
+            return res.status(200).json(safeJSON({ caption, shareUrl }));
         }
 
-        return res.status(200).json({
+        return res.status(200).json(safeJSON({
             shareUrl,
             shareToken,
             album: {
@@ -354,7 +354,7 @@ async function handleShare(req: VercelRequest, res: VercelResponse, userId: numb
                 babyName: album.baby?.name,
                 userName: album.user?.nickname
             }
-        });
+        }));
     } catch (error: any) {
         console.error('Share error:', error);
         return res.status(500).json({ message: `分享失败: ${error.message}` });
