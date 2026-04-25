@@ -141,11 +141,17 @@ ${(query || '请分析宝宝现状并提供建议').trim()}
                 // MiniMax Anthropic 格式: content 是数组，可能包含 thinking 和 text
                 let content: string | undefined;
                 if (data.content && Array.isArray(data.content)) {
+                    console.log('[MinimaxProvider] content数组:', JSON.stringify(data.content.map((c: any) => ({ type: c.type, textLength: c.text?.length || c.thinking?.length }))));
                     // 找 text 类型的内容
                     const textBlock = data.content.find((c: any) => c.type === 'text');
                     content = textBlock?.text;
+                    console.log('[MinimaxProvider] 找到的textBlock:', textBlock ? `长度${textBlock.text?.length}` : '未找到');
                 }
-                content = content || data.content?.[0]?.text || data.text || data.message?.content;
+                // 备用路径
+                if (!content) {
+                    content = data.content?.[0]?.text || data.text || data.message?.content;
+                }
+                console.log('[MinimaxProvider] 最终content长度:', content?.length);
 
                 if (!content) {
                     console.error('[MinimaxProvider] 无法解析响应 content:', data.content);

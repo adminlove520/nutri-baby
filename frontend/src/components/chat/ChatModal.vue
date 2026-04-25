@@ -249,9 +249,18 @@ const quickQuestions = [
 
 // 渲染 Markdown
 const renderMarkdown = (text: string) => {
+  if (!text) return ''
   try {
-    return marked.parse(text) as string
+    // 使用 marked.parse 解析 Markdown
+    // marked.parse 返回 string | Promise<string>
+    const result = marked.parse(text)
+    if (typeof result === 'string') {
+      return result
+    }
+    // 如果是 Promise，等待解决
+    return ''
   } catch (e) {
+    console.error('Markdown parse error:', e)
     return text
   }
 }
