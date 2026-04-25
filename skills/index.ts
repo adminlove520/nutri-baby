@@ -52,12 +52,14 @@ import { babyHealthSkill } from './baby-health';
 import { vaccineSkill } from './vaccine';
 import { earlyEducationSkill } from './early-education';
 import { babyProductSkill } from './baby-product';
+import { growthAssessmentSkill } from './growth-assessment';
 
 export const skillsRegistry: Record<string, Skill> = {
     'baby-health': babyHealthSkill,
     'vaccine': vaccineSkill,
     'early-education': earlyEducationSkill,
     'baby-product': babyProductSkill,
+    'growth-assessment': growthAssessmentSkill,
 };
 
 /**
