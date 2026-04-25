@@ -280,18 +280,19 @@ const handleDelete = (entry: any) => {
     confirmButtonText: '确认删除',
     cancelButtonText: '取消',
     confirmButtonClass: 'el-button--danger',
-    type: 'warning'
+    type: 'warning',
+    roundButton: true
   }).then(async () => {
     try {
       const token = localStorage.getItem('token')
-      await axios.delete('/api/record', {
-        data: { type: entry.type, id: entry.data.id },
+      await axios.delete(`/api/record/${entry.type}?id=${entry.data.id}`, {
         headers: { Authorization: `Bearer ${token}` }
       })
       ElMessage.success('已删除')
       fetchTimeline(true)
-    } catch (e) {
-      ElMessage.error('删除失败')
+    } catch (e: any) {
+      const msg = e?.response?.data?.message || e?.message || ''
+      ElMessage.error('删除失败' + (msg ? ': ' + msg : ''))
     }
   }).catch(() => {})
 }
@@ -559,13 +560,17 @@ watch(() => babyStore.currentBaby?.id, () => {
 
 .card-actions {
   padding-top: 2px;
+  flex-shrink: 0;
+
 
   .more-icon {
-    color: #d0d4db;
+    color: #909399;
     cursor: pointer;
-    padding: 8px;
+    padding: 10px;
     border-radius: 50%;
+    font-size: 20px;
     transition: all 0.2s;
+    background: var(--el-fill-color-light);
 
     &:hover {
       color: var(--el-color-primary);
@@ -575,7 +580,20 @@ watch(() => babyStore.currentBaby?.id, () => {
 }
 
 .delete-item {
-  color: var(--el-color-danger);
+  color: var(--el-color-danger) !important;
+  font-weight: 600;
+  &:hover {
+    background: var(--el-color-danger-light-9) !important;
+    color: var(--el-color-danger) !important;
+  }
+}
+
+:deep(.el-dropdown-menu__item) {
+  padding: 12px 20px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .load-more {
