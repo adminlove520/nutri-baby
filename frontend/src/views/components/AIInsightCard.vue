@@ -156,10 +156,10 @@ const analyze = async () => {
 
         const res: any = await client.post('/ai/analyze', {
             babyId: babyStore.currentBaby.id.toString(),
-            query: `宝宝：${baby?.name || '未知'}，性别：${baby?.gender === 'male' ? '男' : '女'}，年龄：${ageStr}（出生${days}天）。请提供专业的育儿健康分析和建议。`
+            query: `宝宝：${baby?.name || '未知'}，性别：${baby?.gender === 'male' ? '男' : '女'}，年龄：${ageStr}（出生${days}天）。请提供专业的育儿健康分析和建议。`,
+            timeout: 30000
         })
         
-        // Ensure recommendations is always an array
         const normalized = {
             insight: res.insight || '',
             sentiment: res.sentiment || 'neutral',
@@ -169,17 +169,17 @@ const analyze = async () => {
                     ? (res.recommendations as string).split(/[;\n]/).map((s: string) => s.trim()).filter(Boolean)
                     : []
         }
-        
         result.value = normalized
-        
-        // Persist to cache with timestamp
         const now = Date.now()
         saveToCache(babyStore.currentBaby.id, { ...normalized, timestamp: now })
         lastUpdated.value = formatUpdateTime(now)
-        
     } catch (e: any) {
-        console.error('AI Insight error:', e)
-        ElMessage.error('获取AI建议失败，请稍后重试')
+        const msg = e?.message || e?.response?.data?.message || ''
+        if (msg.includes('timeout') || msg.includes('超时')) {
+            ElMessage.warning('AI 服务响应超时，请稍后重试')
+        } else {
+            ElMessage.error('获取AI建议失败，请稍后重试')
+        }
     } finally {
         loading.value = false
     }

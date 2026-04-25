@@ -14,11 +14,11 @@
 
     <!-- Important Alerts -->
     <transition name="el-zoom-in-top">
-      <div v-if="upcomingVaccines.length > 0" class="vaccine-alert-card" @click="goToVaccine">
+      <div v-if="nextVaccineAlert" class="vaccine-alert-card" @click="showVaccineDetail = true">
          <div class="alert-icon"><el-icon><WarningFilled /></el-icon></div>
          <div class="alert-body">
-            <div class="alert-title">疫苗接种预警</div>
-            <div class="alert-desc">{{ upcomingVaccines[0] }}</div>
+            <div class="alert-title">💉 疫苗接种预警</div>
+            <div class="alert-desc">{{ nextVaccineAlert }}</div>
          </div>
          <el-icon class="alert-arrow"><ArrowRight /></el-icon>
       </div>
@@ -253,6 +253,33 @@
                 <el-button type="primary" @click="tipDetailVisible = false" round>我学到了</el-button>
               </div>
            </template>
+        </el-dialog>
+
+        <!-- Vaccine Detail Dialog -->
+        <el-dialog v-model="showVaccineDetail" :title="nextVaccineData?.vaccineName || '疫苗详情'" width="90%" class="rounded-dialog">
+           <div v-if="nextVaccineData" class="vaccine-detail-content">
+              <el-descriptions :column="1" border>
+                 <el-descriptions-item label="疫苗名称">
+                    {{ nextVaccineData.vaccineName }}
+                    <el-tag v-if="nextVaccineData.doseNumber" size="small" style="margin-left:8px">第{{ nextVaccineData.doseNumber }}针</el-tag>
+                 </el-descriptions-item>
+                 <el-descriptions-item label="疫苗类型">
+                    <el-tag :type="nextVaccineData.isRequired ? 'danger' : 'info'" effect="dark">
+                      {{ nextVaccineData.isRequired ? '国家免疫规划（一类）' : '自费（二类）' }}
+                    </el-tag>
+                 </el-descriptions-item>
+                 <el-descriptions-item label="接种月龄">{{ nextVaccineData.ageInMonths === 0 ? '出生时' : `${nextVaccineData.ageInMonths}月龄` }}</el-descriptions-item>
+                 <el-descriptions-item label="预防疾病">{{ nextVaccineData.targetDisease || '暂无信息' }}</el-descriptions-item>
+                 <el-descriptions-item label="接种提示">{{ nextVaccineData.tips || '暂无特别提示' }}</el-descriptions-item>
+              </el-descriptions>
+              <div class="vaccine-actions" style="margin-top:20px;text-align:center">
+                <el-button type="primary" @click="goToVaccine" round>前往疫苗接种管家</el-button>
+                <el-button @click="showVaccineDetail = false" round>知道了</el-button>
+              </div>
+           </div>
+           <div v-else class="empty-state">
+              <p>暂无疫苗接种计划</p>
+           </div>
         </el-dialog>
       </el-col>
 
@@ -663,7 +690,7 @@ const todayStats = ref({
     growth: { latestHeight: 0, latestWeight: 0 }
 })
 
-const upcomingVaccines = ref<string[]>([])
+const upcomingVaccines = ref<string[]>([])  // 保留兼容性（可能被其他地方引用）
 const todayTips = ref<any[]>([])
 const tipsLoading = ref(false)
 const recentAlbums = ref<any[]>([])
@@ -692,12 +719,19 @@ const manualGenerateTip = async () => {
     tipsLoading.value = true
     try {
         const babyId = babyStore.currentBaby?.id
-        // Call tips with forceAI=true to regenerate fresh AI tips
-        const tipsRes: any = await client.get('/tips', { params: { babyId: babyId?.toString(), forceAI: 'true' } })
+        const tipsRes: any = await client.get('/tips', {
+            params: { babyId: babyId?.toString(), forceAI: 'true' },
+            timeout: 30000
+        })
         todayTips.value = Array.isArray(tipsRes) ? tipsRes : []
         ElMessage.success('已为您生成最新的育儿锦囊')
-    } catch (e) {
-        ElMessage.warning('生成失败，请稍后再试')
+    } catch (e: any) {
+        const msg = e?.message || e?.response?.data?.message || ''
+        if (msg.includes('timeout') || msg.includes('超时')) {
+            ElMessage.warning('AI 服务响应超时，请稍后重试')
+        } else {
+            ElMessage.warning('生成失败，请稍后再试')
+        }
     } finally {
         tipsLoading.value = false
     }
@@ -714,7 +748,7 @@ const fetchData = async () => {
 
         const babyIdStr = babyId?.toString()
         const results = await Promise.allSettled([
-            client.get('/tips', { params: { babyId: babyIdStr } }),
+            client.get('/tips', { params: { babyId: babyIdStr }, timeout: 30000 }),
             babyIdStr ? getStatistics(babyIdStr) : Promise.reject('No babyId'),
             babyIdStr ? getVaccines(babyIdStr) : Promise.reject('No babyId'),
             babyIdStr ? client.get('/record/sleep', { params: { babyId: babyIdStr, limit: 1 } }) : Promise.reject('No babyId'),
@@ -775,11 +809,7 @@ const fetchData = async () => {
                     })
 
                 if (pending.length > 0) {
-                    const next = pending[0]
-                    const vName = next.vaccineName || next.vaccine_name || '未知疫苗'
-                    const sDate = next.scheduledDate || next.scheduled_date
-                    const dateStr = sDate ? (typeof sDate === 'string' ? sDate.split('T')[0] : new Date(sDate).toISOString().split('T')[0]) : '待定'
-                    upcomingVaccines.value = [`宝宝接种提醒：${vName}（预计接种：${dateStr}）`]
+                    nextVaccineData.value = pending[0]
                 }
             }
         }
@@ -805,6 +835,34 @@ const formatSleepDuration = (minutes: number) => {
 }
 
 const goToVaccine = () => router.push('/vaccine')
+const showVaccineDetail = ref(false)
+const nextVaccineData = ref<any>(null)
+
+const nextVaccineAlert = computed(() => {
+    if (!nextVaccineData.value) return null
+    const v = nextVaccineData.value
+    const name = v.vaccineName || '未知疫苗'
+    const dose = v.doseNumber ? ` 第${v.doseNumber}针` : ''
+    const scheduled = v.scheduledDate
+    if (!scheduled) return null
+    const date = new Date(scheduled)
+    const now = new Date()
+    const diffDays = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+    let timeStr = ''
+    if (diffDays < 0) {
+        timeStr = '已过期'
+    } else if (diffDays === 0) {
+        timeStr = '今天'
+    } else if (diffDays === 1) {
+        timeStr = '明天'
+    } else if (diffDays <= 7) {
+        timeStr = `${diffDays}天后`
+    } else {
+        timeStr = `${date.getMonth() + 1}/${date.getDate()}`
+    }
+    return `${name}${dose} - ${timeStr}`
+})
+
 const handleTipClick = (tip: any) => {
     tipDetail.value = tip
     tipDetailVisible.value = true
