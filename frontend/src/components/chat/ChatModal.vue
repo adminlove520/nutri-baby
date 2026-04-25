@@ -1,8 +1,15 @@
 <template>
-  <div class="chat-modal-container">
-    <!-- 悬浮按钮 -->
+  <div class="chat-modal-container" ref="containerRef">
+    <!-- 悬浮按钮 - 可拖动 -->
     <transition name="el-zoom-in-bottom">
-      <div v-if="!isOpen" class="chat-fab" @click="openChat">
+      <div 
+        v-if="!isOpen" 
+        class="chat-fab" 
+        @click="openChat"
+        @mousedown="startDrag"
+        @touchstart="startDrag"
+        style="cursor: move; user-select: none;"
+      >
         <el-badge :value="unreadCount" :hidden="unreadCount === 0" :max="99">
           <div class="fab-icon">
             <el-icon size="28"><ChatDotRound /></el-icon>
@@ -14,7 +21,7 @@
 
     <!-- 聊天窗口 -->
     <transition name="el-zoom-in-bottom">
-      <div v-if="isOpen" class="chat-window">
+      <div v-if="isOpen" :class="['chat-window', { maximized: isMaximized }]">
         <!-- 头部 -->
         <div class="chat-header">
           <div class="header-info">
@@ -30,7 +37,7 @@
             </div>
           </div>
           <div class="header-actions">
-            <el-button text @click="minimize" :icon="Minus" circle />
+            <el-button text @click="toggleMaximize" :icon="isMaximized ? Minus : FullScreen" circle />
             <el-button text @click="closeChat" :icon="Close" circle />
           </div>
         </div>
@@ -103,9 +110,7 @@
                 <span>🦞</span>
               </div>
               <div class="message-content">
-                <div class="message-bubble">
-                  {{ msg.content }}
-                </div>
+                <div class="message-bubble" v-html="renderMarkdown(msg.content)"></div>
                 <div class="message-time">{{ formatTime(msg.createdAt) }}</div>
               </div>
             </div>
@@ -157,17 +162,73 @@
 
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted, watch } from 'vue'
-import { ChatDotRound, Close, Minus, Promotion } from '@element-plus/icons-vue'
+import { ChatDotRound, Close, Expand, Promotion, FullScreen } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { marked } from 'marked'
 import client from '@/api/client'
 import { useBabyStore } from '@/stores/baby'
+
+// 配置 marked
+marked.setOptions({
+  breaks: true,
+  gfm: true
+})
 
 const babyStore = useBabyStore()
 
 // 状态
 const isOpen = ref(false)
 const isMinimized = ref(false)
+const isMaximized = ref(false)
 const showSidebar = ref(false)
+const containerRef = ref<HTMLElement | null>(null)
+
+// 拖动状态
+const isDragging = ref(false)
+const dragOffset = ref({ x: 0, y: 0 })
+
+// 拖动函数
+const startDrag = (e: MouseEvent | TouchEvent) => {
+  isDragging.value = true
+  const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
+  const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY
+  dragOffset.value = { x: clientX, y: clientY }
+  
+  document.addEventListener('mousemove', onDrag)
+  document.addEventListener('mouseup', stopDrag)
+  document.addEventListener('touchmove', onDrag)
+  document.addEventListener('touchend', stopDrag)
+}
+
+const onDrag = (e: MouseEvent | TouchEvent) => {
+  if (!isDragging.value) return
+  const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
+  const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY
+  const deltaX = clientX - dragOffset.value.x
+  const deltaY = clientY - dragOffset.value.y
+  dragOffset.value = { x: clientX, y: clientY }
+  
+  if (containerRef.value) {
+    const rect = containerRef.value.getBoundingClientRect()
+    const newLeft = rect.left + deltaX
+    const newTop = rect.top + deltaY
+    // 限制在视口内
+    const maxLeft = window.innerWidth - rect.width
+    const maxTop = window.innerHeight - rect.height
+    containerRef.value.style.left = `${Math.max(0, Math.min(maxLeft, newLeft))}px`
+    containerRef.value.style.top = `${Math.max(0, Math.min(maxTop, newTop))}px`
+    containerRef.value.style.right = 'auto'
+    containerRef.value.style.bottom = 'auto'
+  }
+}
+
+const stopDrag = () => {
+  isDragging.value = false
+  document.removeEventListener('mousemove', onDrag)
+  document.removeEventListener('mouseup', stopDrag)
+  document.removeEventListener('touchmove', onDrag)
+  document.removeEventListener('touchend', stopDrag)
+}
 const inputMessage = ref('')
 const isSending = ref(false)
 const isTyping = ref(false)
@@ -186,6 +247,15 @@ const quickQuestions = [
   '纸尿裤怎么选？'
 ]
 
+// 渲染 Markdown
+const renderMarkdown = (text: string) => {
+  try {
+    return marked.parse(text) as string
+  } catch (e) {
+    return text
+  }
+}
+
 // 打开聊天
 const openChat = () => {
   isOpen.value = true
@@ -193,10 +263,17 @@ const openChat = () => {
   loadConversations()
 }
 
-// 最小化
+// 最小化（已改为全屏切换）
 const minimize = () => {
-  isMinimized.value = !isMinimized.value
+  isOpen.value = false
+  isMinimized.value = false
+  isMaximized.value = false
   showSidebar.value = false
+}
+
+// 切换全屏
+const toggleMaximize = () => {
+  isMaximized.value = !isMaximized.value
 }
 
 // 关闭聊天
@@ -408,6 +485,19 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.chat-window.maximized {
+  position: fixed;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  border-radius: 0;
+  z-index: 10000;
 }
 
 /* 头部 */
@@ -635,6 +725,79 @@ onMounted(() => {
   color: #333;
   border-bottom-left-radius: 4px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  text-align: left;
+}
+
+/* Markdown 样式 */
+.message-item.assistant .message-bubble :deep(h1),
+.message-item.assistant .message-bubble :deep(h2),
+.message-item.assistant .message-bubble :deep(h3) {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 8px 0 4px;
+  color: #1a1a1a;
+}
+
+.message-item.assistant .message-bubble :deep(p) {
+  margin: 6px 0;
+}
+
+.message-item.assistant .message-bubble :deep(ul),
+.message-item.assistant .message-bubble :deep(ol) {
+  margin: 6px 0;
+  padding-left: 20px;
+}
+
+.message-item.assistant .message-bubble :deep(li) {
+  margin: 3px 0;
+}
+
+.message-item.assistant .message-bubble :deep(strong) {
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.message-item.assistant .message-bubble :deep(em) {
+  font-style: italic;
+}
+
+.message-item.assistant .message-bubble :deep(code) {
+  background: #f5f5f5;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.message-item.assistant .message-bubble :deep(blockquote) {
+  border-left: 3px solid #667eea;
+  margin: 8px 0;
+  padding: 4px 12px;
+  background: #f8f8ff;
+  color: #666;
+}
+
+.message-item.assistant .message-bubble :deep(hr) {
+  border: none;
+  border-top: 1px solid #eee;
+  margin: 12px 0;
+}
+
+.message-item.assistant .message-bubble :deep(table) {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 8px 0;
+  font-size: 13px;
+}
+
+.message-item.assistant .message-bubble :deep(th),
+.message-item.assistant .message-bubble :deep(td) {
+  border: 1px solid #eee;
+  padding: 6px 10px;
+  text-align: left;
+}
+
+.message-item.assistant .message-bubble :deep(th) {
+  background: #f5f7fa;
 }
 
 .message-item.user .message-bubble {
