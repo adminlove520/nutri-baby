@@ -152,7 +152,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
             return error(res, '该类型不支持 PATCH', 400);
         } else if (req.method === 'DELETE') {
-            const { id } = req.query;
+            const queryId = req.query.id as string;
+            const bodyId = req.body?.id;
+            const id = queryId || bodyId;
             if (!id) return error(res, '记录 ID 缺失');
 
             const rId = BigInt(id as string);

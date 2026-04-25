@@ -319,44 +319,57 @@ watch(() => babyStore.currentBaby?.id, () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 20px;
-  background: rgba(255, 255, 255, 0.95);
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(10px);
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-  margin-bottom: 20px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 8px;
 
   .header-content {
     .title {
       display: flex;
       align-items: center;
-      gap: 8px;
-      font-size: 22px;
+      gap: 6px;
+      font-size: 17px;
       font-weight: 800;
       margin: 0;
       background: linear-gradient(135deg, var(--el-color-primary) 0%, #ff6b8a 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
+      line-height: 1.2;
 
       .title-icon {
         -webkit-text-fill-color: var(--el-color-primary);
+        font-size: 16px;
       }
     }
 
     .subtitle {
-      font-size: 13px;
+      font-size: 11px;
       color: #909399;
-      margin: 4px 0 0 0;
+      margin: 2px 0 0 0;
+      line-height: 1.2;
     }
   }
 
   .refresh-btn {
     background: linear-gradient(135deg, var(--el-color-primary) 0%, #ff6b8a 100%);
     border: none;
+    color: #fff;
+    font-weight: 700;
+    font-size: 13px;
+    padding: 8px 14px;
+    height: auto;
+
+    .el-icon {
+      font-size: 14px;
+    }
 
     &:hover {
       opacity: 0.9;
-      transform: scale(1.02);
     }
   }
 }
