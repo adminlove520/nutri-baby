@@ -637,29 +637,54 @@ const openShare = async (item: AlbumRecord) => {
     try {
         const res: any = await shareAlbum(item.id)
         shareData.value = res
-    } catch (e) {
-        ElMessage.error('获取分享信息失败')
+        if (!res.shareUrl) {
+            ElMessage.error('获取分享链接失败')
+            return
+        }
+    } catch (e: any) {
+        ElMessage.error(e?.message || '获取分享信息失败')
+        return
     }
     showShareDialog.value = true
 }
 
 const copyLink = async () => {
-    if (!shareData.value?.shareUrl) return
+    if (!shareData.value?.shareUrl) {
+        ElMessage.warning('分享链接不存在')
+        return
+    }
     try {
         await navigator.clipboard.writeText(shareData.value.shareUrl)
         ElMessage.success('链接已复制到剪贴板')
     } catch (e) {
-        ElMessage.error('复制失败')
+        // Fallback for older browsers
+        const input = document.createElement('input')
+        input.value = shareData.value.shareUrl
+        document.body.appendChild(input)
+        input.select()
+        document.execCommand('copy')
+        document.body.removeChild(input)
+        ElMessage.success('链接已复制到剪贴板')
     }
 }
 
 const generateWechatCaption = async () => {
-    if (!shareData.value?.shareUrl) return
+    if (!shareData.value?.album?.id) {
+        ElMessage.warning('无法生成文案，请先获取分享信息')
+        return
+    }
+    generatedCaption.value = '生成中...'
     try {
         const res: any = await shareAlbum(shareData.value.album.id, 'caption')
-        generatedCaption.value = res.caption
-    } catch (e) {
-        ElMessage.error('生成文案失败')
+        if (res.caption) {
+            generatedCaption.value = res.caption
+        } else {
+            generatedCaption.value = ''
+            ElMessage.error('生成文案失败')
+        }
+    } catch (e: any) {
+        generatedCaption.value = ''
+        ElMessage.error(e?.message || '生成文案失败')
     }
 }
 
@@ -714,24 +739,26 @@ onMounted(() => {
         .title {
             display: flex;
             align-items: center;
-            gap: 6px;
-            font-size: 20px;
+            gap: 5px;
+            font-size: 17px;
             font-weight: 800;
             margin: 0;
             background: linear-gradient(135deg, var(--el-color-primary) 0%, #ff6b8a 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-
+            line-height: 1.2;
             .title-icon {
                 -webkit-text-fill-color: var(--el-color-primary);
+                font-size: 16px;
             }
         }
 
         .subtitle {
-            font-size: 12px;
+            font-size: 11px;
             color: #999;
-            margin: 2px 0 0 0;
+            margin: 1px 0 0 0;
+            line-height: 1.2;
         }
     }
 
@@ -892,7 +919,7 @@ onMounted(() => {
 
 .feed-actions {
     display: flex;
-    padding: 10px 14px;
+    padding: 8px 10px;
     border-top: 1px solid var(--el-fill-color-light);
 
     .action-item {
@@ -900,20 +927,32 @@ onMounted(() => {
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 5px;
-        padding: 10px;
+        gap: 4px;
+        padding: 8px 4px;
         color: #909399;
         cursor: pointer;
         transition: all 0.2s;
         border-radius: 8px;
+        min-width: 0;
 
         .action-icon {
-            font-size: 18px;
+            font-size: 16px;
             transition: transform 0.2s;
+            flex-shrink: 0;
+        }
+
+        span:not(.action-label) {
+            font-size: 13px;
+            font-weight: 500;
         }
 
         .action-label {
-            font-size: 13px;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        &:active {
+            transform: scale(0.95);
         }
 
         &:hover {
