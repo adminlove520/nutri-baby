@@ -2,7 +2,7 @@ import { VercelRequest, VercelResponse } from '@vercel/node';
 import prisma from '../lib/prisma';
 import { getUserFromRequest, hasBabyPermission } from '../lib/auth';
 import { AIFactory } from '../lib/ai/factory';
-import { success } from '../lib/utils';
+import { success, error } from '../lib/utils';
 
 // 测试各 AI 服务延迟的工具函数
 async function testAIDelay(provider: string, apiKey: string, baseUrl?: string): Promise<{ provider: string; latency: number; status: string }> {
@@ -57,7 +57,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const user = await getUserFromRequest(req);
     if (!user) {
-        return res.status(401).json({ message: 'Unauthorized' });
+        return error(res, 'Unauthorized', 401);
     }
 
     if (req.method === 'GET' && req.query.action === 'tips') {

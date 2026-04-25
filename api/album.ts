@@ -1,7 +1,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { PrismaClient } from '@prisma/client';
 import { getUserFromRequest } from '../lib/auth';
-import { safeJSON } from '../lib/utils';
+import { safeJSON, error } from '../lib/utils';
 
 const prisma = new PrismaClient();
 
@@ -92,7 +92,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     
     const user = await getUserFromRequest(req);
-    if (!user) return res.status(401).json({ message: 'Unauthorized' });
+    if (!user) return error(res, 'Unauthorized', 401);
 
     if (action === 'comment') {
         if (req.method === 'POST') return handleComment(req, res, user.id);
