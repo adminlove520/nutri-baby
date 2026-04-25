@@ -12,6 +12,10 @@ export const register = async (data: any) => {
     return client.post('/auth/register', data)
 }
 
+export const forgotPassword = async (account: string) => {
+    return client.post('/auth/forgot-password', { account })
+}
+
 export const getUserInfo = async () => {
     return client.get('/user/info')
 }
