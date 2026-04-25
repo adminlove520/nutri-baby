@@ -26,7 +26,7 @@
         { "source": "/api/user/github-logs", "destination": "/api/user?action=github-logs" },
         { "source": "/api/tips", "destination": "/api/ai?action=tips" },
         { "source": "/api/tips/daily", "destination": "/api/ai?action=tips" },
-        { "source": "/api/share", "destination": "/api/album?action=share" },
+        { "source": "/api/share", "destination": "/api/share" },
         { "source": "/api/ai/analyze", "destination": "/api/ai" },
         { "source": "/api/cron/reminders", "destination": "/api/cron" },
         { "source": "/api/record/:type", "destination": "/api/record?type=:type" },

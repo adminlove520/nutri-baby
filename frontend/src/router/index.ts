@@ -116,6 +116,11 @@ const routes: Array<RouteRecordRaw> = [
         path: '/join',
         name: 'JoinFamily',
         component: () => import('../views/baby/JoinFamily.vue'),
+    },
+    {
+        path: '/share/:token',
+        name: 'Share',
+        component: () => import('../views/Share.vue'),
     }
 ]
 
@@ -126,7 +131,11 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
     const token = localStorage.getItem('token')
-    if (to.name !== 'Login' && to.name !== 'JoinFamily' && !token) {
+    // 公开页面不需要登录
+    const publicPages = ['Login', 'JoinFamily', 'Share', 'ResetPassword']
+    if (publicPages.includes(to.name as string)) {
+        next()
+    } else if (!token) {
         next({ name: 'Login' })
     } else {
         next()
