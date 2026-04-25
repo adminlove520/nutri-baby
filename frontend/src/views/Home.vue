@@ -420,6 +420,9 @@
        </template>
     </el-dialog>
   </div>
+
+  <!-- 小溪AI助手 -->
+  <ChatModal />
 </template>
 
 <script setup lang="ts">
@@ -1481,6 +1484,3 @@ onUnmounted(() => {
   }
 }
 </style>
-
-<!-- 小溪AI助手 -->
-<ChatModal />
