@@ -34,11 +34,18 @@ async function testMiniMax() {
                 ageStr: '10天'
             },
             recentRecords: {
-                feeding: [],
-                sleep: [],
+                feeding: [
+                    { id: 1, amount: 120, feedingType: 'bottle', createdAt: new Date() },
+                    { id: 2, amount: 100, feedingType: 'bottle', createdAt: new Date() },
+                    { id: 3, amount: 90, feedingType: 'breast', createdAt: new Date() }
+                ],
+                sleep: [
+                    { id: 1, duration: 120, createdAt: new Date() },
+                    { id: 2, duration: 90, createdAt: new Date() }
+                ],
                 growth: []
             },
-            query: '你好'
+            query: '宝宝10天了，喂养和睡眠情况怎么样？有什么建议？'
         });
         const duration = Date.now() - startTime;
 
