@@ -357,6 +357,7 @@ const sendMessage = async () => {
 
   inputMessage.value = ''
   isSending.value = true
+  isTyping.value = true  // 开始请求时显示打字动画
 
   // 添加用户消息
   messages.value.push({
@@ -378,9 +379,7 @@ const sendMessage = async () => {
     }
 
     if (res.message) {
-      isTyping.value = true
-      // 模拟打字效果
-      await new Promise(resolve => setTimeout(resolve, 500))
+      // 收到响应，隐藏打字动画，添加消息
       messages.value.push({
         role: 'assistant',
         content: res.message.content,
@@ -394,7 +393,7 @@ const sendMessage = async () => {
     ElMessage.error(e?.message || '发送失败，请重试')
   } finally {
     isSending.value = false
-    isTyping.value = false
+    isTyping.value = false  // 确保 finally 中也关闭
   }
 }
 
