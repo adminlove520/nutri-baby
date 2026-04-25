@@ -3,6 +3,7 @@ import prisma from '../lib/prisma';
 import { getUserFromRequest } from '../lib/auth';
 import { success, error } from '../lib/utils';
 import { sendEmail } from '../lib/mail';
+import { GitHubUploader, generateAlbumPath, generateFilename } from '../lib/github';
 import * as bcrypt from 'bcryptjs';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -122,6 +123,122 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 return success(res, { message: 'AI育儿锦囊任务已触发', type: 'aiTip' });
             }
             return success(res, { message: '定时任务已执行' });
+        }
+
+        // ========== GitHub Settings (from settings.ts) ==========
+        if (req.method === 'GET' && action === 'github-config') {
+            const config = await prisma.gitHubConfig.findUnique({ where: { userId: uId } });
+            if (!config) return success(res, { configured: false });
+            return success(res, {
+                configured: true,
+                config: {
+                    owner: config.owner,
+                    repo: config.repo,
+                    branch: config.branch,
+                    basePath: config.basePath,
+                    autoSync: config.autoSync,
+                    syncInterval: config.syncInterval,
+                    syncGrowth: config.syncGrowth,
+                    syncMoment: config.syncMoment,
+                    syncVaccine: config.syncVaccine
+                }
+            });
+        }
+
+        if (req.method === 'POST' && action === 'github-save') {
+            const { owner, repo, branch, basePath, autoSync, syncInterval, syncGrowth, syncMoment, syncVaccine, token } = req.body;
+            const existing = await prisma.gitHubConfig.findUnique({ where: { userId: uId } });
+
+            if (existing) {
+                const updated = await prisma.gitHubConfig.update({
+                    where: { userId: uId },
+                    data: { owner, repo, branch, basePath, autoSync, syncInterval, syncGrowth, syncMoment, syncVaccine, token }
+                });
+                return success(res, { configured: true, config: updated });
+            } else {
+                const created = await prisma.gitHubConfig.create({
+                    data: { userId: uId, owner, repo, branch, basePath, autoSync, syncInterval, syncGrowth, syncMoment, syncVaccine, token }
+                });
+                return success(res, { configured: true, config: created });
+            }
+        }
+
+        if (req.method === 'POST' && action === 'github-test') {
+            const { token, owner, repo, branch } = req.body;
+            try {
+                const uploader = new GitHubUploader({ token, owner, repo, branch, basePath: '' });
+                const result = await uploader.testConnection();
+                return success(res, result);
+            } catch (e: any) {
+                return error(res, '连接失败: ' + e.message, 500);
+            }
+        }
+
+        if (req.method === 'POST' && action === 'github-sync') {
+            const config = await prisma.gitHubConfig.findUnique({ where: { userId: uId } });
+            if (!config || !config.token) return error(res, '请先配置 GitHub');
+
+            try {
+                const uploader = new GitHubUploader({
+                    token: config.token,
+                    owner: config.owner,
+                    repo: config.repo,
+                    branch: config.branch,
+                    basePath: config.basePath
+                });
+
+                const albums = await prisma.babyAlbum.findMany({
+                    where: { userId: uId, deletedAt: null },
+                    include: { baby: { select: { name: true } } },
+                    orderBy: { createdAt: 'desc' },
+                    take: 20
+                });
+
+                let synced = 0;
+                for (const album of albums) {
+                    try {
+                        const urls = album.url.split(',');
+                        const babyName = album.baby?.name || '未知宝宝';
+                        const date = new Date(album.createdAt);
+                        const folderPath = generateAlbumPath(album.albumType, babyName, date);
+
+                        await uploader.createFolder(folderPath);
+
+                        for (let i = 0; i < urls.length; i++) {
+                            const url = urls[i].trim();
+                            if (!url || !url.startsWith('http')) continue;
+
+                            const filename = generateFilename(`${album.id}_${i}.jpg`, i);
+                            const imageResponse = await fetch(url);
+                            if (!imageResponse.ok) continue;
+
+                            const buffer = await imageResponse.arrayBuffer();
+                            const result = await uploader.uploadFile(Buffer.from(buffer), filename, folderPath);
+                            if (result.success) synced++;
+                        }
+                    } catch (e) {
+                        console.error('Sync album error:', e);
+                    }
+                }
+
+                await prisma.gitHubConfig.update({
+                    where: { userId: uId },
+                    data: { lastSyncAt: new Date() }
+                });
+
+                return success(res, { message: `同步完成，成功 ${synced} 个文件` });
+            } catch (e: any) {
+                return error(res, '同步失败: ' + e.message, 500);
+            }
+        }
+
+        if (req.method === 'GET' && action === 'github-logs') {
+            const logs = await prisma.syncLog.findMany({
+                where: { userId: uId },
+                orderBy: { createdAt: 'desc' },
+                take: 10
+            });
+            return success(res, { logs });
         }
 
         return error(res, '请求无效', 404);
