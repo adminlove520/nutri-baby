@@ -405,6 +405,9 @@
           </div>
        </template>
     </el-dialog>
+
+    <!-- 小溪AI助手 -->
+    <ChatModal />
   </div>
 </template>
 
@@ -420,6 +423,7 @@ import {
 } from '@element-plus/icons-vue'
 import DailyTipsCard from '@/components/DailyTipsCard.vue'
 import AIInsightCard from './components/AIInsightCard.vue'
+import ChatModal from '@/components/chat/ChatModal.vue'
 import { formatRelative } from '@/utils/date'
 import { useBabyStore } from '@/stores/baby'
 import { useUserStore } from '@/stores/user'

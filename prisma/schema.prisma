@@ -38,6 +38,7 @@ model User {
   likes            AlbumLike[]
   githubConfig     GitHubConfig?
   syncLogs         SyncLog[]
+  conversations   ChatConversation[]
 }
 
 model Notification {
@@ -390,4 +391,37 @@ model BabyVaccineSchedule {
   template          VaccinePlanTemplate? @relation(fields: [templateId], references: [id])
 
   @@index([babyId, scheduledDate])
+}
+
+// ===========================================
+// 小溪AI助手 - 对话相关模型
+// ===========================================
+
+model ChatConversation {
+  id        BigInt        @id @default(autoincrement())
+  userId    BigInt        @map("user_id")
+  babyId    BigInt?       @map("baby_id")
+  title     String        @default("新对话")
+  isPinned  Boolean       @default(false) @map("is_pinned")
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  baby      Baby?         @relation(fields: [babyId], references: [id], onDelete: SetNull)
+  messages  ChatMessage[]
+
+  @@index([userId, createdAt])
+  @@index([userId, updatedAt])
+}
+
+model ChatMessage {
+  id            BigInt            @id @default(autoincrement())
+  conversationId BigInt           @map("conversation_id")
+  role          String            // 'user' | 'assistant' | 'system'
+  content       String            @db.Text
+  model         String?           @default("MiniMax-M2.7")
+  tokens        Int?              @default(0)
+  createdAt     DateTime          @default(now()) @map("created_at")
+  conversation  ChatConversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
 }
