@@ -91,6 +91,8 @@ ${(query || '请分析宝宝现状并提供建议').trim()}
             const anthropicBaseUrl = this.baseUrl || process.env.ANTHROPIC_BASE_URL || process.env.AI_BASE_URL;
             const isAnthropic = anthropicBaseUrl?.includes('anthropic') || this.model.toLowerCase().includes('claude');
 
+            console.log(`[MinimaxProvider] Request: isAnthropic=${isAnthropic}, baseUrl=${anthropicBaseUrl}, model=${this.model}`);
+
             if (isAnthropic) {
                 const url = anthropicBaseUrl?.endsWith('/messages') ? anthropicBaseUrl : `${anthropicBaseUrl?.replace(/\/$/, '')}/v1/messages`;
                 const body: any = {

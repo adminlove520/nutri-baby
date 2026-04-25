@@ -32,7 +32,7 @@ export class AIFactory {
         const groupId = process.env.MINIMAX_GROUP_ID || '';
 
         if (!apiKey) {
-            console.warn('AI API KEY is missing, falling back to mock provider');
+            console.warn('[AIFactory] AI API KEY is missing, falling back to mock provider');
             return {
                 analyze: async () => ({
                     insight: "育儿小贴士：保持宝宝皮肤清洁干燥，预防湿疹。建议每天温水洗澡，涂抹婴儿润肤乳。",
@@ -41,6 +41,8 @@ export class AIFactory {
                 })
             };
         }
+
+        console.log(`[AIFactory] Creating provider: type=${providerType}, model=${model}, baseUrl=${baseUrl || 'default'}, keyPrefix=${apiKey.substring(0, 10)}...`);
 
         switch (providerType) {
             case 'gemini':
