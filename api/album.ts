@@ -334,7 +334,10 @@ async function handleShare(req: VercelRequest, res: VercelResponse, userId: numb
             return res.status(404).json({ message: '记录不存在' });
         }
 
-        const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://nutri-baby.vercel.app';
+        // 优先使用环境变量，否则从请求 origin 推断
+        const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 
+            `https://${req.headers.get('host')}` || 
+            'https://baby.dfyx.xyz';
         const shareToken = Buffer.from(`${album.id}-${Date.now()}`).toString('base64url');
         const shareUrl = `${BASE_URL}/share/${shareToken}`;
 

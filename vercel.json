@@ -1,50 +1,50 @@
 {
-    "outputDirectory": "frontend/dist",
-    "buildCommand": "prisma generate && prisma db push --accept-data-loss && npm run build --workspace=frontend",
-    "rewrites": [
-        { "source": "/api/auth/login", "destination": "/api/auth?action=login" },
-        { "source": "/api/auth/register", "destination": "/api/auth?action=register" },
-        { "source": "/api/auth/login_credential", "destination": "/api/auth?action=login" },
-        { "source": "/api/baby/:babyId/vaccines", "destination": "/api/baby?action=vaccines&babyId=:babyId" },
-        { "source": "/api/baby/:babyId/invite", "destination": "/api/baby?action=invite&babyId=:babyId" },
-        { "source": "/api/baby/join", "destination": "/api/baby?action=join" },
-        { "source": "/api/statistics/charts", "destination": "/api/statistics?action=charts" },
-        { "source": "/api/statistics/standards", "destination": "/api/statistics?action=standards" },
-        { "source": "/api/statistics/seed", "destination": "/api/statistics?action=seed_standards" },
-        { "source": "/api/user/stats", "destination": "/api/user?action=stats" },
-        { "source": "/api/user/update", "destination": "/api/user?action=update" },
-        { "source": "/api/user/info", "destination": "/api/user?action=info" },
-        { "source": "/api/user/change-password", "destination": "/api/user?action=change-password" },
-        { "source": "/api/user/delete-account", "destination": "/api/user?action=delete-account" },
-        { "source": "/api/user/test-email", "destination": "/api/user?action=test-email" },
-        { "source": "/api/user/trigger-notify", "destination": "/api/user?action=trigger-notify" },
-        { "source": "/api/settings", "destination": "/api/user" },
-        { "source": "/api/user/github-config", "destination": "/api/user?action=github-config" },
-        { "source": "/api/user/github-save", "destination": "/api/user?action=github-save" },
-        { "source": "/api/user/github-test", "destination": "/api/user?action=github-test" },
-        { "source": "/api/user/github-sync", "destination": "/api/user?action=github-sync" },
-        { "source": "/api/user/github-logs", "destination": "/api/user?action=github-logs" },
-        { "source": "/api/tips", "destination": "/api/ai?action=tips" },
-        { "source": "/api/tips/daily", "destination": "/api/ai?action=tips" },
-        { "source": "/api/share", "destination": "/api/share" },
-        { "source": "/api/ai/analyze", "destination": "/api/ai" },
-        { "source": "/api/cron/reminders", "destination": "/api/cron" },
-        { "source": "/api/record/:type", "destination": "/api/record?type=:type" },
-        { "source": "/api/feeding-records", "destination": "/api/record?type=feeding" },
-        { "source": "/api/sleep-records", "destination": "/api/record?type=sleep" },
-        { "source": "/api/diaper-records", "destination": "/api/record?type=diaper" },
-        { "source": "/api/growth-records", "destination": "/api/record?type=growth" },
-        { "source": "/api/baby/:babyId", "destination": "/api/baby?babyId=:babyId" },
-        { "source": "/api/(.*)", "destination": "/api/$1" }
-    ],
-    "crons": [
-        {
-            "path": "/api/cron/reminders",
-            "schedule": "0 8 * * *"
-        },
-        {
-            "path": "/api/cron/reminders?triggerAiTip=true",
-            "schedule": "0 9 * * *"
-        }
-    ]
+  "outputDirectory": "frontend/dist",
+  "buildCommand": "prisma generate && prisma db push --accept-data-loss && npm run build --workspace=frontend",
+  "rewrites": [
+    { "source": "/api/auth/login", "destination": "/api/auth?action=login" },
+    { "source": "/api/auth/register", "destination": "/api/auth?action=register" },
+    { "source": "/api/auth/login_credential", "destination": "/api/auth?action=login" },
+    { "source": "/api/baby/:babyId/vaccines", "destination": "/api/baby?action=vaccines&babyId=:babyId" },
+    { "source": "/api/baby/:babyId/invite", "destination": "/api/baby?action=invite&babyId=:babyId" },
+    { "source": "/api/baby/join", "destination": "/api/baby?action=join" },
+    { "source": "/api/statistics/charts", "destination": "/api/statistics?action=charts" },
+    { "source": "/api/statistics/standards", "destination": "/api/statistics?action=standards" },
+    { "source": "/api/statistics/seed", "destination": "/api/statistics?action=seed_standards" },
+    { "source": "/api/user/stats", "destination": "/api/user?action=stats" },
+    { "source": "/api/user/update", "destination": "/api/user?action=update" },
+    { "source": "/api/user/info", "destination": "/api/user?action=info" },
+    { "source": "/api/user/change-password", "destination": "/api/user?action=change-password" },
+    { "source": "/api/user/delete-account", "destination": "/api/user?action=delete-account" },
+    { "source": "/api/user/test-email", "destination": "/api/user?action=test-email" },
+    { "source": "/api/user/trigger-notify", "destination": "/api/user?action=trigger-notify" },
+    { "source": "/api/settings", "destination": "/api/user" },
+    { "source": "/api/user/github-config", "destination": "/api/user?action=github-config" },
+    { "source": "/api/user/github-save", "destination": "/api/user?action=github-save" },
+    { "source": "/api/user/github-test", "destination": "/api/user?action=github-test" },
+    { "source": "/api/user/github-sync", "destination": "/api/user?action=github-sync" },
+    { "source": "/api/user/github-logs", "destination": "/api/user?action=github-logs" },
+    { "source": "/api/tips", "destination": "/api/ai?action=tips" },
+    { "source": "/api/tips/daily", "destination": "/api/ai?action=tips" },
+    { "source": "/api/share", "destination": "/api/share" },
+    { "source": "/api/ai/analyze", "destination": "/api/ai" },
+    { "source": "/api/cron/reminders", "destination": "/api/cron" },
+    { "source": "/api/record/:type", "destination": "/api/record?type=:type" },
+    { "source": "/api/feeding-records", "destination": "/api/record?type=feeding" },
+    { "source": "/api/sleep-records", "destination": "/api/record?type=sleep" },
+    { "source": "/api/diaper-records", "destination": "/api/record?type=diaper" },
+    { "source": "/api/growth-records", "destination": "/api/record?type=growth" },
+    { "source": "/api/baby/:babyId", "destination": "/api/baby?babyId=:babyId" },
+    { "source": "/api/(.*)", "destination": "/api/$1" }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/reminders",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/reminders?triggerAiTip=true",
+      "schedule": "0 9 * * *"
+    }
+  ]
 }
