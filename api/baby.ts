@@ -106,28 +106,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 });
 
                 if (schedules.length === 0) {
+                    // 自动从疫苗模板初始化
                     const baby = await prisma.baby.findUnique({ where: { id: bId } });
-                    const templates = await prisma.vaccinePlanTemplate.findMany({ orderBy: { ageInMonths: 'asc' } });
-                    if (baby && templates.length > 0) {
-                        const newSchedules = templates.map(t => {
-                            const scheduledDate = new Date(baby.birthDate);
-                            scheduledDate.setMonth(scheduledDate.getMonth() + t.ageInMonths);
-                            return {
-                                babyId: bId, templateId: t.id, vaccineType: t.vaccineType,
-                                vaccineName: t.vaccineName, description: t.description,
-                                targetDisease: t.targetDisease, tips: t.tips,
-                                ageInMonths: t.ageInMonths, doseNumber: t.doseNumber,
-                                isRequired: t.isRequired, scheduledDate, createdBy: uId
-                            };
-                        });
-                        await prisma.babyVaccineSchedule.createMany({ data: newSchedules });
-                        schedules = await prisma.babyVaccineSchedule.findMany({
-                            where: { babyId: bId },
-                            orderBy: { scheduledDate: 'asc' }
-                        });
+                    if (!baby?.birthDate) {
+                        return success(res, []);
                     }
+
+                    // 直接使用静态标准数据生成接种计划
+                    const { VACCINE_STANDARDS_2021 } = await import('../../lib/vaccineStandards');
+                    const newSchedules = VACCINE_STANDARDS_2021.map(t => {
+                        const scheduledDate = new Date(baby.birthDate);
+                        scheduledDate.setMonth(scheduledDate.getMonth() + t.ageInMonths);
+                        return {
+                            babyId: bId,
+                            vaccineName: t.vaccineName,
+                            vaccineType: t.vaccineType,
+                            description: t.description,
+                            ageInMonths: t.ageInMonths,
+                            doseNumber: t.doseNumber,
+                            isRequired: t.isRequired,
+                            targetDisease: t.targetDisease,
+                            tips: t.tips,
+                            scheduledDate,
+                            createdBy: uId
+                        };
+                    });
+                    await prisma.babyVaccineSchedule.createMany({ data: newSchedules });
+                    schedules = await prisma.babyVaccineSchedule.findMany({
+                        where: { babyId: bId },
+                        orderBy: { scheduledDate: 'asc' }
+                    });
                 }
-                // 序列化 BigInt 字段
+
                 const safeSchedules = (schedules as any[]).map((s: any) => ({
                     ...s,
                     id: s.id.toString(),
