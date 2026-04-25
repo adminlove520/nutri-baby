@@ -706,7 +706,8 @@ onMounted(() => {
     .header-left {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 8px;
+        flex-shrink: 0;
     }
 
     .title-area {
@@ -732,6 +733,10 @@ onMounted(() => {
             color: #999;
             margin: 2px 0 0 0;
         }
+    }
+
+    .header-actions {
+        flex-shrink: 0;
     }
 
     .type-filter {

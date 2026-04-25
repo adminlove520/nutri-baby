@@ -80,9 +80,9 @@ const beforeUpload = (file: File) => {
     ElMessage.error('只能上传 JPG/PNG 格式的图片!')
     return false
   }
-  const isLt2M = file.size / 1024 / 1024 < 2
-  if (!isLt2M) {
-    ElMessage.error('图片大小不能超过 2MB!')
+  const isLt10M = file.size / 1024 / 1024 < 10
+  if (!isLt10M) {
+    ElMessage.error('图片大小不能超过 10MB!')
     return false
   }
   return true

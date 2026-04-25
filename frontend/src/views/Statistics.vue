@@ -259,10 +259,10 @@ const growthForm = reactive({
 
 const beforeUpload = (file: File) => {
   const isImg = file.type.startsWith('image/')
-  const isLt2M = file.size / 1024 / 1024 < 5
+  const isLt10M = file.size / 1024 / 1024 < 10
   if (!isImg) ElMessage.error('只能上传图片!')
-  if (!isLt2M) ElMessage.error('图片大小不能超过 5MB!')
-  return isImg && isLt2M
+  if (!isLt10M) ElMessage.error('图片大小不能超过 10MB!')
+  return isImg && isLt10M
 }
 
 const customUpload = async (options: any) => {
