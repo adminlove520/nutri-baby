@@ -22,7 +22,13 @@ export class AIFactory {
 
         const model = process.env.AI_MODEL || (providerType === 'openai' ? 'gpt-4o-mini' : 'MiniMax-M2.7');
         // 确保 baseUrl 优先取 Anthropic 相关的，以便支持 MiniMax 的 Anthropic 接口
-        const baseUrl = process.env.ANTHROPIC_BASE_URL || process.env.AI_BASE_URL;
+        // 但 OpenAI 应该用自己的标准 endpoint
+        let baseUrl: string | undefined;
+        if (providerType !== 'openai') {
+            baseUrl = process.env.ANTHROPIC_BASE_URL || process.env.AI_BASE_URL;
+        } else if (process.env.OPENAI_BASE_URL) {
+            baseUrl = process.env.OPENAI_BASE_URL;
+        }
         const groupId = process.env.MINIMAX_GROUP_ID || '';
 
         if (!apiKey) {
