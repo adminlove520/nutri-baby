@@ -39,6 +39,7 @@ model User {
   githubConfig     GitHubConfig?
   syncLogs         SyncLog[]
   conversations   ChatConversation[]
+  aiAnalyses     AIAnalysis[]
 }
 
 model AIAnalysis {
