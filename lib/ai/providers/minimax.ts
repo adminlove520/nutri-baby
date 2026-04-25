@@ -89,7 +89,9 @@ ${(query || '请分析宝宝现状并提供建议').trim()}
 
         try {
             const anthropicBaseUrl = this.baseUrl || process.env.ANTHROPIC_BASE_URL || process.env.AI_BASE_URL;
-            const isAnthropic = anthropicBaseUrl?.includes('anthropic') || this.model.toLowerCase().includes('claude');
+            // 只有当 baseUrl 包含 anthropic 且模型是 Claude 时才走 Anthropic 路径
+            // 避免 MiniMax key + Anthropic endpoint 的错误组合
+            const isAnthropic = anthropicBaseUrl?.includes('anthropic') && this.model.toLowerCase().includes('claude');
 
             console.log(`[MinimaxProvider] Request: isAnthropic=${isAnthropic}, baseUrl=${anthropicBaseUrl}, model=${this.model}`);
 
