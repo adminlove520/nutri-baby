@@ -125,6 +125,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return success(res, { message: '定时任务已执行' });
         }
 
+        // ========== Settings (from settings.ts) ==========
+        if (req.method === 'GET' && action === 'get') {
+            // 通用设置获取
+            const userData = await prisma.user.findUnique({
+                where: { id: uId },
+                select: { settings: true, defaultBabyId: true }
+            });
+            return success(res, {
+                settings: userData?.settings || {},
+                defaultBabyId: userData?.defaultBabyId?.toString() || null
+            });
+        }
+
+        if (req.method === 'POST' && action === 'save') {
+            // 通用设置保存
+            const { settings, defaultBabyId } = req.body;
+            await prisma.user.update({
+                where: { id: uId },
+                data: {
+                    ...(settings && { settings }),
+                    ...(defaultBabyId !== undefined && { defaultBabyId: defaultBabyId ? BigInt(defaultBabyId) : null })
+                }
+            });
+            return success(res, { message: '设置已保存' });
+        }
+
         // ========== GitHub Settings (from settings.ts) ==========
         if (req.method === 'GET' && action === 'github-config') {
             const config = await prisma.gitHubConfig.findUnique({ where: { userId: uId } });
