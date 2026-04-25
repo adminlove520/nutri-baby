@@ -4,7 +4,57 @@ import { getUserFromRequest, hasBabyPermission } from '../lib/auth';
 import { AIFactory } from '../lib/ai/factory';
 import { success } from '../lib/utils';
 
+// 测试各 AI 服务延迟的工具函数
+async function testAIDelay(provider: string, apiKey: string, baseUrl?: string): Promise<{ provider: string; latency: number; status: string }> {
+    const start = Date.now();
+    try {
+        if (provider === 'openai') {
+            const res = await fetch('https://api.openai.com/v1/models', {
+                headers: { 'Authorization': `Bearer ${apiKey}` }
+            });
+            return { provider, latency: Date.now() - start, status: res.status.toString() };
+        } else if (provider === 'minimax') {
+            const url = baseUrl || 'https://api.minimaxi.com/anthropic/v1/messages';
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'anthropic-version': '2023-06-01',
+                    'content-type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: 'MiniMax-M2.7',
+                    max_tokens: 10,
+                    messages: [{ role: 'user', content: 'hi' }]
+                })
+            });
+            return { provider, latency: Date.now() - start, status: res.status.toString() };
+        } else if (provider === 'gemini') {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
+            const res = await fetch(url);
+            return { provider, latency: Date.now() - start, status: res.status.toString() };
+        }
+        return { provider, latency: -1, status: 'unknown provider' };
+    } catch (e: any) {
+        return { provider, latency: Date.now() - start, status: `error: ${e.message}` };
+    }
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+    // 延迟测试接口
+    if (req.method === 'GET' && req.query.action === 'ping_ai') {
+        const openaiKey = process.env.OPENAI_API_KEY || '';
+        const minimaxKey = process.env.ANTHROPIC_API_KEY || process.env.MINIMAX_API_KEY || '';
+        const minimaxUrl = process.env.ANTHROPIC_BASE_URL || '';
+
+        const results = await Promise.all([
+            openaiKey ? testAIDelay('openai', openaiKey) : Promise.resolve({ provider: 'openai', latency: -1, status: 'no key' }),
+            minimaxKey ? testAIDelay('minimax', minimaxKey, minimaxUrl) : Promise.resolve({ provider: 'minimax', latency: -1, status: 'no key' }),
+        ]);
+
+        return res.status(200).json({ results, timestamp: new Date().toISOString() });
+    }
+
     const user = await getUserFromRequest(req);
     if (!user) {
         return res.status(401).json({ message: 'Unauthorized' });
