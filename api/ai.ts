@@ -156,9 +156,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                             const sleepTip = jsonData.sleep ? `睡眠提醒：${jsonData.sleep}` : null;
                             const healthTip = jsonData.health ? `健康提醒：${jsonData.health}` : null;
 
-                            const extractedTips = [feedingTip, sleepTip, healthTip].filter(Boolean);
+                            const extractedTips = [feedingTip, sleepTip, healthTip].filter((t): t is string => t !== null && t !== undefined);
                             if (extractedTips.length > 0) {
-                                tips = extractedTips.slice(0, 3).map((text, idx) => ({
+                                tips = extractedTips.slice(0, 3).map((text: string, idx: number) => ({
                                     title: text.substring(0, 25) + (text.length > 25 ? '...' : ''),
                                     content: text,
                                     category: 'general'

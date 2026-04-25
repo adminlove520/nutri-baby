@@ -418,7 +418,7 @@ async function handleShare(req: VercelRequest, res: VercelResponse, userId: numb
         }
 
         // 优先使用环境变量
-        const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://baby.dfyx.xyz';
+        const BASE_URL = (req.headers.origin as string) || process.env.NEXT_PUBLIC_BASE_URL || 'https://baby.dfyx.xyz';
         const shareToken = Buffer.from(`${album.id}-${Date.now()}`).toString('base64url');
         const shareUrl = `${BASE_URL}/share/${shareToken}`;
 
