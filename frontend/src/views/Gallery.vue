@@ -77,7 +77,7 @@
               <el-icon class="title-icon"><Collection /></el-icon>
               {{ item.title }}
             </p>
-            <p v-if="item.description" class="feed-desc">{{ item.description }}</p>
+            <div v-if="item.description" class="feed-desc markdown-body" v-html="renderMarkdown(item.description)"></div>
             <div class="feed-images" :class="{ 'multi': item.url.includes(',') }">
               <el-image
                 v-for="(img, idx) in item.url.split(',')"
@@ -293,11 +293,25 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { UploadFilled, Delete, Edit, ArrowLeft, MoreFilled, Star, ChatDotRound, Promotion, Plus, Close, Share, Link, MagicStick, Picture, TrendCharts, Grid, User, Clock, Collection, ChatLineSquare, CaretRight, More, RefreshRight } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { marked } from 'marked'
 import client from '@/api/client'
 import { getAlbums, createAlbum, deleteAlbum, addComment, deleteComment as delComment, likeAlbum, unlikeAlbum, type AlbumRecord, type AlbumComment } from '@/api/album'
 import { shareAlbum } from '@/api/share'
 import { useBabyStore } from '@/stores/baby'
 import { useUserStore } from '@/stores/user'
+
+// 设置 marked 选项
+marked.setOptions({ breaks: true, gfm: true } as any)
+
+// 渲染 Markdown 为 HTML
+const renderMarkdown = (text: string): string => {
+    if (!text) return ''
+    try {
+        return marked.parse(text) as string
+    } catch {
+        return text.replace(/\n/g, '<br/>')
+    }
+}
 
 const router = useRouter()
 const babyStore = useBabyStore()
@@ -344,13 +358,18 @@ const generateTitle = async () => {
     }
     generatingTitle.value = true
     try {
+        // 如果已有标题，则优化；否则生成新标题
+        const wasOptimizing = !!uploadForm.value.title
+        const query = wasOptimizing
+            ? `为一个${uploadForm.value.albumType === 'growth' ? '成长记录' : '精彩瞬间'}优化这个标题，使其更加吸引人，不超过20字：${uploadForm.value.title}`
+            : `为一个${uploadForm.value.albumType === 'growth' ? '成长记录' : '精彩瞬间'}生成一个吸引人的标题，不超过20字`
         const res: any = await client.post('/ai', {
             babyId: uploadForm.value.babyId,
-            query: `为一个${uploadForm.value.albumType === 'growth' ? '成长记录' : '精彩瞬间'}生成一个吸引人的标题，不超过20字`
+            query
         })
         if (res.insight) {
             uploadForm.value.title = res.insight.substring(0, 20)
-            ElMessage.success('标题已生成')
+            ElMessage.success(wasOptimizing ? '标题已优化' : '标题已生成')
         }
     } catch (e: any) {
         console.error('Generate Title Error:', e)
@@ -367,13 +386,18 @@ const generateContent = async () => {
     }
     generatingContent.value = true
     try {
+        // 如果已有描述，则优化；否则生成新描述
+        const wasOptimizing = !!uploadForm.value.description
+        const query = wasOptimizing
+            ? `为一个${uploadForm.value.albumType === 'growth' ? '成长记录' : '精彩瞬间'}优化这个内容描述，使其更加温馨生动，50字左右：${uploadForm.value.description}`
+            : `为一个${uploadForm.value.albumType === 'growth' ? '成长记录' : '精彩瞬间'}生成一段温馨的内容描述，50字左右`
         const res: any = await client.post('/ai', {
             babyId: uploadForm.value.babyId,
-            query: `为一个${uploadForm.value.albumType === 'growth' ? '成长记录' : '精彩瞬间'}生成一段温馨的内容描述，50字左右`
+            query
         })
         if (res.insight) {
             uploadForm.value.description = res.insight.substring(0, 100)
-            ElMessage.success('内容已生成')
+            ElMessage.success(wasOptimizing ? '内容已优化' : '内容已生成')
         }
     } catch (e: any) {
         console.error('Generate Content Error:', e)

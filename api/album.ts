@@ -1,6 +1,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { PrismaClient } from '@prisma/client';
 import { getUserFromRequest } from '../lib/auth';
+import { safeJSON } from '../lib/utils';
 
 const prisma = new PrismaClient();
 
@@ -99,13 +100,13 @@ async function handleGet(req: VercelRequest, res: VercelResponse, userId: number
             }))
         }));
 
-        return res.status(200).json({
+        return res.status(200).json(safeJSON({
             records: formatted,
             total,
             page: pageNum,
             limit: limitNum,
             totalPages: Math.ceil(total / limitNum)
-        });
+        }));
     } catch (error: any) {
         console.error('Album fetch error:', error);
         return res.status(500).json({ message: `获取相册失败: ${error.message}` });
@@ -137,7 +138,7 @@ async function handlePost(req: VercelRequest, res: VercelResponse, userId: numbe
             }
         });
 
-        return res.status(200).json(record);
+        return res.status(200).json(safeJSON(record));
     } catch (error: any) {
         console.error('Album create error:', error);
         return res.status(500).json({ message: `创建相册记录失败: ${error.message}` });
@@ -170,7 +171,7 @@ async function handlePut(req: VercelRequest, res: VercelResponse, userId: number
             }
         });
 
-        return res.status(200).json(record);
+        return res.status(200).json(safeJSON(record));
     } catch (error: any) {
         console.error('Album update error:', error);
         return res.status(500).json({ message: `更新相册记录失败: ${error.message}` });
@@ -226,7 +227,7 @@ async function handleComment(req: VercelRequest, res: VercelResponse, userId: nu
                 }
             });
 
-            return res.status(200).json(comment);
+            return res.status(200).json(safeJSON(comment));
         } catch (error: any) {
             console.error('Comment create error:', error);
             return res.status(500).json({ message: `评论失败: ${error.message}` });
