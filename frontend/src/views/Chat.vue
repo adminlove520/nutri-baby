@@ -409,7 +409,7 @@ watch(messages, () => {
 // 初始化
 onMounted(() => {
   loadConversations()
-  babyStore.fetchCurrentBaby()
+  babyStore.fetchBabies()
 })
 </script>
 
