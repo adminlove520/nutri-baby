@@ -140,14 +140,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
 
             if (req.method === 'POST') {
-                const { id, status, vaccineDate, hospital, note } = req.body;
-                if (!id) return error(res, '参数错误');
+                const { id, status, vaccineDate, hospital, note, batchNumber, doctor, reaction } = req.body;
+                if (!id) {
+                    // Create new record (manual add)
+                    const baby = await prisma.baby.findUnique({ where: { id: bId } });
+                    const newRecord = await prisma.babyVaccineSchedule.create({
+                        data: {
+                            babyId: bId,
+                            vaccineName: req.body.vaccineName || '手动添加',
+                            doseNumber: req.body.doseNumber || 1,
+                            ageInMonths: 0,
+                            vaccineType: 'custom',
+                            isRequired: false,
+                            isCustom: true,
+                            vaccinationStatus: status || 'completed',
+                            vaccineDate: vaccineDate ? new Date(vaccineDate) : new Date(),
+                            hospital,
+                            batchNumber,
+                            doctor,
+                            reaction,
+                            note,
+                            createdBy: uId
+                        }
+                    });
+                    return success(res, {
+                        ...newRecord,
+                        id: newRecord.id.toString(),
+                        babyId: newRecord.babyId.toString()
+                    });
+                }
                 const result = await prisma.babyVaccineSchedule.update({
                     where: { id: BigInt(id) },
                     data: {
                         vaccinationStatus: status || 'completed',
                         vaccineDate: vaccineDate ? new Date(vaccineDate) : new Date(),
-                        hospital, note, completedBy: uId, completedTime: new Date()
+                        hospital, note, batchNumber, doctor, reaction,
+                        completedBy: uId, completedTime: new Date()
                     }
                 });
                 return success(res, {
@@ -158,6 +186,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     createdBy: result.createdBy?.toString() ?? null,
                     completedBy: result.completedBy?.toString() ?? null,
                 });
+            }
+
+            if (req.method === 'PUT') {
+                const { id, vaccineName, doseNumber, vaccineDate, hospital, batchNumber, doctor, reaction, note } = req.body;
+                if (!id) return error(res, '记录 ID 缺失');
+                const result = await prisma.babyVaccineSchedule.update({
+                    where: { id: BigInt(id) },
+                    data: {
+                        vaccineName,
+                        doseNumber,
+                        vaccineDate: vaccineDate ? new Date(vaccineDate) : undefined,
+                        hospital,
+                        batchNumber,
+                        doctor,
+                        reaction,
+                        note
+                    }
+                });
+                return success(res, {
+                    ...result,
+                    id: result.id.toString(),
+                    babyId: result.babyId.toString()
+                });
+            }
+
+            if (req.method === 'DELETE') {
+                const scheduleId = req.query.scheduleId as string;
+                if (!scheduleId) return error(res, '记录 ID 缺失');
+                await prisma.babyVaccineSchedule.delete({ where: { id: BigInt(scheduleId) } });
+                return success(res, { message: '删除成功' });
             }
         }
 
