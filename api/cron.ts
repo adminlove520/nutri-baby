@@ -3,7 +3,7 @@ import prisma from '../lib/prisma';
 import { sendEmail } from '../lib/mail';
 import { getUserFromRequest } from '../lib/auth';
 import { AIFactory } from '../lib/ai/factory';
-import { success, error } from '../lib/utils';
+import { success, error, getBeijingDate, toBeijingTime } from '../lib/utils';
 import { GitHubUploader, generateAlbumPath, generateFilename } from '../lib/github';
 
 async function syncUserAlbumsToGitHub(userId: number): Promise<{ success: boolean; syncedCount: number; errors: string[] }> {
@@ -234,14 +234,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // 使用北京时间计算明天的日期范围
+    const todayBeijing = getBeijingDate();
+    todayBeijing.setHours(0, 0, 0, 0);
     
-    // Target is tomorrow (1 day before)
-    const reminderTarget = new Date(today);
-    reminderTarget.setDate(today.getDate() + 1);
+    // 明天的北京凌晨 0 点 = UTC 今天下午 4 点
+    const tomorrowBeijing = new Date(todayBeijing);
+    tomorrowBeijing.setDate(todayBeijing.getDate() + 1);
     
-    const reminderEnd = new Date(reminderTarget);
+    // 转为 UTC 存储格式查询
+    const reminderTarget = toBeijingTime(tomorrowBeijing);
+    const reminderEnd = new Date(reminderTarget.getTime() + 24 * 60 * 60 * 1000 - 1);
     reminderEnd.setHours(23, 59, 59, 999);
 
     try {

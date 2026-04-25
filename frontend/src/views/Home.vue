@@ -845,9 +845,12 @@ const nextVaccineAlert = computed(() => {
     const dose = v.doseNumber ? ` 第${v.doseNumber}针` : ''
     const scheduled = v.scheduledDate
     if (!scheduled) return null
-    const date = new Date(scheduled)
+    // scheduledDate 是 UTC，转成北京时间显示
+    const scheduledMs = new Date(scheduled).getTime() + 8 * 60 * 60 * 1000
+    const scheduledBeijing = new Date(scheduledMs)
     const now = new Date()
-    const diffDays = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+    const nowBeijing = new Date(now.getTime() + 8 * 60 * 60 * 1000)
+    const diffDays = Math.ceil((scheduledBeijing.getTime() - nowBeijing.getTime()) / (1000 * 60 * 60 * 24))
     let timeStr = ''
     if (diffDays < 0) {
         timeStr = '已过期'
@@ -858,7 +861,7 @@ const nextVaccineAlert = computed(() => {
     } else if (diffDays <= 7) {
         timeStr = `${diffDays}天后`
     } else {
-        timeStr = `${date.getMonth() + 1}/${date.getDate()}`
+        timeStr = `${scheduledBeijing.getMonth() + 1}/${scheduledBeijing.getDate()}`
     }
     return `${name}${dose} - ${timeStr}`
 })
