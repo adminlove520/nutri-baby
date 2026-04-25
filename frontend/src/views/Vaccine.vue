@@ -188,7 +188,7 @@
                    </div>
                    <div class="ai-body">
                       <div v-if="!aiKnowledge" class="ai-placeholder">
-                         <el-empty :image-size="80" description="点击"智能优化"开启专属百科" />
+                         <el-empty :image-size="80" description="点击「智能优化」开启专属百科" />
                       </div>
                       <div v-else class="markdown-body rich-text" v-html="aiKnowledge"></div>
                    </div>
