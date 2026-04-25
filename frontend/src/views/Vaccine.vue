@@ -217,7 +217,9 @@
     <el-dialog v-model="showRecordDialog" :title="isEditing ? '编辑接种记录' : '添加接种记录'" width="90%" class="rounded-dialog" destroy-on-close>
        <el-form :model="recordForm" label-position="top" class="vaccine-form">
           <el-form-item label="疫苗名称">
-             <el-input v-model="recordForm.vaccineName" placeholder="请输入疫苗名称" />
+             <el-select v-model="recordForm.vaccineName" placeholder="请选择疫苗" filterable allow-create default-first-option style="width: 100%">
+                <el-option v-for="v in VACCINE_LIST" :key="v" :label="v" :value="v" />
+             </el-select>
           </el-form-item>
           <el-row :gutter="12">
              <el-col :span="12">
@@ -335,6 +337,14 @@ const savingRecord = ref(false)
 const currentVaccine = ref<any>(null)
 const editingRecord = ref<any>(null)
 
+const VACCINE_LIST = [
+    '乙肝疫苗', '卡介苗', '脊灰灭活疫苗(IPV)', '脊灰减毒活疫苗(bOPV)',
+    '百白破疫苗', '麻腮风疫苗', '甲肝减毒活疫苗', '乙脑减毒活疫苗',
+    'A群流脑多糖疫苗', 'A群C群流脑多糖疫苗', '白破疫苗', '水痘疫苗',
+    '肺炎球菌疫苗', '流感疫苗', '手足口病疫苗', '轮状病毒疫苗',
+    '其他'
+]
+
 const recordForm = reactive({
     vaccineName: '',
     doseNumber: 1,
@@ -364,22 +374,20 @@ const generateAiPlan = async () => {
         const birthStr = baby?.birthDate ? new Date(baby.birthDate).toLocaleDateString() : '未知'
         const res: any = await client.post('/ai/analyze', {
             babyId: baby?.id?.toString(),
-            query: `请根据《国家免疫规划疫苗儿童免疫程序及说明(2021年版)》政策标准,结合宝宝出生日期(${birthStr})和当前月龄,推荐近期接种疫苗清单及接种建议。
-            返回格式要求:
-            1. 推荐接种的疫苗清单(包含:疫苗名称、推荐接种月龄、预防疾病)
-            2. 相关疫苗接种的建议tips (包含:接种前准备、接种后护理等)
-            请使用清晰美观的Markdown格式返回。`
+            query: `请根据2021年国家免疫规划，为宝宝推荐近期可接种的疫苗（出生日期：${birthStr}）。
+请简化为3-5条核心建议，包含：疫苗名称、接种月龄、注意事项。
+格式：Markdown列表`,
+            timeout: 30000
         })
-        // 合并 insight + recommendations 为完整 Markdown
-        const parts = [res.insight || '']
-        if (Array.isArray(res.recommendations) && res.recommendations.length > 0) {
-            parts.push('\n\n**专家建议**\n' + res.recommendations.map((r: string) => `- ${r}`).join('\n'))
-        }
-        aiPlan.value = renderMarkdown(parts.join(''))
+        aiPlan.value = renderMarkdown(res.insight || res || '')
         ElMessage.success('AI 接种推荐已生成')
     } catch (e: any) {
-        console.error('AI Plan Error:', e)
-        ElMessage.error(e?.message || e?.response?.data?.message || '网络连接超时,请检查您的网络')
+        const msg = e?.message || e?.response?.data?.message || ''
+        if (msg.includes('timeout') || msg.includes('超时')) {
+            ElMessage.warning('AI 服务响应超时，请稍后再试或检查网络连接')
+        } else {
+            ElMessage.error('生成失败：' + (msg || '请检查网络连接'))
+        }
     } finally {
         aiPlanLoading.value = false
     }
@@ -646,7 +654,7 @@ const openEditDialog = (item: any) => {
 
 const saveRecord = async () => {
     if (!recordForm.vaccineName) {
-        ElMessage.warning('请输入疫苗名称')
+        ElMessage.warning('请选择或输入疫苗名称')
         return
     }
     savingRecord.value = true
@@ -723,18 +731,18 @@ const generateAiKnowledge = async () => {
     try {
         const res: any = await client.post('/ai/analyze', {
             babyId: babyStore.currentBaby?.id?.toString(),
-            query: '请作为一名专业的儿科医生,提供一份疫苗接种百科知识,包括接种意义、常见反应及护理、注意事项等。如果宝宝信息存在,请针对宝宝月龄定制。请使用Markdown格式返回。'
+            query: '作为儿科医生，简述疫苗接种百科知识：接种意义、常见反应及护理、注意事项。3-5条要点，Markdown格式。',
+            timeout: 30000
         })
-        // 合并 insight + recommendations 为完整 Markdown
-        const parts = [res.insight || '']
-        if (Array.isArray(res.recommendations) && res.recommendations.length > 0) {
-            parts.push('\n\n## 接种建议\n' + res.recommendations.map((r: string) => `- ${r}`).join('\n'))
-        }
-        aiKnowledge.value = renderMarkdown(parts.join(''))
-        ElMessage.success('知识库已优化')
+        aiKnowledge.value = renderMarkdown(res.insight || res || '')
+        ElMessage.success('知识库已更新')
     } catch (e: any) {
-        console.error('AI Knowledge Error:', e)
-        ElMessage.error(e?.message || e?.response?.data?.message || '网络连接超时,请检查您的网络')
+        const msg = e?.message || e?.response?.data?.message || ''
+        if (msg.includes('timeout') || msg.includes('超时')) {
+            ElMessage.warning('AI 服务响应超时，请稍后再试或检查网络连接')
+        } else {
+            ElMessage.error('生成失败：' + (msg || '请检查网络连接'))
+        }
     } finally {
         aiLoading.value = false
     }
