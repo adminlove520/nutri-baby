@@ -247,18 +247,14 @@ const quickQuestions = [
   '纸尿裤怎么选？'
 ]
 
-// 渲染 Markdown
-const renderMarkdown = (text: string) => {
+// 配置 marked 为同步模式
+marked.setOptions({ async: false })
+
+const renderMarkdown = (text: string): string => {
   if (!text) return ''
   try {
-    // 使用 marked.parse 解析 Markdown
-    // marked.parse 返回 string | Promise<string>
     const result = marked.parse(text)
-    if (typeof result === 'string') {
-      return result
-    }
-    // 如果是 Promise，等待解决
-    return ''
+    return typeof result === 'string' ? result : text
   } catch (e) {
     console.error('Markdown parse error:', e)
     return text
