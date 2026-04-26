@@ -97,15 +97,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         timelineEntries.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
         const pagedEntries = timelineEntries.slice(0, take);
 
-        const [feedingCount, sleepCount, diaperCount, growthCount, medicationCount, healthCount] = await Promise.all([
-            prisma.feedingRecord.count({ where: { babyId: bId } }),
-            prisma.sleepRecord.count({ where: { babyId: bId } }),
-            prisma.diaperRecord.count({ where: { babyId: bId } }),
-            prisma.growthRecord.count({ where: { babyId: bId } }),
-            prisma.medicationRecord.count({ where: { babyId: bId } }),
-            prisma.healthRecord.count({ where: { babyId: bId } })
+        // 优化：使用 aggregate._count 替代单独的 count 查询，减少数据库往返
+        const countResults = await Promise.all([
+            prisma.feedingRecord.aggregate({ where: { babyId: bId }, _count: true }),
+            prisma.sleepRecord.aggregate({ where: { babyId: bId }, _count: true }),
+            prisma.diaperRecord.aggregate({ where: { babyId: bId }, _count: true }),
+            prisma.growthRecord.aggregate({ where: { babyId: bId }, _count: true }),
+            prisma.medicationRecord.aggregate({ where: { babyId: bId }, _count: true }),
+            prisma.healthRecord.aggregate({ where: { babyId: bId }, _count: true })
         ]);
-        const total = feedingCount + sleepCount + diaperCount + growthCount + medicationCount + healthCount;
+        const total = countResults.reduce((sum, r) => sum + (r._count as number), 0);
 
         return res.status(200).json({
             records: safeJSON(pagedEntries),
