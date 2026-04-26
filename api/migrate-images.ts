@@ -1,173 +1,148 @@
 /**
  * 图片迁移脚本：将 Vercel Blob 图片迁移到 GitHub 图床
  * 
- * 使用方式：
- * 1. 确保已配置 GitHub Token（在 Vercel 环境变量或数据库中）
- * 2. 运行：npx tsx scripts/migrate-images.ts
- * 3. 或者部署后访问 /api/cron/migrate-images（需要认证）
+ * 处理范围：
+ * 1. 宝宝头像 (Baby.avatarUrl)
+ * 2. 用户头像 (User.avatarUrl)
+ * 3. 相册图片 (BabyAlbum.url)
+ * 4. 成长记录图片 (GrowthRecord.imageUrl)
  */
 
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import prisma from '../lib/prisma';
 import { GitHubUploader, generateAlbumPath, generateFilename } from '../lib/github';
 
-const BLOB_HOSTS = ['vercel-blob.com', 'blob.vercel.com'];
+const BLOB_HOSTS = ['vercel-blob.com', 'blob.vercel.com', 'public-user-images-'];
 
 interface MigrationResult {
+    table: string;
     success: number;
     failed: number;
     errors: string[];
 }
 
-async function migrateImage(url: string, babyId?: bigint, albumType?: string): Promise<string | null> {
+async function migrateSingleImage(
+    url: string,
+    uploader: GitHubUploader,
+    babyName: string = 'system',
+    category: string = 'misc'
+): Promise<string | null> {
     try {
-        // 检查是否是 Vercel Blob URL
-        const isBlobUrl = BLOB_HOSTS.some(host => url.includes(host));
-        if (!isBlobUrl) {
-            return url; // 已经是其他图床，跳过
+        // 检查是否已是其他图床
+        if (!BLOB_HOSTS.some(host => url.includes(host))) {
+            return url; // 非 Blob URL，跳过
         }
 
         // 下载图片
         const response = await fetch(url);
         if (!response.ok) {
-            throw new Error(`Failed to fetch: ${response.status}`);
+            throw new Error(`Fetch failed: ${response.status}`);
         }
 
         const buffer = await response.arrayBuffer();
-        const base64 = Buffer.from(buffer).toString('base64');
-
-        // 获取宝宝名称
-        let babyName = '未知宝宝';
-        if (babyId) {
-            const baby = await prisma.baby.findUnique({ where: { id: babyId } });
-            if (baby) babyName = baby.name;
-        }
-
+        
         // 生成路径
         const date = new Date();
-        const folderPath = generateAlbumPath(albumType || 'growth', babyName, date);
-        const filename = generateFilename('migrated.jpg', 0);
-
-        // 从数据库获取用户的 GitHub 配置
-        // 这里需要查询使用这个图片的用户的配置
-        const album = await prisma.babyAlbum.findFirst({
-            where: { url: { contains: url.split('/').pop() || '' } },
-            include: { baby: true }
-        });
-
-        if (!album) {
-            throw new Error('Cannot find album record');
-        }
-
-        const config = await prisma.gitHubConfig.findUnique({
-            where: { userId: album.userId }
-        });
-
-        if (!config || !config.token) {
-            throw new Error('GitHub not configured for this user');
-        }
+        const folderPath = generateAlbumPath(category as any, babyName, date);
+        const ext = getImageExt(url) || 'jpg';
+        const filename = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
 
         // 上传到 GitHub
-        const uploader = new GitHubUploader({
-            token: config.token,
-            owner: config.owner,
-            repo: config.repo,
-            branch: config.branch || 'main',
-            basePath: config.basePath || ''
-        });
-
-        const result = await uploader.uploadFile(Buffer.from(base64, 'base64'), filename, folderPath);
+        const result = await uploader.uploadFile(Buffer.from(buffer), filename, folderPath);
 
         if (result.success && result.url) {
-            console.log(`Migrated: ${url} -> ${result.url}`);
+            console.log(`  ✓ Migrated: ${url.split('/').pop()} -> ${result.url.split('/').pop()}`);
             return result.url;
         } else {
             throw new Error(result.error || 'Upload failed');
         }
     } catch (error: any) {
-        console.error(`Migration failed for ${url}:`, error.message);
+        console.error(`  ✗ Failed: ${url}`, error.message);
         return null;
     }
 }
 
-export async function migrateAllImages(): Promise<MigrationResult> {
+function getImageExt(url: string): string {
+    const match = url.match(/\.([^.]+)(?:\?|$)/);
+    if (match) {
+        const ext = match[1].toLowerCase();
+        if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic'].includes(ext)) {
+            return ext;
+        }
+    }
+    return 'jpg';
+}
+
+async function migrateTable(
+    tableName: string,
+    records: any[],
+    urlField: string,
+    getUploader: (record: any) => Promise<GitHubUploader | null>,
+    getBabyName: (record: any) => Promise<string>
+): Promise<MigrationResult> {
     const result: MigrationResult = {
+        table: tableName,
         success: 0,
         failed: 0,
         errors: []
     };
 
-    try {
-        // 查找所有使用 Vercel Blob 的相册记录
-        const albums = await prisma.babyAlbum.findMany({
-            where: {
-                url: {
-                    contains: 'vercel-blob'
-                },
-                deletedAt: null
-            },
-            include: {
-                baby: true
-            }
-        });
+    console.log(`\n📋 Migrating ${tableName}...`);
 
-        console.log(`Found ${albums.length} albums with Vercel Blob images to migrate`);
+    for (const record of records) {
+        const urls = record[urlField];
+        if (!urls) continue;
 
-        for (const album of albums) {
-            const urls = album.url.split(',');
-            const newUrls: string[] = [];
+        const urlList = urls.split(',').map((u: string) => u.trim()).filter(Boolean);
+        const newUrls: string[] = [];
 
-            for (const url of urls) {
-                const trimmedUrl = url.trim();
-                if (!trimmedUrl) continue;
-
-                const isBlob = BLOB_HOSTS.some(host => trimmedUrl.includes(host));
-                if (!isBlob) {
-                    newUrls.push(trimmedUrl); // 非 Blob URL 保留
-                    continue;
-                }
-
-                // 迁移单个图片
-                const newUrl = await migrateImage(
-                    trimmedUrl,
-                    album.babyId,
-                    album.albumType
-                );
-
-                if (newUrl) {
-                    newUrls.push(newUrl);
-                    result.success++;
-                } else {
-                    newUrls.push(trimmedUrl); // 迁移失败保留原 URL
-                    result.failed++;
-                    result.errors.push(`Failed to migrate: ${trimmedUrl}`);
-                }
+        for (const url of urlList) {
+            const isBlob = BLOB_HOSTS.some(host => url.includes(host));
+            if (!isBlob) {
+                newUrls.push(url);
+                continue;
             }
 
-            // 更新数据库
-            await prisma.babyAlbum.update({
-                where: { id: album.id },
-                data: { url: newUrls.join(',') }
-            });
+            const uploader = await getUploader(record);
+            const babyName = await getBabyName(record);
 
-            console.log(`Updated album ${album.id}: ${album.url} -> ${newUrls.join(',')}`);
+            if (!uploader) {
+                console.error(`  ✗ No GitHub config for record ${record.id}`);
+                newUrls.push(url);
+                result.failed++;
+                continue;
+            }
+
+            const newUrl = await migrateSingleImage(url, uploader, babyName, tableName);
+            if (newUrl) {
+                newUrls.push(newUrl);
+                result.success++;
+            } else {
+                newUrls.push(url); // 失败保留原 URL
+                result.failed++;
+            }
         }
 
-        return result;
-    } catch (error: any) {
-        console.error('Migration error:', error);
-        result.errors.push(error.message);
-        return result;
+        // 更新记录
+        try {
+            const updateData: any = { [urlField]: newUrls.join(',') };
+            await prisma[tableName as keyof typeof prisma].update({
+                where: { id: record.id },
+                data: updateData
+            });
+        } catch (err: any) {
+            result.errors.push(`Record ${record.id}: ${err.message}`);
+        }
     }
+
+    return result;
 }
 
-// API endpoint for manual trigger
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') {
         return res.status(405).json({ message: 'Method Not Allowed' });
     }
 
-    // 简单的密钥验证
     const authKey = req.headers['x-migration-key'];
     const expectedKey = process.env.MIGRATION_SECRET || 'migration-key';
     
@@ -175,26 +150,166 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    console.log('Starting image migration...');
-    const result = await migrateAllImages();
+    console.log('🟢 Starting full image migration...');
+    const allResults: MigrationResult[] = [];
 
-    return res.status(200).json({
-        message: 'Migration completed',
-        ...result
-    });
-}
-
-// 如果直接运行脚本
-if (require.main === module) {
-    migrateAllImages()
-        .then(result => {
-            console.log('\n=== Migration Summary ===');
-            console.log(`Success: ${result.success}`);
-            console.log(`Failed: ${result.failed}`);
-            if (result.errors.length > 0) {
-                console.log('Errors:', result.errors);
+    try {
+        // 1. 宝宝头像
+        const babies = await prisma.baby.findMany({
+            where: {
+                avatarUrl: { contains: 'vercel-blob' }
             }
-            process.exit(result.failed > 0 ? 1 : 0);
-        })
-        .catch(console.error);
+        });
+
+        for (const baby of babies) {
+            const config = await prisma.gitHubConfig.findUnique({
+                where: { userId: baby.userId }
+            });
+            if (!config?.token) continue;
+
+            const uploader = new GitHubUploader({
+                token: config.token,
+                owner: config.owner,
+                repo: config.repo,
+                branch: config.branch || 'main',
+                basePath: config.basePath || ''
+            });
+
+            const newUrl = await migrateSingleImage(baby.avatarUrl, uploader, baby.name, 'avatar');
+            if (newUrl && newUrl !== baby.avatarUrl) {
+                await prisma.baby.update({
+                    where: { id: baby.id },
+                    data: { avatarUrl: newUrl }
+                });
+                console.log(`  ✓ Baby avatar updated: ${baby.name}`);
+            }
+        }
+
+        // 2. 用户头像
+        const users = await prisma.user.findMany({
+            where: {
+                avatarUrl: { contains: 'vercel-blob' }
+            }
+        });
+
+        for (const user of users) {
+            const config = await prisma.gitHubConfig.findUnique({
+                where: { userId: user.id }
+            });
+            if (!config?.token) continue;
+
+            const uploader = new GitHubUploader({
+                token: config.token,
+                owner: config.owner,
+                repo: config.repo,
+                branch: config.branch || 'main',
+                basePath: config.basePath || ''
+            });
+
+            const newUrl = await migrateSingleImage(user.avatarUrl, uploader, user.nickname || 'user', 'avatar');
+            if (newUrl && newUrl !== user.avatarUrl) {
+                await prisma.user.update({
+                    where: { id: user.id },
+                    data: { avatarUrl: newUrl }
+                });
+                console.log(`  ✓ User avatar updated: ${user.nickname}`);
+            }
+        }
+
+        // 3. 相册图片
+        const albums = await prisma.babyAlbum.findMany({
+            where: {
+                url: { contains: 'vercel-blob' },
+                deletedAt: null
+            },
+            include: { baby: true }
+        });
+
+        for (const album of albums) {
+            const config = await prisma.gitHubConfig.findUnique({
+                where: { userId: album.userId }
+            });
+            if (!config?.token) continue;
+
+            const uploader = new GitHubUploader({
+                token: config.token,
+                owner: config.owner,
+                repo: config.repo,
+                branch: config.branch || 'main',
+                basePath: config.basePath || ''
+            });
+
+            const urls = album.url.split(',');
+            const newUrls: string[] = [];
+
+            for (const url of urls) {
+                if (!BLOB_HOSTS.some(host => url.includes(host))) {
+                    newUrls.push(url);
+                    continue;
+                }
+
+                const newUrl = await migrateSingleImage(url, uploader, album.baby?.name || 'unknown', album.albumType);
+                newUrls.push(newUrl || url);
+            }
+
+            if (newUrls.join(',') !== album.url) {
+                await prisma.babyAlbum.update({
+                    where: { id: album.id },
+                    data: { url: newUrls.join(',') }
+                });
+                console.log(`  ✓ Album ${album.id} updated`);
+            }
+        }
+
+        // 4. 成长记录图片
+        const growthRecords = await prisma.growthRecord.findMany({
+            where: {
+                imageUrl: { contains: 'vercel-blob' }
+            },
+            include: { baby: true }
+        });
+
+        for (const record of growthRecords) {
+            const config = await prisma.gitHubConfig.findUnique({
+                where: { userId: record.baby?.userId || BigInt(0) }
+            });
+            if (!config?.token) continue;
+
+            const uploader = new GitHubUploader({
+                token: config.token,
+                owner: config.owner,
+                repo: config.repo,
+                branch: config.branch || 'main',
+                basePath: config.basePath || ''
+            });
+
+            const newUrl = await migrateSingleImage(record.imageUrl, uploader, record.baby?.name || 'unknown', 'growth');
+            if (newUrl && newUrl !== record.imageUrl) {
+                await prisma.growthRecord.update({
+                    where: { id: record.id },
+                    data: { imageUrl: newUrl }
+                });
+                console.log(`  ✓ Growth record ${record.id} image updated`);
+            }
+        }
+
+        console.log('\n✅ Migration completed!');
+
+        return res.status(200).json({
+            message: 'Migration completed successfully',
+            migrated: {
+                babies: babies.length,
+                users: users.length,
+                albums: albums.length,
+                growthRecords: growthRecords.length
+            }
+        });
+
+    } catch (error: any) {
+        console.error('Migration error:', error);
+        return res.status(500).json({
+            message: 'Migration failed',
+            error: error.message
+        });
+    }
 }
