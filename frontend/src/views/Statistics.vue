@@ -298,8 +298,8 @@ const handleUploadSuccess = (res: any) => {
 
 const submitGrowth = async () => {
   if (!babyStore.currentBaby?.id) return
-  if (!growthForm.height && !growthForm.weight) {
-    return ElMessage.warning('请输入身高或体重')
+  if (!growthForm.height && !growthForm.weight && !growthForm.milestone) {
+    return ElMessage.warning('请输入身高、体重或选择里程碑')
   }
 
   submitting.value = true
