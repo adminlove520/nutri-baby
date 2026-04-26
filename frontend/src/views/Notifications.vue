@@ -290,6 +290,64 @@ onMounted(fetchNotifications)
   :deep(.el-dialog) { border-radius: 28px !important; }
 }
 
+// Markdown 内容样式
+.markdown-content, .detail-body {
+    h1, h2, h3, h4, h5, h6 {
+        margin: 16px 0 8px;
+        font-weight: 600;
+        line-height: 1.4;
+    }
+    h1 { font-size: 20px; }
+    h2 { font-size: 18px; }
+    h3 { font-size: 16px; }
+    
+    p {
+        margin: 8px 0;
+        line-height: 1.7;
+    }
+    
+    ul, ol {
+        margin: 8px 0;
+        padding-left: 20px;
+    }
+    
+    li {
+        margin: 4px 0;
+        line-height: 1.6;
+    }
+    
+    strong {
+        font-weight: 600;
+        color: var(--el-text-color-primary);
+    }
+    
+    em {
+        font-style: italic;
+    }
+    
+    code {
+        background: var(--el-fill-color);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 14px;
+    }
+    
+    blockquote {
+        margin: 12px 0;
+        padding: 10px 16px;
+        border-left: 3px solid var(--el-color-primary);
+        background: var(--el-fill-color-light);
+        border-radius: 0 8px 8px 0;
+    }
+    
+    hr {
+        border: none;
+        border-top: 1px solid var(--el-border-color);
+        margin: 16px 0;
+    }
+}
+
 .dialog-footer {
   display: flex;
   justify-content: flex-end;
