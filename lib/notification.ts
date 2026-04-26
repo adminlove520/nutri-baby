@@ -51,6 +51,9 @@ async function getUserSettings(userId: bigint): Promise<Record<string, any>> {
  * 检查是否应该发送站内信
  */
 function shouldSendInAppNotification(type: NotificationType, settings: Record<string, any>): boolean {
+    // 先检查站内通知总开关
+    if (settings.inAppNotify === false) return false;
+    
     switch (type) {
         case 'tips':
             return settings.aiTipsNotify !== false; // 默认 true
