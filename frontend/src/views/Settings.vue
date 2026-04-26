@@ -35,84 +35,94 @@
       </div>
 
       <div class="setting-group">
-        <h3 class="group-title">消息通知</h3>
+        <h3 class="group-title">🔔 通知设置</h3>
         <el-card class="setting-card" shadow="never">
           <div class="setting-item">
             <div class="item-info">
-              <span class="label">站内消息</span>
-              <span class="desc">在应用内接收重要的系统与任务提醒</span>
+              <span class="label">📬 站内通知</span>
+              <span class="desc">在应用内接收重要提醒</span>
             </div>
             <el-switch v-model="settings.inAppNotify" @change="saveSettings" />
           </div>
           <div class="divider"></div>
           <div class="setting-item">
             <div class="item-info">
-              <span class="label">邮件提醒</span>
-              <span class="desc">开启疫苗接种、成长建议的邮件推送</span>
+              <span class="label">📧 邮件推送</span>
+              <span class="desc">接收邮件通知</span>
             </div>
             <el-switch v-model="settings.emailNotify" @change="saveSettings" />
           </div>
-          <div class="divider"></div>
+        </el-card>
+      </div>
+
+      <div class="setting-group">
+        <h3 class="group-title">💉 疫苗接种提醒</h3>
+        <el-card class="setting-card" shadow="never">
           <div class="setting-item">
             <div class="item-info">
-              <span class="label">疫苗接种提醒</span>
-              <span class="desc">在预计接种前 1 天为您发送提醒</span>
+              <span class="label">🔔 提醒开关</span>
+              <span class="desc">接种前 1 天自动发送</span>
             </div>
             <el-switch v-model="settings.vaccineNotify" @change="saveSettings" />
           </div>
           <div class="divider"></div>
           <div class="setting-item">
             <div class="item-info">
-              <span class="label">每日 AI 育儿锦囊</span>
-              <span class="desc">由 AI 每天为您生成一则科学育儿建议</span>
+              <span class="label">🧪 发送测试</span>
+              <span class="desc">模拟一次疫苗提醒</span>
             </div>
-            <el-switch v-model="settings.aiTipsNotify" @change="saveSettings" />
+            <el-button type="primary" size="small" :loading="testingVaccine" @click="handleTestVaccine" plain round>测试</el-button>
           </div>
         </el-card>
       </div>
 
       <div class="setting-group">
-        <h3 class="group-title">⏰ 定时任务设置</h3>
+        <h3 class="group-title">✨ AI 每日育儿锦囊</h3>
         <el-card class="setting-card" shadow="never">
           <div class="setting-item">
             <div class="item-info">
-              <span class="label">💉 疫苗接种提醒</span>
-              <span class="desc">接种前 1 天发送站内通知和邮件</span>
-            </div>
-            <el-switch v-model="settings.vaccineNotify" @change="saveSettings" />
-          </div>
-          <div class="divider"></div>
-          <div class="setting-item">
-            <div class="item-info">
-              <span class="label">📚 每日 AI 育儿锦囊</span>
-              <span class="desc">每天生成一则科学育儿建议</span>
+              <span class="label">🔔 提醒开关</span>
+              <span class="desc">每天自动生成科学育儿建议</span>
             </div>
             <el-switch v-model="settings.aiTipsNotify" @change="saveSettings" />
           </div>
           <div class="divider"></div>
           <div class="setting-item">
             <div class="item-info">
-              <span class="label">▶️ 立即执行定时任务</span>
-              <span class="desc">手动触发执行所有已开启的定时任务</span>
+              <span class="label">🧪 发送测试</span>
+              <span class="desc">模拟一次锦囊推送</span>
             </div>
-            <el-button type="primary" size="small" :loading="syncing" @click="handleManualSync" plain round>执行</el-button>
+            <el-button type="primary" size="small" :loading="testingTips" @click="handleTestTips" plain round>测试</el-button>
           </div>
         </el-card>
       </div>
 
       <div class="setting-group">
-        <h3 class="group-title">📧 邮件推送配置</h3>
+        <h3 class="group-title">🤖 AI 健康分析</h3>
         <el-card class="setting-card" shadow="never">
           <div class="setting-item">
             <div class="item-info">
-              <span class="label">📧 当前邮箱</span>
+              <span class="label">🔔 分析通知</span>
+              <span class="desc">AI 分析完成后发送通知</span>
+            </div>
+            <el-switch v-model="settings.aiAnalysisNotify" @change="saveSettings" />
+          </div>
+        </el-card>
+      </div>
+
+      <div class="setting-group">
+        <h3 class="group-title">📧 邮件通道测试</h3>
+        <el-card class="setting-card" shadow="never">
+          <div class="setting-item">
+            <div class="item-info">
+              <span class="label">📮 当前邮箱</span>
               <span class="desc">{{ userStore.userInfo.email || '未配置邮箱' }}</span>
             </div>
           </div>
           <div class="divider"></div>
           <div class="setting-item">
             <div class="item-info">
-              <span class="label">📤 发送测试邮件</span>
+              <span class="label">📤 发送测试</span>
               <span class="desc">验证邮件通道是否畅通</span>
             </div>
             <el-button type="primary" size="small" :loading="testingEmail" @click="handleTestEmail" plain round>发送测试</el-button>
@@ -340,6 +350,7 @@ const settings = reactive({
     vaccineNotify: true,
     inAppNotify: true,
     aiTipsNotify: true,
+    aiAnalysisNotify: true,
     darkMode: false
 })
 
@@ -379,6 +390,8 @@ const testingConnection = ref(false)
 const savingGithub = ref(false)
 const syncingGithub = ref(false)
 const testingEmail = ref(false)
+const testingVaccine = ref(false)
+const testingTips = ref(false)
 const lastEmailTime = ref('')
 const emailTestResult = ref<'success' | 'error' | ''>('')
 const showSyncLogs = ref(false)
@@ -489,6 +502,30 @@ const handleTestEmail = async () => {
         ElMessage.error(e?.message || '发送失败，请检查邮箱是否正确')
     } finally {
         testingEmail.value = false
+    }
+}
+
+const handleTestVaccine = async () => {
+    testingVaccine.value = true
+    try {
+        await client.post('/user/trigger-notify', { type: 'vaccine' })
+        ElMessage.success('疫苗提醒测试已发送，请检查站内信和邮箱')
+    } catch (e: any) {
+        ElMessage.error(e?.message || '发送失败')
+    } finally {
+        testingVaccine.value = false
+    }
+}
+
+const handleTestTips = async () => {
+    testingTips.value = true
+    try {
+        await client.post('/user/trigger-notify', { type: 'aiTip' })
+        ElMessage.success('锦囊测试已发送，请检查站内信和邮箱')
+    } catch (e: any) {
+        ElMessage.error(e?.message || '发送失败')
+    } finally {
+        testingTips.value = false
     }
 }
 
