@@ -89,7 +89,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     }
                 });
             } else if (type === 'growth') {
-                const { height, weight, headCircumference, remark, note, imageUrl } = rest;
+                const { height, weight, headCircumference, remark, note, imageUrl, milestone } = rest;
                 result = await prisma.growthRecord.create({
                     data: {
                         babyId: bId,
@@ -98,6 +98,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         weight: weight ? parseFloat(weight) : null,
                         headCircumference: headCircumference ? parseFloat(headCircumference) : null,
                         imageUrl: imageUrl || null,
+                        milestone: milestone || null,
                         note: note || remark,
                         createdBy: uId
                     }

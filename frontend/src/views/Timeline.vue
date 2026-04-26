@@ -245,8 +245,24 @@ const getDiaperText = (data: any) => {
   return `尿布: ${types[data.type] || data.type}`
 }
 
+const milestoneLabels: Record<string, string> = {
+  first_smile: '😊 第一次微笑',
+  first_lift_head: '🙆 第一次抬头',
+  first_roll: '🔄 第一次翻身',
+  first_sit: '🧘 第一次独坐',
+  first_crawl: '🐛 第一次爬行',
+  first_stand: '🧍 第一次站立',
+  first_walk: '🚶 第一次走路',
+  first_tooth: '🦷 第一颗牙',
+  first_word: '🗣️ 第一次说话',
+  other: '⭐ 其他里程碑'
+}
+
 const getGrowthText = (data: any) => {
   const parts = []
+  if (data.milestone) {
+    parts.push(`🎉 ${milestoneLabels[data.milestone] || data.milestone}`)
+  }
   if (data.height) parts.push(`身高 ${data.height}cm`)
   if (data.weight) parts.push(`体重 ${data.weight}kg`)
   if (data.headCircumference) parts.push(`头围 ${data.headCircumference}cm`)

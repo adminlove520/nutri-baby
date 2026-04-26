@@ -321,6 +321,7 @@ model GrowthRecord {
   weight            Decimal?  @db.Decimal(10, 2)
   headCircumference Decimal?  @map("head_circumference") @db.Decimal(10, 2)
   imageUrl          String?   @map("image_url")
+  milestone         String?   // 里程碑类型: first_smile/first_crawl/first_steps/first_tooth/first_word/other
   note              String?
   createdBy         BigInt    @map("created_by")
   createdByName     String?   @map("created_by_name")

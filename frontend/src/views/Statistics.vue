@@ -191,6 +191,20 @@
           <el-form-item label="头围 (cm)">
             <el-input v-model="growthForm.headCircumference" type="number" placeholder="0.0" />
           </el-form-item>
+          <el-form-item label="里程碑 (可选)">
+            <el-select v-model="growthForm.milestone" placeholder="选择宝宝的重要时刻" clearable style="width: 100%">
+              <el-option label="第一次微笑" value="first_smile" />
+              <el-option label="第一次抬头" value="first_lift_head" />
+              <el-option label="第一次翻身" value="first_roll" />
+              <el-option label="第一次独坐" value="first_sit" />
+              <el-option label="第一次爬行" value="first_crawl" />
+              <el-option label="第一次站立" value="first_stand" />
+              <el-option label="第一次走路" value="first_walk" />
+              <el-option label="第一颗牙" value="first_tooth" />
+              <el-option label="第一次说话" value="first_word" />
+              <el-option label="其他里程碑" value="other" />
+            </el-select>
+          </el-form-item>
           <el-form-item label="记录日期">
             <el-date-picker v-model="growthForm.time" type="date" style="width: 100%" />
           </el-form-item>
@@ -252,6 +266,7 @@ const growthForm = reactive({
   height: '',
   weight: '',
   headCircumference: '',
+  milestone: '',
   time: getBeijingNow().toISOString(),
   imageUrl: '',
   note: ''
@@ -299,6 +314,7 @@ const submitGrowth = async () => {
     growthForm.height = ''
     growthForm.weight = ''
     growthForm.headCircumference = ''
+    growthForm.milestone = ''
     growthForm.imageUrl = ''
     growthForm.note = ''
     fetchData()
