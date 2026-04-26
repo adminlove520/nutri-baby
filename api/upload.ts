@@ -2,6 +2,7 @@ import { put } from '@vercel/blob';
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { getUserFromRequest } from '../lib/auth';
 import { GitHubUploader, generateAlbumPath, generateFilename } from '../lib/github';
+import prisma from '../lib/prisma';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') return res.status(405).json({ message: 'Method Not Allowed' });
@@ -10,25 +11,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!user) return res.status(401).json({ message: 'Unauthorized' });
 
     const { filename } = req.query;
-    const { action } = req.query;
 
-    // GitHub 图床上传
-    if (action === 'github') {
+    // 检查 GitHub 配置
+    const config = await prisma.gitHubConfig.findUnique({
+        where: { userId: BigInt(user.userId) }
+    });
+
+    const useGitHub = config?.token && config?.owner && config?.repo;
+
+    // 如果有 GitHub 配置，优先使用 GitHub
+    if (useGitHub) {
         try {
-            // 获取用户的 GitHub 配置
-            const { default: prisma } = await import('../lib/prisma');
-            const config = await prisma.gitHubConfig.findUnique({
-                where: { userId: BigInt(user.userId) }
-            });
-
-            if (!config || !config.token || !config.owner || !config.repo) {
-                return res.status(400).json({
-                    message: 'GitHub 图床未配置，请在设置中配置 GitHub 图床',
-                    code: 'GITHUB_NOT_CONFIGURED'
-                });
-            }
-
-            let { filename: fileName, data, babyId, albumType } = req.body;
+            const { filename: fileName, data, babyId, albumType } = req.body;
 
             if (!fileName || !data) {
                 return res.status(400).json({ message: '缺少文件名或图片数据' });
@@ -54,7 +48,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const date = new Date();
             const baseFolderPath = albumType
                 ? generateAlbumPath(albumType, babyName, date)
-                : `uploads/${babyName}`;
+                : `Photos/${babyName}/其他`;
 
             const finalFilename = generateFilename(fileName, 0);
 
@@ -63,7 +57,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 owner: config.owner,
                 repo: config.repo,
                 branch: config.branch || 'main',
-                basePath: config.basePath || ''  // 用户可自定义前缀，默认空
+                basePath: config.basePath || ''
             });
 
             const result = await uploader.uploadFile(imageBuffer, finalFilename, baseFolderPath);
@@ -87,7 +81,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
     }
 
-    // Vercel Blob 上传（原有逻辑）
+    // 没有 GitHub 配置，使用 Vercel Blob
     if (!filename) return res.status(400).json({ message: 'Filename required' });
 
     try {
