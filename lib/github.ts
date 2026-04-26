@@ -157,12 +157,14 @@ export function generateAlbumPath(albumType: string, babyName: string, date: Dat
     const typeMap: Record<string, string> = {
         'growth': '成长记录',
         'moment': '精彩瞬间',
+        'vaccine': '疫苗接种',
         'default': '其他'
     };
 
     const typeName = typeMap[albumType] || typeMap['default'];
 
-    return `${year}/${year}-${month}-${day}_${babyName}/${typeName}`;
+    // 默认路径格式: Photos/宝宝名称/分类/年月日
+    return `Photos/${babyName}/${typeName}/${year}-${month}-${day}`;
 }
 
 export function generateFilename(originalName: string, index: number): string {

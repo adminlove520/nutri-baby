@@ -63,7 +63,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 owner: config.owner,
                 repo: config.repo,
                 branch: config.branch || 'main',
-                basePath: config.basePath || ''
+                basePath: config.basePath || 'Photos'  // 默认 Photos，可自定义
             });
 
             const result = await uploader.uploadFile(imageBuffer, finalFilename, baseFolderPath);
