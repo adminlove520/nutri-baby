@@ -462,13 +462,61 @@ const handleDrop = async (event: DragEvent) => {
     if (files) await processFiles(Array.from(files))
 }
 
+// 压缩图片（使用 Canvas）
+async function compressImage(file: File, maxWidth = 1920, quality = 0.85): Promise<File> {
+    return new Promise((resolve) => {
+        const img = new Image()
+        img.onload = () => {
+            const canvas = document.createElement('canvas')
+            let { width, height } = img
+            
+            // 如果图片太大，等比缩放
+            if (width > maxWidth) {
+                height = (height * maxWidth) / width
+                width = maxWidth
+            }
+            
+            canvas.width = width
+            canvas.height = height
+            const ctx = canvas.getContext('2d')!
+            ctx.drawImage(img, 0, 0, width, height)
+            
+            canvas.toBlob(
+                (blob) => {
+                    if (blob) {
+                        const compressedFile = new File([blob], file.name, {
+                            type: 'image/jpeg',
+                            lastModified: Date.now()
+                        })
+                        console.log(`压缩: ${file.name} (${(file.size / 1024).toFixed(1)}KB -> ${(compressedFile.size / 1024).toFixed(1)}KB)`)
+                        resolve(compressedFile)
+                    } else {
+                        resolve(file)
+                    }
+                },
+                'image/jpeg',
+                quality
+            )
+        }
+        img.src = URL.createObjectURL(file)
+    })
+}
+
 const processFiles = async (files: File[]) => {
     for (const file of files) {
-        if (file.size > 5 * 1024 * 1024) {
-            ElMessage.warning(`${file.name} 超过 5MB`)
+        // 压缩超过 1MB 的图片
+        let processedFile = file
+        if (file.size > 1024 * 1024) {
+            processedFile = await compressImage(file)
+        }
+        
+        // 检查压缩后的大小（仍超过 5MB 则跳过）
+        if (processedFile.size > 5 * 1024 * 1024) {
+            ElMessage.warning(`${file.name} 压缩后仍超过 5MB，已跳过`)
             continue
         }
-        const url = URL.createObjectURL(file)
+        
+        const url = URL.createObjectURL(processedFile)
         previewUrls.value.push(url)
     }
 }
@@ -489,11 +537,13 @@ const handlePublish = async () => {
     }
 
     publishing.value = true
+    const totalFiles = previewUrls.value.length
     try {
         const uploadedUrls: string[] = []
         for (let i = 0; i < previewUrls.value.length; i++) {
             const url = previewUrls.value[i]
             if (url.startsWith('blob:')) {
+                ElMessage.info(`正在上传 ${i + 1}/${totalFiles} ...`)
                 const blob = await fetch(url).then(r => r.blob())
                 const filename = `${uploadForm.value.babyId}/${Date.now()}-${i}.jpg`
                 const res: any = await client.post(`/upload?filename=${encodeURIComponent(filename)}`, blob, {
@@ -514,7 +564,7 @@ const handlePublish = async () => {
             albumType: uploadForm.value.albumType
         })
 
-        ElMessage.success('发布成功')
+        ElMessage.success(`发布成功！共上传 ${uploadedUrls.length} 张照片 📸`)
         showUpload.value = false
         previewUrls.value = []
         uploadForm.value = { babyId: uploadForm.value.babyId, title: '', description: '', albumType: 'growth' }
