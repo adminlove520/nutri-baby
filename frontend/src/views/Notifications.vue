@@ -27,6 +27,7 @@
         <div class="item-icon-wrap" :class="n.type">
           <el-icon v-if="n.type === 'vaccine'"><FirstAidKit /></el-icon>
           <el-icon v-else-if="n.type === 'system'"><Bell /></el-icon>
+          <el-icon v-else-if="n.type === 'tips'"><Opportunity /></el-icon>
           <el-icon v-else><InfoFilled /></el-icon>
         </div>
         <div class="item-main">

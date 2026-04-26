@@ -62,7 +62,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 take,
                 select: {
                     id: true, babyId: true, time: true,
-                    height: true, weight: true, headCircumference: true, note: true,
+                    height: true, weight: true, headCircumference: true, milestone: true, note: true,
                     createdBy: true, createdByName: true, createdByAvatar: true,
                     creator: { select: { nickname: true, avatarUrl: true } }
                 }
