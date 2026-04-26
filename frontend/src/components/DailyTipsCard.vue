@@ -11,7 +11,7 @@
           </el-tooltip>
           <span class="card-title">育儿锦囊</span>
         </div>
-        <el-button link type="primary" class="more-btn">查看更多</el-button>
+        <el-button link type="primary" class="more-btn" @click="$emit('more-click')">查看更多</el-button>
       </div>
     </template>
     
@@ -66,7 +66,7 @@ defineProps({
   }
 })
 
-defineEmits(['tip-click', 'generate'])
+defineEmits(['tip-click', 'generate', 'more-click'])
 
 const formatDate = (dateStr: string) => {
   const date = new Date(dateStr)

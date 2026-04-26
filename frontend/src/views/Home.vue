@@ -53,7 +53,8 @@
             :loading="tipsLoading" 
             class="mb-32" 
             @tip-click="handleTipClick" 
-            @generate="manualGenerateTip" 
+            @generate="manualGenerateTip"
+            @more-click="goToNotifications"
         />
 
         <!-- Flash Actions -->
@@ -1016,6 +1017,10 @@ const nextVaccineAlert = computed(() => {
 const handleTipClick = (tip: any) => {
     tipDetail.value = tip
     tipDetailVisible.value = true
+}
+
+const goToNotifications = () => {
+    router.push('/notifications')
 }
 
 const tipDetailVisible = ref(false)

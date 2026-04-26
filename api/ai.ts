@@ -141,55 +141,73 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                             ageStr: babyAgeMonth >= 1 ? `${babyAgeMonth}个月` : `${Math.floor((Date.now() - new Date(baby.birthDate).getTime()) / (1000 * 60 * 60 * 24))}天`
                         } : undefined,
                         recentRecords,
-                        query: baby ? `请为${babyAgeStr}提供3条科学、具体的每日育儿建议，每条建议要有标题和详细说明。重要：不要返回JSON或任何结构化数据格式，只返回普通文本格式的建议，每条建议用数字或符号开头。` : '请为新生儿到3岁阶段的宝宝家长提供3条科学的育儿建议。重要：不要返回JSON，只返回普通文本格式的建议。'
+                        query: baby ? `请为${babyAgeStr}提供每日育儿建议。请用以下JSON格式返回（不要加Markdown代码块）：{"title": "建议标题", "content": "建议的详细正文内容", "category": "建议类别"}` : '请为新生儿到3岁阶段的宝宝家长提供育儿建议。请用JSON格式返回：{"title": "建议标题", "content": "建议的详细正文内容", "category": "建议类别"}'
                     });
 
                     const content = aiResponse.insight;
 
-                    // 检查是否返回了JSON格式
-                    const jsonMatch = content.match(/^\s*\{[\s\S]*\}\s*$/);
-                    if (jsonMatch) {
-                        // 如果是JSON格式，尝试解析并生成结构化建议
-                        try {
-                            const jsonData = JSON.parse(content);
-                            // 从JSON数据中提取信息生成建议
-                            const feedingTip = jsonData.feeding ? `喂养提醒：${jsonData.feeding}` : null;
-                            const sleepTip = jsonData.sleep ? `睡眠提醒：${jsonData.sleep}` : null;
-                            const healthTip = jsonData.health ? `健康提醒：${jsonData.health}` : null;
-
-                            const extractedTips = [feedingTip, sleepTip, healthTip].filter((t): t is string => t !== null && t !== undefined);
-                            if (extractedTips.length > 0) {
-                                tips = extractedTips.slice(0, 3).map((text: string, idx: number) => ({
-                                    title: text.substring(0, 25) + (text.length > 25 ? '...' : ''),
-                                    content: text,
-                                    category: 'general'
-                                }));
-                            }
-                        } catch {
-                            // JSON解析失败，忽略
+                    // 检查是否返回了JSON格式（尝试多种匹配方式）
+                    let jsonData: any = null;
+                    
+                    // 方式1：直接解析（如果是纯JSON）
+                    try {
+                        jsonData = JSON.parse(content.trim());
+                    } catch {}
+                    
+                    // 方式2：提取JSON对象（可能在文本中间）
+                    if (!jsonData) {
+                        const jsonMatch = content.match(/\{[\s\S]*\}/);
+                        if (jsonMatch) {
+                            try {
+                                jsonData = JSON.parse(jsonMatch[0]);
+                            } catch {}
                         }
+                    }
+                    
+                    if (jsonData && jsonData.title && (jsonData.content || jsonData.description)) {
+                        tips = [{
+                            title: jsonData.title,
+                            content: jsonData.content || jsonData.description,
+                            category: jsonData.category || 'general'
+                        }];
+                    }
+                    // 如果JSON格式是数组，尝试解析
+                    else if (jsonData && Array.isArray(jsonData) && jsonData.length > 0) {
+                        tips = jsonData.slice(0, 3).map((item: any) => ({
+                            title: item.title || item.name || '育儿建议',
+                            content: item.content || item.description || item.text || JSON.stringify(item),
+                            category: item.category || 'general'
+                        })).filter((t: any) => t.content);
                     }
 
                     // 如果还没解析出tips，尝试Markdown格式解析
                     if (tips.length === 0) {
-                        const tipMatches = content.match(/(?:^|\n)[-*•]?\s*(.+?)(?:\n|$)/g) || [];
-                        const titleMatches = content.match(/(?:^|\n)(?:#+\s*)?(.+?)(?:\n|$)/g) || [];
-
-                        if (tipMatches.length > 0) {
-                            tips = tipMatches.slice(0, 3).map((match, idx) => {
-                                const text = match.replace(/^[-*•]\s*/, '').trim();
+                        // 按段落分割内容（支持多种分隔符）
+                        const paragraphs = content.split(/\n{2,}|\n(?=#{1,6}\s)|(?<=^|\n)(?=#{1,6}\s)/).filter(p => p.trim().length > 0);
+                        
+                        if (paragraphs.length > 0) {
+                            tips = paragraphs.slice(0, 3).map((para, idx) => {
+                                const lines = para.trim().split(/\n/);
+                                let title = lines[0]?.replace(/^#{1,6}\s+|^[-*•\d]+\s*/g, '').trim() || '';
+                                
+                                // 如果第一行太短（看起来像标题），尝试合并下一行
+                                if (title.length < 10 && lines.length > 1) {
+                                    title = lines.slice(0, 2).join(' ').replace(/^#{1,6}\s+/g, '').trim();
+                                }
+                                
+                                // content 是除了第一行之外的所有内容
+                                let bodyLines = lines.slice(1);
+                                // 如果 body 为空，尝试用整个段落（去掉标题部分）
+                                let content = bodyLines.length > 0 ? bodyLines.join('\n').trim() : para.replace(/^#{1,6}\s+/g, '').trim();
+                                
+                                // 如果 content 太短（和 title 一样或空），使用原始段落
+                                if (content.length < title.length) {
+                                    content = para.replace(/^#{1,6}\s*/, '').trim();
+                                }
+                                
                                 return {
-                                    title: text.substring(0, 30),
-                                    content: text,
-                                    category: 'general'
-                                };
-                            });
-                        } else if (titleMatches.length > 0) {
-                            tips = titleMatches.slice(0, 3).map((match, idx) => {
-                                const text = match.replace(/^#+\s*/, '').trim();
-                                return {
-                                    title: text.substring(0, 30),
-                                    content: text,
+                                    title: title.substring(0, 40) || `育儿建议${idx + 1}`,
+                                    content: content,
                                     category: 'general'
                                 };
                             });
@@ -198,13 +216,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
                     // 最终fallback：如果还是没解析出来
                     if (tips.length === 0) {
-                        const paragraphs = content.split(/\n\n+/).filter(p => p.trim().length > 10);
-                        tips = paragraphs.slice(0, 3).map((p, idx) => {
-                            const lines = p.trim().split('\n');
-                            const title = lines[0]?.replace(/^[-*#\s]+/, '').substring(0, 30) || `建议${idx + 1}`;
+                        // 简单按行分割，每行作为一条
+                        const lines = content.split(/\n/).filter(l => l.trim().length > 10);
+                        tips = lines.slice(0, 3).map((line, idx) => {
+                            const cleanLine = line.replace(/^#{1,6}\s+|^[-*•\d]+\s*/g, '').trim();
                             return {
-                                title,
-                                content: p.trim(),
+                                title: cleanLine.substring(0, 40) || `建议${idx + 1}`,
+                                content: cleanLine,
                                 category: 'general'
                             };
                         });

@@ -253,7 +253,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const aiResponse = await provider.analyze({
                 babyProfile: { name: '宝宝', gender: 'unknown', birthDate: new Date(), month: 0 },
                 recentRecords: { feeding: [], sleep: [], growth: [] },
-                query: "请生成一条通用的、科学的、温馨的每日育儿锦囊（只需正文内容，不需要标题）。内容应涵盖营养、睡眠、心理或日常护理中的一个方面。请以JSON格式返回，不要包含Markdown代码块：{ \"title\": \"...\", \"content\": \"...\", \"category\": \"...\" }。注意：content 只包含正文，不要包含标题，标题会单独显示。"
+                query: "请生成一条通用的、科学的、温馨的每日育儿锦囊。请用JSON格式返回：{ \"title\": \"建议标题\", \"content\": \"建议的详细正文内容（Markdown格式）\", \"category\": \"日常护理\" }。content只包含正文，不要包含标题。"
             });
 
             if (!aiResponse || !aiResponse.insight) {
@@ -264,6 +264,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             try {
                 // Try to parse if AI returned JSON as requested
                 let cleanJson = aiResponse.insight.trim();
+                
+                // 移除 Markdown 代码块
                 if (cleanJson.startsWith('```')) {
                     const match = cleanJson.match(/```(?:json)?\n?([\s\S]*?)\n?```/);
                     if (match && match[1]) {
@@ -271,7 +273,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     }
                 }
                 
-                const parsed = JSON.parse(cleanJson);
+                // 尝试提取 JSON 对象
+                let jsonStr = cleanJson;
+                const jsonMatch = cleanJson.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    jsonStr = jsonMatch[0];
+                }
+                
+                const parsed = JSON.parse(jsonStr);
                 if (parsed.title && (parsed.content || parsed.description)) {
                     tipData = {
                         title: parsed.title,
@@ -280,7 +289,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     };
                 }
             } catch (e) {
-                // Fallback to raw insight if not JSON
+                // Fallback to raw insight if not JSON - but try to extract useful content
+                const raw = aiResponse.insight;
+                // 尝试提取第一段作为标题，第二段作为内容
+                const parts = raw.split(/\n{2,}|\n(?=#)/).filter(p => p.trim().length > 0);
+                if (parts.length >= 2) {
+                    tipData.title = parts[0].replace(/^#{1,6}\s+/, '').trim().substring(0, 50);
+                    tipData.content = parts.slice(1).join('\n\n').trim();
+                } else if (parts.length === 1) {
+                    tipData.content = parts[0].replace(/^#{1,6}\s+/, '').trim();
+                }
             }
 
             // Get all users who enabled AI tips
