@@ -27,7 +27,7 @@ export interface SyncLog {
 }
 
 export const getGitHubSettings = async (): Promise<GitHubSettings> => {
-    return client.get('/settings?action=get')
+    return client.get('/settings/github-config')
 }
 
 export const saveGitHubSettings = async (data: {
@@ -43,7 +43,7 @@ export const saveGitHubSettings = async (data: {
     syncVaccine?: boolean
     keepLocal?: boolean
 }): Promise<any> => {
-    return client.post('/settings?action=save', data)
+    return client.post('/settings/github-save', data)
 }
 
 export const testGitHubConnection = async (data: {
@@ -51,7 +51,7 @@ export const testGitHubConnection = async (data: {
     owner: string
     repo: string
 }): Promise<{ valid: boolean; message: string }> => {
-    return client.post('/settings?action=test', data)
+    return client.post('/settings/github-test', data)
 }
 
 export const syncToGitHub = async (): Promise<{
@@ -59,9 +59,9 @@ export const syncToGitHub = async (): Promise<{
     syncedCount: number
     errors?: string[]
 }> => {
-    return client.post('/settings?action=sync')
+    return client.post('/settings/github-sync')
 }
 
 export const getSyncLogs = async (): Promise<SyncLog[]> => {
-    return client.get('/settings?action=logs')
+    return client.get('/settings/github-logs')
 }
