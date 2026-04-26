@@ -27,6 +27,7 @@
     { "source": "/api/tips/daily", "destination": "/api/ai?action=tips" },
     { "source": "/api/share", "destination": "/api/album?action=share" },
     { "source": "/api/ai/analyze", "destination": "/api/ai" },
+    { "source": "/api/upload/github", "destination": "/api/upload?action=github" },
     { "source": "/api/cron/reminders", "destination": "/api/cron" },
     { "source": "/api/record/:type", "destination": "/api/record?type=:type" },
     { "source": "/api/feeding-records", "destination": "/api/record?type=feeding" },
