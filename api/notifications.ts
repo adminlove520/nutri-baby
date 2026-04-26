@@ -15,11 +15,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const uId = BigInt(user.userId);
 
     if (req.method === 'GET') {
+        const { type, limit = '50' } = req.query;
+        const where: any = { userId: uId };
+        if (type && type !== 'all') {
+            where.type = type as string;
+        }
         try {
             const notifications = await prisma.notification.findMany({
-                where: { userId: uId },
+                where,
                 orderBy: { createdAt: 'desc' },
-                take: 50
+                take: parseInt(limit as string)
             });
             return res.status(200).json(safeJSON(notifications));
         } catch (error) {

@@ -12,13 +12,27 @@
        </div>
     </div>
 
-    <div v-if="notifications.length === 0" class="empty-notif">
-       <el-empty :image-size="120" description="暂时没有新的消息哦" />
+    <!-- Filter Tabs -->
+    <div class="filter-tabs">
+      <span 
+        v-for="tab in filterTabs" 
+        :key="tab.value"
+        :class="{ active: currentFilter === tab.value }"
+        class="filter-tab"
+        @click="changeFilter(tab.value)"
+      >
+        {{ tab.label }}
+        <span v-if="tab.count > 0" class="tab-count">{{ tab.count }}</span>
+      </span>
+    </div>
+
+    <div v-if="filteredNotifications.length === 0" class="empty-notif">
+       <el-empty :image-size="120" :description="currentFilter === 'all' ? '暂时没有新的消息哦' : '该分类暂无消息'" />
     </div>
 
     <div class="notification-list" v-else>
       <div 
-        v-for="n in notifications" 
+        v-for="n in filteredNotifications" 
         :key="n.id" 
         class="notification-item" 
         :class="{ unread: !n.isRead }"
@@ -74,6 +88,40 @@ const loading = ref(false)
 const notifications = ref<any[]>([])
 const detailVisible = ref(false)
 const currentNotif = ref<any>(null)
+const currentFilter = ref('all')
+
+// Filter tabs configuration
+const filterTabs = ref([
+    { label: '全部', value: 'all', count: 0 },
+    { label: '💉 疫苗', value: 'vaccine', count: 0 },
+    { label: '✨ 锦囊', value: 'tips', count: 0 },
+    { label: '🤖 AI', value: 'ai_analysis', count: 0 },
+    { label: '🔔 系统', value: 'system', count: 0 }
+])
+
+// Computed filtered notifications
+const filteredNotifications = ref<any[]>([])
+
+const updateFilteredNotifications = () => {
+    if (currentFilter.value === 'all') {
+        filteredNotifications.value = notifications.value
+    } else {
+        filteredNotifications.value = notifications.value.filter(n => n.type === currentFilter.value)
+    }
+    // Update tab counts
+    filterTabs.value.forEach(tab => {
+        if (tab.value === 'all') {
+            tab.count = 0 // Total will be shown if needed
+        } else {
+            tab.count = notifications.value.filter(n => n.type === tab.value && !n.isRead).length
+        }
+    })
+}
+
+const changeFilter = (filter: string) => {
+    currentFilter.value = filter
+    updateFilteredNotifications()
+}
 
 // 渲染 Markdown 为 HTML
 const renderMarkdown = (text: string): string => {
@@ -90,6 +138,7 @@ const fetchNotifications = async () => {
     try {
         const res: any = await client.get('/notifications')
         notifications.value = res
+        updateFilteredNotifications()
     } catch (e) {
         // Error handled globally
     } finally {
@@ -165,7 +214,7 @@ onMounted(fetchNotifications)
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 
   .header-left {
     display: flex;
@@ -176,6 +225,51 @@ onMounted(fetchNotifications)
   }
 
   .read-all-btn { font-weight: 700; font-size: 14px; }
+}
+
+.filter-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  
+  &::-webkit-scrollbar { display: none; }
+}
+
+.filter-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  background: var(--el-fill-color-light);
+  color: var(--el-text-color-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+  
+  &:hover {
+    background: var(--el-fill-color);
+  }
+  
+  &.active {
+    background: var(--el-color-primary-light-9);
+    color: var(--el-color-primary);
+    border-color: var(--el-color-primary-light-7);
+  }
+  
+  .tab-count {
+    background: var(--el-color-danger);
+    color: white;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-weight: 700;
+  }
 }
 
 .notification-list {
