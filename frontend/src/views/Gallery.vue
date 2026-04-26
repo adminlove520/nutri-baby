@@ -42,7 +42,7 @@
         <div v-for="item in records" :key="item.id" class="feed-card" :class="{ 'with-title': !!item.title }">
           <div class="feed-header">
             <div class="user-info">
-              <el-avatar :size="48" :src="item.user?.avatar || 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'" class="user-avatar" />
+              <el-avatar :size="48" :src="item.user?.avatarUrl || 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'" class="user-avatar" />
               <div class="header-info">
                 <div class="user-row">
                   <span class="user-name">{{ item.user?.nickname || '匿名用户' }}</span>
