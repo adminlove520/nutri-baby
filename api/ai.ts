@@ -3,6 +3,7 @@ import prisma from '../lib/prisma';
 import { getUserFromRequest, hasBabyPermission } from '../lib/auth';
 import { AIFactory } from '../lib/ai/factory';
 import { success, error } from '../lib/utils';
+import { sendAIAnalysisNotification } from '../lib/notification';
 
 // 测试各 AI 服务延迟的工具函数
 async function testAIDelay(provider: string, apiKey: string, baseUrl?: string): Promise<{ provider: string; latency: number; status: string }> {
@@ -256,14 +257,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                             }
                         });
                         
-                        await prisma.notification.create({
-                            data: {
-                                userId,
-                                title: `✨ ${tip.title}`,
-                                content: tip.description,
-                                type: 'tips'
-                            }
-                        });
+                        // 使用统一通知模块发送站内信+邮件
+                        await sendDailyTipNotification(userId, tip.title, tip.description, tip.type);
                         
                         // 如果有 babyId，也创建 AIAnalysis 记录
                         if (babyIdBigInt) {
@@ -402,16 +397,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 }
             });
 
-            // 创建站内通知
+            // 创建站内通知 + 邮件推送
             const babyName = babyProfile?.name ? `（${babyProfile.name}）` : '';
-            await prisma.notification.create({
-                data: {
-                    userId: BigInt(user.userId),
-                    title: `✨ AI 健康分析${babyName}`,
-                    content: normalized.insight.substring(0, 500) + (normalized.insight.length > 500 ? '...' : ''),
-                    type: 'ai_analysis'
-                }
-            });
+            await sendAIAnalysisNotification(
+                BigInt(user.userId),
+                `AI 健康分析${babyName}`,
+                normalized.insight.substring(0, 500) + (normalized.insight.length > 500 ? '...' : ''),
+                babyProfile?.name
+            );
 
             return success(res, {
                 id: analysis.id.toString(),

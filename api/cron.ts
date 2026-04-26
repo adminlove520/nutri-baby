@@ -5,6 +5,7 @@ import { getUserFromRequest } from '../lib/auth';
 import { AIFactory } from '../lib/ai/factory';
 import { success, error, getBeijingDate, toBeijingTime } from '../lib/utils';
 import { GitHubUploader, generateAlbumPath, generateFilename } from '../lib/github';
+import { sendNotification, sendDailyTipNotification, sendVaccineReminderNotification } from '../lib/notification';
 
 async function syncUserAlbumsToGitHub(userId: number): Promise<{ success: boolean; syncedCount: number; errors: string[] }> {
     const config = await prisma.gitHubConfig.findUnique({ where: { userId } });
@@ -287,20 +288,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 where: { deletedAt: null }
             });
 
-            const notificationsData = users
-                .filter(u => {
-                    const settings = (u.settings as any) || {};
-                    return settings.aiTipsNotify !== false; // Default true
-                })
-                .map(u => ({
-                    userId: u.id,
-                    title: `✨ ${tipData.title}`,
-                    content: tipData.content,
-                    type: 'tips'
-                }));
-
-            if (notificationsData.length > 0) {
-                await prisma.notification.createMany({ data: notificationsData });
+            // 使用新的统一通知模块发送站内信+邮件
+            let notificationCount = 0;
+            for (const user of users) {
+                const settings = (user.settings as any) || {};
+                if (settings.aiTipsNotify !== false) {
+                    const result = await sendDailyTipNotification(
+                        user.id,
+                        tipData.title,
+                        tipData.content,
+                        tipData.category
+                    );
+                    if (result.inApp) notificationCount++;
+                }
             }
 
             // Also add to ExpertTip table for display on Home page
@@ -315,37 +315,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 }
             });
 
-            // 发送邮件推送
-            for (const user of users) {
-                const settings = (user.settings as any) || {};
-                if (user.email && settings.aiTipsNotify !== false) {
-                    try {
-                        await sendEmail(user.email, `✨ ${tipData.title}`, `
-                            <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #f9fbfc;">
-                                <div style="background-color: #fff; padding: 40px; border-radius: 24px; box-shadow: 0 10px 30px rgba(255,142,148,0.1); border: 1px solid #ffeaec;">
-                                    <div style="text-align: center; margin-bottom: 30px;">
-                                        <h1 style="color: #ff8e94; margin: 0; font-size: 28px; font-weight: 900;">Nutri-Baby</h1>
-                                        <p style="color: #a4b0be; font-size: 14px; margin-top: 5px;">每日育儿锦囊</p>
-                                    </div>
-                                    <div style="border-left: 4px solid #ff8e94; padding-left: 20px; margin-bottom: 30px;">
-                                        <h2 style="color: #2c3e50; margin: 0 0 10px; font-size: 20px;">${tipData.title}</h2>
-                                        <p style="color: #57606f; font-size: 16px; line-height: 1.6; margin: 0;">${tipData.content}</p>
-                                    </div>
-                                    <div style="text-align: center; border-top: 1px solid #f1f2f6; padding-top: 30px;">
-                                        <p style="font-size: 12px; color: #a4b0be; margin: 0;">此邮件由系统自动发送，请勿直接回复。</p>
-                                        <p style="font-size: 12px; color: #a4b0be; margin: 5px 0 0;">© 2026 Nutri-Baby Project. All rights reserved.</p>
-                                    </div>
-                                </div>
-                            </div>
-                        `);
-                    } catch (emailErr) {
-                        console.error('Failed to send tip email to', user.email, emailErr);
-                    }
-                }
-            }
-            
             if (req.query.triggerAiTip) {
-                return success(res, { message: 'AI Tips pushed', count: notificationsData.length, tip: tipData });
+                return success(res, { message: 'AI Tips pushed', count: notificationCount, tip: tipData });
             }
         } catch (err: any) {
             console.error('AI Tip Generation Error:', err);
@@ -399,59 +370,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const primaryUser = v.baby.user;
             const primarySettings = (primaryUser.settings as any) || {};
 
-            const title = `疫苗接种提醒: ${v.vaccineName}`;
-            const content = `您的宝宝 ${v.baby.name} 预计将在 ${v.scheduledDate.toISOString().split('T')[0]} 接种 ${v.vaccineName}。请提前做好准备。`;
-            
-            // 1. Create Internal Notification for primary user
+            // 使用统一通知模块发送站内信+邮件
             if (primarySettings.vaccineNotify !== false) {
-                notifications.push({
-                    userId: v.baby.userId,
-                    title,
-                    content,
-                    type: 'vaccine'
-                });
+                await sendVaccineReminderNotification(
+                    v.baby.userId,
+                    v.baby.name,
+                    v.vaccineName,
+                    v.scheduledDate.toISOString().split('T')[0]
+                );
             }
 
             // 2. Create for collaborators
             for (const c of v.baby.collaborators) {
                 const cSettings = (c.user.settings as any) || {};
                 if (cSettings.vaccineNotify !== false) {
-                    notifications.push({
-                        userId: c.userId,
-                        title,
-                        content,
-                        type: 'vaccine'
-                    });
-                }
-            }
-
-            // 3. Real Email Push for primary user
-            if (primaryUser.email && primarySettings.emailNotify !== false) {
-                try {
-                    await sendEmail(primaryUser.email, title, `
-                        <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #f9fbfc;">
-                            <div style="background-color: #fff; padding: 40px; border-radius: 24px; box-shadow: 0 10px 30px rgba(255,142,148,0.1); border: 1px solid #ffeaec;">
-                                <div style="text-align: center; margin-bottom: 30px;">
-                                    <h1 style="color: #ff8e94; margin: 0; font-size: 28px; font-weight: 900;">Nutri-Baby</h1>
-                                    <p style="color: #a4b0be; font-size: 14px; margin-top: 5px;">宝宝接种贴心提醒</p>
-                                </div>
-                                <div style="border-left: 4px solid #ff8e94; padding-left: 20px; margin-bottom: 30px;">
-                                    <h2 style="color: #2c3e50; margin: 0 0 10px; font-size: 20px;">${title}</h2>
-                                    <p style="color: #57606f; font-size: 16px; line-height: 1.6; margin: 0;">您的宝宝 <b>${v.baby.name}</b> 预计将在 <b>${v.scheduledDate.toISOString().split('T')[0]}</b> 进行 <b>${v.vaccineName}</b> 接种。请记得提前查看接种证，做好宝宝护理准备。</p>
-                                </div>
-                                <div style="background-color: #fff9f9; padding: 20px; border-radius: 16px; margin-bottom: 30px;">
-                                    <p style="margin: 0; font-size: 14px; color: #ff8e94; font-weight: 700;">💡 温馨提示：</p>
-                                    <p style="margin: 8px 0 0; font-size: 13px; color: #57606f; line-height: 1.5;">接种当天请确保宝宝身体状况良好，无发热、严重腹泻等症状。接种后请在现场留观 30 分钟。</p>
-                                </div>
-                                <div style="text-align: center; border-top: 1px solid #f1f2f6; padding-top: 30px;">
-                                    <p style="font-size: 12px; color: #a4b0be; margin: 0;">此邮件由系统自动发送，请勿直接回复。</p>
-                                    <p style="font-size: 12px; color: #a4b0be; margin: 5px 0 0;">© 2026 Nutri-Baby Project. All rights reserved.</p>
-                                </div>
-                            </div>
-                        </div>
-                    `);
-                } catch (err) {
-                    console.error('Failed to send email to', primaryUser.email, err);
+                    await sendVaccineReminderNotification(
+                        c.userId,
+                        v.baby.name,
+                        v.vaccineName,
+                        v.scheduledDate.toISOString().split('T')[0]
+                    );
                 }
             }
 
@@ -459,12 +397,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             await prisma.babyVaccineSchedule.update({
                 where: { id: v.id },
                 data: { reminderSent: true, reminderSentAt: new Date() }
-            });
-        }
-
-        if (notifications.length > 0) {
-            await prisma.notification.createMany({
-                data: notifications
             });
         }
 
