@@ -214,37 +214,102 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     basePath: config.basePath
                 });
 
+                const BLOB_HOSTS = ['vercel-blob.com', 'blob.vercel.com', 'public-user-images-'];
+                const needsSync = (url: string): boolean => {
+                    if (!url) return false;
+                    const lower = url.toLowerCase();
+                    const isBlob = BLOB_HOSTS.some(h => lower.includes(h));
+                    const isGitHub = lower.includes('raw.githubusercontent.com') || lower.includes('github.com');
+                    return isBlob && !isGitHub;
+                };
+
+                let synced = 0;
+
+                // 1. 同步宝宝头像
+                const babies = await prisma.baby.findMany({ where: { userId: uId } });
+                for (const baby of babies) {
+                    if (baby.avatarUrl && needsSync(baby.avatarUrl)) {
+                        try {
+                            const folderPath = `Photos/${baby.name}/头像`;
+                            await uploader.createFolder(folderPath);
+                            const filename = `avatar_${baby.id}.jpg`;
+                            const resp = await fetch(baby.avatarUrl);
+                            if (resp.ok) {
+                                const buf = await resp.arrayBuffer();
+                                const result = await uploader.uploadFile(Buffer.from(buf), filename, folderPath);
+                                if (result.success) {
+                                    await prisma.baby.update({
+                                        where: { id: baby.id },
+                                        data: { avatarUrl: result.url }
+                                    });
+                                    synced++;
+                                }
+                            }
+                        } catch (e) { console.error('Baby avatar sync error:', e); }
+                    }
+                }
+
+                // 2. 同步相册图片
                 const albums = await prisma.babyAlbum.findMany({
                     where: { userId: uId, deletedAt: null },
                     include: { baby: { select: { name: true } } },
                     orderBy: { createdAt: 'desc' },
-                    take: 20
+                    take: 50
                 });
 
-                let synced = 0;
                 for (const album of albums) {
                     try {
                         const urls = album.url.split(',');
                         const babyName = album.baby?.name || '未知宝宝';
                         const date = new Date(album.createdAt);
                         const folderPath = generateAlbumPath(album.albumType, babyName, date);
-
                         await uploader.createFolder(folderPath);
 
                         for (let i = 0; i < urls.length; i++) {
                             const url = urls[i].trim();
-                            if (!url || !url.startsWith('http')) continue;
+                            if (!url || !url.startsWith('http') || !needsSync(url)) continue;
 
-                            const filename = generateFilename(`${album.id}_${i}.jpg`, i);
-                            const imageResponse = await fetch(url);
-                            if (!imageResponse.ok) continue;
-
-                            const buffer = await imageResponse.arrayBuffer();
-                            const result = await uploader.uploadFile(Buffer.from(buffer), filename, folderPath);
-                            if (result.success) synced++;
+                            try {
+                                const filename = `photo_${album.id}_${i}.jpg`;
+                                const resp = await fetch(url);
+                                if (resp.ok) {
+                                    const buf = await resp.arrayBuffer();
+                                    const result = await uploader.uploadFile(Buffer.from(buf), filename, folderPath);
+                                    if (result.success) synced++;
+                                }
+                            } catch (e) { console.error('Album sync error:', e); }
                         }
-                    } catch (e) {
-                        console.error('Sync album error:', e);
+                    } catch (e) { console.error('Album sync error:', e); }
+                }
+
+                // 3. 同步成长记录图片
+                const growthRecords = await prisma.growthRecord.findMany({
+                    where: { baby: { userId: uId }, imageUrl: { not: null } },
+                    include: { baby: { select: { name: true } } },
+                    take: 50
+                });
+
+                for (const record of growthRecords) {
+                    if (record.imageUrl && needsSync(record.imageUrl)) {
+                        try {
+                            const babyName = record.baby?.name || '未知宝宝';
+                            const date = new Date(record.recordedAt || record.createdAt);
+                            const folderPath = generateAlbumPath('growth', babyName, date);
+                            await uploader.createFolder(folderPath);
+                            const filename = `growth_${record.id}.jpg`;
+                            const resp = await fetch(record.imageUrl);
+                            if (resp.ok) {
+                                const buf = await resp.arrayBuffer();
+                                const result = await uploader.uploadFile(Buffer.from(buf), filename, folderPath);
+                                if (result.success) {
+                                    await prisma.growthRecord.update({
+                                        where: { id: record.id },
+                                        data: { imageUrl: result.url }
+                                    });
+                                    synced++;
+                                }
+                            }
+                        } catch (e) { console.error('Growth sync error:', e); }
                     }
                 }
 

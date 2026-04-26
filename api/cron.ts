@@ -26,22 +26,118 @@ async function syncUserAlbumsToGitHub(userId: number): Promise<{ success: boolea
         return { success: false, syncedCount: 0, errors: ['GitHub 连接失败: ' + connectionTest.message] };
     }
 
+    const BLOB_HOSTS = ['vercel-blob.com', 'blob.vercel.com', 'public-user-images-'];
+    
+    // 判断URL是否需要同步（是Vercel Blob且不在GitHub上）
+    const needsSync = (url: string): boolean => {
+        if (!url) return false;
+        const lower = url.toLowerCase();
+        // 如果包含Vercel Blob域名，且不是GitHub链接 -> 需要同步
+        const isBlob = BLOB_HOSTS.some(h => lower.includes(h));
+        const isGitHub = lower.includes('raw.githubusercontent.com') || lower.includes('github.com');
+        return isBlob && !isGitHub;
+    };
+
+    // 通用同步单个图片
+    const syncImage = async (url: string, folderPath: string, filename: string): Promise<boolean> => {
+        try {
+            const filePath = `${folderPath}/${filename}`;
+            
+            // 跳过空URL或非HTTP链接
+            if (!url || !url.startsWith('http')) return false;
+            
+            // 如果不是Blob链接，跳过（已经在其他地方了）
+            if (!needsSync(url)) return false;
+            
+            // 检查是否已经存在于GitHub
+            if (await uploader.checkFileExists(filePath)) {
+                console.log(`[Sync] Skip (already exists): ${filePath}`);
+                return false;
+            }
+
+            // 下载图片
+            const response = await fetch(url);
+            if (!response.ok) {
+                console.error(`[Sync] Failed to fetch: ${url}`);
+                return false;
+            }
+
+            const buffer = await response.arrayBuffer();
+            const result = await uploader.uploadFile(Buffer.from(buffer), filename, folderPath);
+            
+            if (result.success) {
+                console.log(`[Sync] Success: ${url} -> ${result.url}`);
+                return true;
+            }
+            return false;
+        } catch (e: any) {
+            console.error(`[Sync] Error syncing ${url}:`, e.message);
+            return false;
+        }
+    };
+
+    let syncedCount = 0;
+    const errors: string[] = [];
+
+    // 1. 同步宝宝头像
+    try {
+        const babies = await prisma.baby.findMany({ where: { userId } });
+        for (const baby of babies) {
+            if (baby.avatarUrl && needsSync(baby.avatarUrl)) {
+                const filename = `avatar_${baby.id}.jpg`;
+                const folderPath = `Photos/${baby.name}/头像`;
+                await uploader.createFolder(folderPath);
+                if (await syncImage(baby.avatarUrl, folderPath, filename)) {
+                    await prisma.baby.update({
+                        where: { id: baby.id },
+                        data: { avatarUrl: `${config.owner}/${config.repo}/main/${folderPath}/${filename}` }
+                    });
+                    syncedCount++;
+                }
+            }
+        }
+    } catch (e: any) {
+        errors.push(`同步宝宝头像失败: ${e.message}`);
+    }
+
+    // 2. 同步用户头像
+    try {
+        const user = await prisma.user.findUnique({ where: { id: BigInt(userId) } });
+        if (user?.avatarUrl && needsSync(user.avatarUrl)) {
+            const filename = `avatar_${userId}.jpg`;
+            const folderPath = `Photos/用户头像`;
+            await uploader.createFolder(folderPath);
+            if (await syncImage(user.avatarUrl, folderPath, filename)) {
+                await prisma.user.update({
+                    where: { id: BigInt(userId) },
+                    data: { avatarUrl: `${config.owner}/${config.repo}/main/${folderPath}/${filename}` }
+                });
+                syncedCount++;
+            }
+        }
+    } catch (e: any) {
+        errors.push(`同步用户头像失败: ${e.message}`);
+    }
+
+    // 3. 同步相册图片
+    const albumTypeFilter = config.syncVaccine
+        ? undefined
+        : {
+            in: config.syncGrowth
+                ? (config.syncMoment ? ['growth', 'moment'] : ['growth'])
+                : (config.syncMoment ? ['moment'] : [])
+        };
+
     const albums = await prisma.babyAlbum.findMany({
         where: {
             userId,
             deletedAt: null,
-            albumType: config.syncVaccine
-                ? undefined
-                : { in: config.syncGrowth ? (config.syncMoment ? ['growth', 'moment'] : ['growth']) : (config.syncMoment ? ['moment'] : []) }
+            albumType: albumTypeFilter
         },
         include: { baby: { select: { name: true } } },
         orderBy: { createdAt: 'desc' },
         take: 100
     });
-
-    let syncedCount = 0;
-    const errors: string[] = [];
-    const syncedPaths = new Set<string>();
 
     for (const album of albums) {
         try {
@@ -54,46 +150,44 @@ async function syncUserAlbumsToGitHub(userId: number): Promise<{ success: boolea
 
             for (let i = 0; i < urls.length; i++) {
                 const url = urls[i].trim();
-                const normalizedUrl = url.toLowerCase();
-
-                if (!url || normalizedUrl.startsWith('data:') ||
-                    normalizedUrl.includes('localhost') ||
-                    normalizedUrl.includes('127.0.0.1') ||
-                    !normalizedUrl.startsWith('http')) {
-                    continue;
-                }
-
-                const filename = generateFilename(`${album.id}_${i}.jpg`, i);
-                const filePath = `${baseFolderPath}/${filename}`;
-
-                if (syncedPaths.has(filePath)) continue;
-
-                const exists = await uploader.checkFileExists(filePath);
-                if (exists) {
-                    syncedPaths.add(filePath);
+                if (await syncImage(url, baseFolderPath, `photo_${i}.jpg`)) {
                     syncedCount++;
-                    continue;
-                }
-
-                const imageResponse = await fetch(url);
-                if (!imageResponse.ok) {
-                    errors.push(`图片获取失败: ${url}`);
-                    continue;
-                }
-
-                const imageBuffer = await imageResponse.arrayBuffer();
-                const result = await uploader.uploadFile(Buffer.from(imageBuffer), filename, baseFolderPath);
-
-                if (result.success) {
-                    syncedPaths.add(filePath);
-                    syncedCount++;
-                } else {
-                    errors.push(result.error || '上传失败');
                 }
             }
         } catch (e: any) {
             errors.push(`相册 ${album.id} 同步错误: ${e.message}`);
         }
+    }
+
+    // 4. 同步成长记录图片
+    try {
+        const growthRecords = await prisma.growthRecord.findMany({
+            where: {
+                baby: { userId },
+                imageUrl: { not: null }
+            },
+            include: { baby: { select: { name: true } } },
+            take: 50
+        });
+
+        for (const record of growthRecords) {
+            if (record.imageUrl && needsSync(record.imageUrl)) {
+                const babyName = record.baby?.name || '未知宝宝';
+                const date = new Date(record.recordedAt || record.createdAt);
+                const folderPath = generateAlbumPath('growth', babyName, date);
+                await uploader.createFolder(folderPath);
+                
+                if (await syncImage(record.imageUrl, folderPath, `growth_${record.id}.jpg`)) {
+                    await prisma.growthRecord.update({
+                        where: { id: record.id },
+                        data: { imageUrl: `${config.owner}/${config.repo}/main/${folderPath}/growth_${record.id}.jpg` }
+                    });
+                    syncedCount++;
+                }
+            }
+        }
+    } catch (e: any) {
+        errors.push(`同步成长记录失败: ${e.message}`);
     }
 
     await prisma.gitHubConfig.update({
@@ -105,7 +199,7 @@ async function syncUserAlbumsToGitHub(userId: number): Promise<{ success: boolea
         data: {
             userId,
             status: errors.length > 0 ? 'partial' : 'success',
-            message: `定时同步完成，成功 ${syncedCount} 个文件`,
+            message: `同步完成，成功 ${syncedCount} 个文件`,
             syncedCount,
             errorLog: errors.length > 0 ? errors.join('\n') : null
         }
