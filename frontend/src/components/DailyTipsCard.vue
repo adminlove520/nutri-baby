@@ -16,7 +16,7 @@
     </template>
     
     <div v-if="tips.length === 0" class="empty-state">
-       <el-empty :image-size="60" description="医生还没写锦囊哦" />
+       <el-empty :image-size="60" description="暂无育儿锦囊，点击右上角💡生成" />
     </div>
 
     <div v-else class="tips-container">
