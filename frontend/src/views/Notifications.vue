@@ -221,6 +221,7 @@ onMounted(fetchNotifications)
     &.vaccine { background: #fef0f0; color: #ff8e94; }
     &.system { background: #f0f9eb; color: #88d498; }
     &.tips { background: #ecf5ff; color: #409eff; }
+    &.ai_analysis, &.ai { background: #fdf4ff; color: #b37feb; }
   }
 
   .item-main {
