@@ -28,6 +28,7 @@
           <el-icon v-if="n.type === 'vaccine'"><FirstAidKit /></el-icon>
           <el-icon v-else-if="n.type === 'system'"><Bell /></el-icon>
           <el-icon v-else-if="n.type === 'tips'"><Opportunity /></el-icon>
+          <el-icon v-else-if="n.type === 'ai_analysis' || n.type === 'ai'"><ChatDotRound /></el-icon>
           <el-icon v-else><InfoFilled /></el-icon>
         </div>
         <div class="item-main">
@@ -35,7 +36,7 @@
                <span class="item-title">{{ n.title }}</span>
                <span class="item-date">{{ formatRelativeDate(n.createdAt) }}</span>
             </div>
-            <div class="item-desc line-clamp">{{ n.content }}</div>
+            <div class="item-desc line-clamp" v-html="renderMarkdown(n.content || '')"></div>
             <div v-if="!n.isRead" class="unread-badge">未读</div>
         </div>
       </div>
@@ -48,9 +49,7 @@
              <el-tag size="small" :type="getNotifTagType(currentNotif?.type)">{{ getNotifTypeName(currentNotif?.type) }}</el-tag>
              <span class="detail-time">{{ currentNotif ? formatRelativeDate(currentNotif.createdAt) : '' }}</span>
           </div>
-          <div class="detail-body">
-             {{ currentNotif?.content }}
-          </div>
+          <div class="detail-body" v-html="renderMarkdown(currentNotif?.content || '')"></div>
        </div>
        <template #footer>
           <div class="dialog-footer">
@@ -64,16 +63,27 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ArrowLeft, FirstAidKit, Bell, InfoFilled } from '@element-plus/icons-vue'
+import { ArrowLeft, FirstAidKit, Bell, InfoFilled, Opportunity, ChatDotRound } from '@element-plus/icons-vue'
 import client from '@/api/client'
 import { ElMessage } from 'element-plus'
 import { formatRelative } from '@/utils/date'
+import { marked } from 'marked'
 
 const router = useRouter()
 const loading = ref(false)
 const notifications = ref<any[]>([])
 const detailVisible = ref(false)
 const currentNotif = ref<any>(null)
+
+// 渲染 Markdown 为 HTML
+const renderMarkdown = (text: string): string => {
+    if (!text) return ''
+    try {
+        return marked.parse(text) as string
+    } catch {
+        return text.replace(/\n/g, '<br/>')
+    }
+}
 
 const fetchNotifications = async () => {
     loading.value = true

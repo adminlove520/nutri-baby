@@ -258,9 +258,7 @@
               <div class="detail-tag" v-if="tipDetail?.type">
                  <el-tag effect="plain" round size="small">{{ tipDetail?.type }}</el-tag>
               </div>
-              <div class="detail-body">
-                 {{ tipDetail?.description }}
-              </div>
+              <div class="detail-body" v-html="renderMarkdown(tipDetail?.description || '')"></div>
            </div>
            <template #footer>
               <div class="dialog-footer">
@@ -517,6 +515,7 @@ import DailyTipsCard from '@/components/DailyTipsCard.vue'
 import AIInsightCard from './components/AIInsightCard.vue'
 import ChatModal from '@/components/chat/ChatModal.vue'
 import { formatRelative } from '@/utils/date'
+import { marked } from 'marked'
 import { useBabyStore } from '@/stores/baby'
 import { useUserStore } from '@/stores/user'
 import { getStatistics } from '@/api/statistics'
@@ -792,6 +791,16 @@ const babyAgeText = computed(() => {
     if (diffMonth < 12) return `${diffMonth}个月`
     return `${Math.floor(diffMonth / 12)}岁${diffMonth % 12}个月`
 })
+
+// 渲染 Markdown 为 HTML
+const renderMarkdown = (text: string): string => {
+    if (!text) return ''
+    try {
+        return marked.parse(text) as string
+    } catch {
+        return text.replace(/\n/g, '<br/>')
+    }
+}
 
 const userInfo = computed(() => userStore.userInfo)
 const greeting = computed(() => {

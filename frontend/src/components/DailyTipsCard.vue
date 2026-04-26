@@ -40,6 +40,7 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
 import { Opportunity, ArrowRight, Refresh } from '@element-plus/icons-vue'
+import { marked } from 'marked'
 
 interface DailyTip {
   id: string
@@ -70,6 +71,21 @@ defineEmits(['tip-click', 'generate'])
 const formatDate = (dateStr: string) => {
   const date = new Date(dateStr)
   return `${date.getMonth() + 1}/${date.getDate()}`
+}
+
+// 渲染 Markdown 为纯文本（用于列表显示，截取摘要）
+const renderMarkdownPreview = (text: string, maxLen: number = 100): string => {
+  if (!text) return ''
+  try {
+    // 移除 markdown 格式获取纯文本
+    const plain = text
+      .replace(/[#*_`~]/g, '')
+      .replace(/\n+/g, ' ')
+      .trim()
+    return plain.length > maxLen ? plain.substring(0, maxLen) + '...' : plain
+  } catch {
+    return text.substring(0, maxLen)
+  }
 }
 </script>
 
