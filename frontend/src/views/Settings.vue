@@ -258,8 +258,8 @@
              <el-input v-model="githubForm.branch" placeholder="main" />
           </el-form-item>
           <el-form-item label="存储路径 (可选)">
-             <el-input v-model="githubForm.basePath" placeholder="Photos/NutriBaby" />
-             <div class="form-tip">留空则存储在根目录，路径格式：文件夹1/文件夹2</div>
+             <el-input v-model="githubForm.basePath" placeholder="留空使用默认路径 Photos/宝宝名/分类/年月日" />
+             <div class="form-tip">填写自定义前缀，如 MyAlbum，不填则默认 Photos</div>
           </el-form-item>
        </el-form>
        <template #footer>
