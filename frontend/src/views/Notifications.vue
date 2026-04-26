@@ -159,6 +159,11 @@ const markAsRead = async (n: any) => {
     try {
         await client.post('/notifications', { ids: [n.id] })
         n.isRead = true
+        // Also update in filteredNotifications
+        const filtered = filteredNotifications.value.find(f => f.id === n.id)
+        if (filtered) filtered.isRead = true
+        // Update tab counts
+        updateFilteredNotifications()
     } catch (e) {}
 }
 
@@ -168,6 +173,8 @@ const markAllAsRead = async () => {
     try {
         await client.post('/notifications', { ids: unreadIds })
         notifications.value.forEach(n => n.isRead = true)
+        filteredNotifications.value.forEach(n => n.isRead = true)
+        updateFilteredNotifications()
         ElMessage.success('已标记全部消息为已读')
     } catch (e) {}
 }
