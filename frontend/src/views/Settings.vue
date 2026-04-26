@@ -79,6 +79,36 @@
         </el-card>
       </div>
 
+      <!-- 手动推送 -->
+      <div class="setting-group">
+        <h3 class="group-title">📨 手动推送</h3>
+        <el-card class="setting-card" shadow="never">
+          <div class="setting-item">
+            <div class="item-info">
+              <span class="label">💉 疫苗提醒</span>
+              <span class="desc">立即发送明天的疫苗提醒</span>
+            </div>
+            <el-button type="primary" size="small" :loading="triggeringVaccine" @click="handleTriggerVaccine" plain round>发送</el-button>
+          </div>
+          <div class="divider"></div>
+          <div class="setting-item">
+            <div class="item-info">
+              <span class="label">✨ 每日育儿锦囊</span>
+              <span class="desc">AI 生成并发送每日育儿建议</span>
+            </div>
+            <el-button type="primary" size="small" :loading="triggeringTip" @click="handleTriggerTip" plain round>发送</el-button>
+          </div>
+          <div class="divider"></div>
+          <div class="setting-item">
+            <div class="item-info">
+              <span class="label">🤖 AI 健康分析</span>
+              <span class="desc">基于最近7天数据分析并发送报告</span>
+            </div>
+            <el-button type="primary" size="small" :loading="triggeringAI" @click="handleTriggerAI" plain round>发送</el-button>
+          </div>
+        </el-card>
+      </div>
+
       <div class="setting-group">
         <h3 class="group-title">🔗 GitHub 图床同步</h3>
         <el-card class="setting-card" shadow="never">
@@ -328,6 +358,9 @@ const githubForm = reactive({
 const testingConnection = ref(false)
 const savingGithub = ref(false)
 const syncingGithub = ref(false)
+const triggeringVaccine = ref(false)
+const triggeringTip = ref(false)
+const triggeringAI = ref(false)
 const showSyncLogs = ref(false)
 const syncLogs = ref<Array<{
     id: number
@@ -428,6 +461,53 @@ const handleDeleteAccount = () => {
             router.push('/login')
         } catch (e) {}
     }).catch(() => {})
+}
+
+// 手动触发通知
+const handleTriggerVaccine = async () => {
+    triggeringVaccine.value = true
+    try {
+        const res: any = await client.post('/user', { action: 'trigger-notify', type: 'vaccine' })
+        if (res.results?.vaccine?.sent) {
+            ElMessage.success(`疫苗提醒已发送（${res.results.vaccine.count}条）`)
+        } else {
+            ElMessage.info(res.results?.vaccine?.message || '明天没有待接种的疫苗')
+        }
+    } catch (e: any) {
+        ElMessage.error(e?.message || '发送失败')
+    } finally {
+        triggeringVaccine.value = false
+    }
+}
+
+const handleTriggerTip = async () => {
+    triggeringTip.value = true
+    try {
+        const res: any = await client.post('/user', { action: 'trigger-notify', type: 'aiTip' })
+        if (res.results?.aiTip?.sent) {
+            ElMessage.success(`育儿锦囊「${res.results.aiTip.title}」已发送，请查收站内信和邮箱`)
+        }
+    } catch (e: any) {
+        ElMessage.error(e?.message || '发送失败')
+    } finally {
+        triggeringTip.value = false
+    }
+}
+
+const handleTriggerAI = async () => {
+    triggeringAI.value = true
+    try {
+        const res: any = await client.post('/user', { action: 'trigger-notify', type: 'aiAnalysis' })
+        if (res.results?.aiAnalysis?.sent) {
+            ElMessage.success(`AI 健康分析已发送给 ${res.results.aiAnalysis.baby}，请查收站内信和邮箱`)
+        } else {
+            ElMessage.warning(res.results?.aiAnalysis?.message || '请先添加宝宝信息')
+        }
+    } catch (e: any) {
+        ElMessage.error(e?.message || '发送失败')
+    } finally {
+        triggeringAI.value = false
+    }
 }
 
 const loadGithubSettings = async () => {

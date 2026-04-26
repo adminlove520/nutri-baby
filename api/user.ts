@@ -3,8 +3,9 @@ import prisma from '../lib/prisma';
 import { getUserFromRequest } from '../lib/auth';
 import { success, error } from '../lib/utils';
 import { sendEmail } from '../lib/mail';
-import { sendNotification } from '../lib/notification';
+import { sendNotification, sendDailyTipNotification, sendVaccineReminderNotification, sendAIAnalysisNotification } from '../lib/notification';
 import { GitHubUploader, generateAlbumPath, generateFilename } from '../lib/github';
+import { AIFactory } from '../lib/ai/factory';
 import * as bcrypt from 'bcryptjs';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -110,53 +111,178 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
         }
 
-        // Trigger notify endpoint (manual trigger for cron tasks)
+        // ========== Manual Trigger Notifications ==========
         if (req.method === 'POST' && action === 'trigger-notify') {
-            const { type } = req.body;
+            const { type, babyId } = req.body;
             const userData = await prisma.user.findUnique({ where: { id: uId } });
             if (!userData) return error(res, 'User not found', 404);
             
             const settings = (userData.settings as any) || {};
+            const results: any = {};
             
             try {
+                // 1. 手动触发疫苗提醒
                 if (type === 'vaccine' || type === 'all') {
-                    // 发送疫苗提醒测试通知
-                    await sendNotification({
-                        userId: uId,
-                        title: '💉 疫苗提醒测试',
-                        content: '这是一条测试消息。如果您收到此消息，说明疫苗提醒功能正常。',
-                        type: 'vaccine'
+                    // 获取用户的宝宝
+                    const babies = await prisma.baby.findMany({
+                        where: { OR: [{ userId: uId }, { collaborators: { some: { userId: uId } }] },
+                        include: { collaborators: true }
                     });
+                    
+                    for (const baby of babies) {
+                        // 获取明天要接种的疫苗
+                        const tomorrow = new Date();
+                        tomorrow.setDate(tomorrow.getDate() + 1);
+                        tomorrow.setHours(0, 0, 0, 0);
+                        const tomorrowEnd = new Date(tomorrow);
+                        tomorrowEnd.setHours(23, 59, 59, 999);
+                        
+                        const tomorrowVaccines = await prisma.babyVaccineSchedule.findMany({
+                            where: {
+                                babyId: baby.id,
+                                scheduledDate: { gte: tomorrow, lte: tomorrowEnd },
+                                vaccinationStatus: 'pending'
+                            }
+                        });
+                        
+                        if (tomorrowVaccines.length > 0) {
+                            for (const v of tomorrowVaccines) {
+                                await sendVaccineReminderNotification(
+                                    uId,
+                                    baby.name,
+                                    v.vaccineName,
+                                    v.scheduledDate.toISOString().split('T')[0]
+                                );
+                            }
+                            results.vaccine = { sent: true, count: tomorrowVaccines.length, vaccines: tomorrowVaccines.map(v => v.vaccineName) };
+                        } else {
+                            results.vaccine = { sent: false, message: '明天没有待接种的疫苗' };
+                        }
+                    }
                 }
                 
+                // 2. 手动触发每日锦囊
                 if (type === 'aiTip' || type === 'all') {
-                    // 发送锦囊测试通知
-                    await sendNotification({
-                        userId: uId,
-                        title: '✨ 育儿锦囊测试',
-                        content: '这是一条测试消息。如果您收到此消息，说明育儿锦囊功能正常。',
-                        type: 'tips'
+                    // 获取宝宝信息
+                    let baby: any = null;
+                    if (babyId) {
+                        baby = await prisma.baby.findUnique({ where: { id: BigInt(babyId) } });
+                    } else {
+                        const babies = await prisma.baby.findMany({
+                            where: { OR: [{ userId: uId }, { collaborators: { some: { userId: uId } }] },
+                            orderBy: { createdAt: 'asc' },
+                            take: 1
+                        });
+                        baby = babies[0] || null;
+                    }
+                    
+                    const babyAgeMonth = baby 
+                        ? Math.floor((new Date().getTime() - new Date(baby.birthDate).getTime()) / (30 * 24 * 60 * 60 * 1000)
+                        : 0;
+                    
+                    // 调用 AI 生成锦囊
+                    const provider = AIFactory.createProvider();
+                    const aiResponse = await provider.analyze({
+                        babyProfile: baby ? {
+                            name: baby.name,
+                            birthDate: baby.birthDate,
+                            gender: baby.gender,
+                            month: babyAgeMonth,
+                            ageStr: babyAgeMonth >= 1 ? `${babyAgeMonth}个月` : '新生儿'
+                        } : undefined,
+                        recentRecords: { feeding: [], sleep: [], growth: [] },
+                        query: '请为' + (baby ? `${babyAgeMonth}个月大的${baby.name}` : '新生儿') + '的家长提供一条科学、实用的每日育儿建议。请用JSON格式返回：{"title": "建议标题（15字内）", "content": "建议详细正文（100-200字，纯文本）", "category": "建议类别"}'
                     });
+                    
+                    let tipData = { title: '每日育儿锦囊', content: aiResponse.insight || '暂无建议', category: '日常护理' };
+                    
+                    // 尝试解析 JSON
+                    try {
+                        let cleanJson = aiResponse.insight.trim();
+                        if (cleanJson.startsWith('```')) {
+                            const match = cleanJson.match(/```(?:json)?\n?([\s\S]*?)\n?```/);
+                            if (match && match[1]) cleanJson = match[1].trim();
+                        }
+                        const jsonMatch = cleanJson.match(/\{[\s\S]*\}/);
+                        if (jsonMatch) {
+                            const parsed = JSON.parse(jsonMatch[0]);
+                            if (parsed.title && (parsed.content || parsed.description)) {
+                                tipData = {
+                                    title: parsed.title,
+                                    content: parsed.content || parsed.description,
+                                    category: parsed.category || '日常护理'
+                                };
+                            }
+                        }
+                    } catch {}
+                    
+                    // 发送通知
+                    await sendDailyTipNotification(uId, tipData.title, tipData.content, tipData.category);
+                    results.aiTip = { sent: true, title: tipData.title };
                 }
                 
-                if (type === 'email' || type === 'all') {
-                    // 发送邮件测试
-                    if (userData.email) {
-                        await sendEmail(
-                            userData.email,
-                            'Nutri-Baby 邮件推送测试',
-                            `<div style="font-family: sans-serif; padding: 20px; color: #333;">
-                                <h2 style="color: #ff8e94;">🎉 邮件推送测试成功！</h2>
-                                <p>如果您收到此邮件，说明 Nutri-Baby 的邮件推送功能正常工作。</p>
-                                <p>收到时间：${new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}</p>
-                            </div>`
+                // 3. 手动触发 AI 健康分析
+                if (type === 'aiAnalysis' || type === 'all') {
+                    // 获取宝宝信息
+                    let baby: any = null;
+                    if (babyId) {
+                        baby = await prisma.baby.findUnique({ where: { id: BigInt(babyId) } });
+                    } else {
+                        const babies = await prisma.baby.findMany({
+                            where: { OR: [{ userId: uId }, { collaborators: { some: { userId: uId } }] },
+                            orderBy: { createdAt: 'asc' },
+                            take: 1
+                        });
+                        baby = babies[0] || null;
+                    }
+                    
+                    if (!baby) {
+                        results.aiAnalysis = { sent: false, message: '请先添加宝宝信息' };
+                    } else {
+                        const babyAgeMonth = Math.floor((new Date().getTime() - new Date(baby.birthDate).getTime()) / (30 * 24 * 60 * 60 * 1000));
+                        
+                        // 获取最近7天的数据
+                        const sevenDaysAgo = new Date();
+                        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+                        
+                        const [feeding, sleep, growth] = await Promise.all([
+                            prisma.feedingRecord.findMany({ where: { babyId: baby.id, time: { gte: sevenDaysAgo } }, take: 20 }),
+                            prisma.sleepRecord.findMany({ where: { babyId: baby.id, startTime: { gte: sevenDaysAgo } }, take: 20 }),
+                            prisma.growthRecord.findMany({ where: { babyId: baby.id, time: { gte: sevenDaysAgo } }, take: 5 })
+                        ]);
+                        
+                        // 调用 AI 分析
+                        const provider = AIFactory.createProvider();
+                        const aiResponse = await provider.analyze({
+                            babyProfile: {
+                                name: baby.name,
+                                birthDate: baby.birthDate,
+                                gender: baby.gender,
+                                month: babyAgeMonth,
+                                ageStr: babyAgeMonth >= 1 ? `${babyAgeMonth}个月` : '新生儿'
+                            },
+                            recentRecords: {
+                                feeding: feeding.map(f => ({ type: f.feedingType, amount: f.amount, time: f.time })),
+                                sleep: sleep.map(s => ({ duration: s.duration, startTime: s.startTime })),
+                                growth: growth.map(g => ({ height: g.height, weight: g.weight }))
+                            },
+                            query: '请分析宝宝最近的喂养、睡眠和生长发育情况，给出专业的健康建议和注意事项。'
+                        });
+                        
+                        // 发送 AI 分析通知
+                        await sendAIAnalysisNotification(
+                            uId,
+                            'AI 健康分析报告',
+                            aiResponse.insight || '暂无分析结果',
+                            baby.name
                         );
+                        results.aiAnalysis = { sent: true, baby: baby.name };
                     }
                 }
                 
                 return success(res, { 
-                    message: '测试通知已发送，请检查站内信和邮箱',
-                    type: type || 'all',
+                    message: '通知已发送，请检查站内信和邮箱',
+                    results,
                     email: userData.email || '未配置邮箱'
                 });
             } catch (err: any) {
