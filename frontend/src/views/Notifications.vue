@@ -122,6 +122,8 @@ const getNotifTagType = (type: string) => {
         case 'vaccine': return 'danger'
         case 'system': return 'success'
         case 'tips': return 'primary'
+        case 'ai_analysis': return 'warning'
+        case 'ai': return 'warning'
         default: return 'info'
     }
 }
@@ -131,6 +133,8 @@ const getNotifTypeName = (type: string) => {
         case 'vaccine': return '疫苗接种'
         case 'system': return '系统通知'
         case 'tips': return '育儿锦囊'
+        case 'ai_analysis': return 'AI 分析'
+        case 'ai': return 'AI 助手'
         default: return '其他消息'
     }
 }

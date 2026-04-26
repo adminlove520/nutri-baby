@@ -314,6 +314,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     source: 'AI Daily'
                 }
             });
+
+            // 发送邮件推送
+            for (const user of users) {
+                const settings = (user.settings as any) || {};
+                if (user.email && settings.aiTipsNotify !== false) {
+                    try {
+                        await sendEmail(user.email, `✨ ${tipData.title}`, `
+                            <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #f9fbfc;">
+                                <div style="background-color: #fff; padding: 40px; border-radius: 24px; box-shadow: 0 10px 30px rgba(255,142,148,0.1); border: 1px solid #ffeaec;">
+                                    <div style="text-align: center; margin-bottom: 30px;">
+                                        <h1 style="color: #ff8e94; margin: 0; font-size: 28px; font-weight: 900;">Nutri-Baby</h1>
+                                        <p style="color: #a4b0be; font-size: 14px; margin-top: 5px;">每日育儿锦囊</p>
+                                    </div>
+                                    <div style="border-left: 4px solid #ff8e94; padding-left: 20px; margin-bottom: 30px;">
+                                        <h2 style="color: #2c3e50; margin: 0 0 10px; font-size: 20px;">${tipData.title}</h2>
+                                        <p style="color: #57606f; font-size: 16px; line-height: 1.6; margin: 0;">${tipData.content}</p>
+                                    </div>
+                                    <div style="text-align: center; border-top: 1px solid #f1f2f6; padding-top: 30px;">
+                                        <p style="font-size: 12px; color: #a4b0be; margin: 0;">此邮件由系统自动发送，请勿直接回复。</p>
+                                        <p style="font-size: 12px; color: #a4b0be; margin: 5px 0 0;">© 2026 Nutri-Baby Project. All rights reserved.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `);
+                    } catch (emailErr) {
+                        console.error('Failed to send tip email to', user.email, emailErr);
+                    }
+                }
+            }
             
             if (req.query.triggerAiTip) {
                 return success(res, { message: 'AI Tips pushed', count: notificationsData.length, tip: tipData });

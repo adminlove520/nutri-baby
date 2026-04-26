@@ -840,14 +840,17 @@ const manualGenerateTip = async () => {
         const babyId = babyStore.currentBaby?.id
         const tipsRes: any = await client.get('/tips', {
             params: { babyId: babyId?.toString(), forceAI: 'true' },
-            timeout: 30000
+            timeout: 60000
         })
         todayTips.value = Array.isArray(tipsRes) ? tipsRes : []
         ElMessage.success('已为您生成最新的育儿锦囊')
     } catch (e: any) {
         const msg = e?.message || e?.response?.data?.message || ''
+        const detail = e?.response?.data?.error || ''
         if (msg.includes('timeout') || msg.includes('超时')) {
             ElMessage.warning('AI 服务响应超时，请稍后重试')
+        } else if (detail) {
+            ElMessage.error(`生成失败: ${detail}`)
         } else {
             ElMessage.warning('生成失败，请稍后再试')
         }
