@@ -65,7 +65,7 @@
            <!-- 第一排：核心记录 -->
            <div class="q-btn-wrap" @click="showBottleDialog = true">
               <div class="q-btn b1"><el-icon><Mug /></el-icon></div>
-              <span>瓶喂</span>
+              <span>奶粉</span>
            </div>
            <div class="q-btn-wrap" @click="showBreastDialog = true">
               <div class="q-btn b1" style="background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%);"><el-icon><Pouring /></el-icon></div>
@@ -420,17 +420,18 @@
        </template>
     </el-dialog>
 
-    <!-- 瓶喂 Dialog -->
-    <el-dialog v-model="showBottleDialog" title="瓶喂记录" width="320px" class="rounded-dialog">
+    <!-- 奶粉 Dialog -->
+    <el-dialog v-model="showBottleDialog" title="奶粉记录" width="360px" class="rounded-dialog">
       <div class="quick-input-grid">
         <div class="input-label">选择奶量 (ml)</div>
-        <div class="quick-select-row">
-          <el-radio-group v-model="bottleAmount" size="large">
-            <el-radio-button v-for="opt in [60,90,120,150,180,210,240]" :key="opt" :value="opt">{{ opt }}</el-radio-button>
+        <div class="quick-select-grid">
+          <el-radio-group v-model="bottleAmount" size="default">
+            <el-radio-button v-for="opt in [10,15,20,25,30,40,50,60,70,80,90,100,120,150,180,210,240]" :key="opt" :value="opt">{{ opt }}</el-radio-button>
           </el-radio-group>
         </div>
-        <div class="custom-input-row">
-          <el-input-number v-model="bottleAmount" :min="10" :max="500" size="large" />
+        <div class="custom-input-row" style="margin-top:16px">
+          <span class="input-label">自定义:</span>
+          <el-input-number v-model="bottleAmount" :min="5" :max="500" size="large" />
           <span class="unit">ml</span>
         </div>
       </div>
@@ -560,11 +561,11 @@ const quickFeeding = async () => {
     try {
         await client.post('/record/feeding', {
             babyId: babyStore.currentBaby.id,
-            feedingType: 'bottle',
+            feedingType: 'formula',
             amount: bottleAmount.value,
             time: getBeijingNow().toISOString()
         })
-        ElMessage.success(`闪电记录：瓶喂 ${bottleAmount.value}ml`)
+        ElMessage.success(`闪电记录：奶粉 ${bottleAmount.value}ml`)
         showBottleDialog.value = false
         fetchData()
     } catch (e) {}
