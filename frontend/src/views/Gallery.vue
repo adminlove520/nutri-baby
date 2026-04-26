@@ -538,18 +538,48 @@ const handlePublish = async () => {
 
     publishing.value = true
     const totalFiles = previewUrls.value.length
+    
+    // 检查是否配置了 GitHub 图床
+    let useGitHub = false
+    try {
+        const ghSettings = await fetch('/api/settings').then(r => r.json()).catch(() => null)
+        if (ghSettings?.githubConfig?.configured) {
+            useGitHub = true
+        }
+    } catch (e) {
+        useGitHub = false
+    }
+    
     try {
         const uploadedUrls: string[] = []
         for (let i = 0; i < previewUrls.value.length; i++) {
             const url = previewUrls.value[i]
             if (url.startsWith('blob:')) {
-                ElMessage.info(`正在上传 ${i + 1}/${totalFiles} ...`)
-                const blob = await fetch(url).then(r => r.blob())
-                const filename = `${uploadForm.value.babyId}/${Date.now()}-${i}.jpg`
-                const res: any = await client.post(`/upload?filename=${encodeURIComponent(filename)}`, blob, {
-                    headers: { 'Content-Type': blob.type }
-                })
-                uploadedUrls.push(res.url)
+                ElMessage.info(`正在上传 ${i + 1}/${totalFiles} ${useGitHub ? '(GitHub图床)' : ''}...`)
+                
+                if (useGitHub) {
+                    // 使用 GitHub 图床上传
+                    const blob = await fetch(url).then(r => r.blob())
+                    const arrayBuffer = await blob.arrayBuffer()
+                    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
+                    const filename = `photo_${Date.now()}_${i}.jpg`
+                    
+                    const res: any = await client.post('/upload/github', {
+                        filename,
+                        data: base64,
+                        babyId: uploadForm.value.babyId,
+                        albumType: uploadForm.value.albumType
+                    })
+                    uploadedUrls.push(res.url)
+                } else {
+                    // 使用 Vercel Blob 上传
+                    const blob = await fetch(url).then(r => r.blob())
+                    const filename = `${uploadForm.value.babyId}/${Date.now()}-${i}.jpg`
+                    const res: any = await client.post(`/upload?filename=${encodeURIComponent(filename)}`, blob, {
+                        headers: { 'Content-Type': blob.type }
+                    })
+                    uploadedUrls.push(res.url)
+                }
             } else {
                 uploadedUrls.push(url)
             }
