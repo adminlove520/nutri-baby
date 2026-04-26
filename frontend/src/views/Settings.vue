@@ -15,11 +15,11 @@
               <span class="desc">打开应用时首选显示的宝宝</span>
             </div>
             <el-select v-model="settings.defaultBabyId" placeholder="选择宝宝" size="default" style="width: 120px" @change="saveSettings">
-              <el-option 
-                v-for="baby in babyStore.babyList" 
-                :key="baby.id" 
-                :label="baby.nickname || baby.name" 
-                :value="baby.id" 
+              <el-option
+                v-for="baby in babyStore.babyList"
+                :key="baby.id"
+                :label="baby.nickname || baby.name"
+                :value="baby.id"
               />
             </el-select>
           </div>
@@ -48,40 +48,22 @@
           <div class="setting-item">
             <div class="item-info">
               <span class="label">📧 邮件推送</span>
-              <span class="desc">接收邮件通知</span>
+              <span class="desc">接收邮件通知提醒</span>
             </div>
             <el-switch v-model="settings.emailNotify" @change="saveSettings" />
           </div>
-        </el-card>
-      </div>
-
-      <div class="setting-group">
-        <h3 class="group-title">💉 疫苗接种提醒</h3>
-        <el-card class="setting-card" shadow="never">
+          <div class="divider"></div>
           <div class="setting-item">
             <div class="item-info">
-              <span class="label">🔔 提醒开关</span>
-              <span class="desc">接种前 1 天自动发送</span>
+              <span class="label">💉 疫苗提醒</span>
+              <span class="desc">接种前 1 天自动通知</span>
             </div>
             <el-switch v-model="settings.vaccineNotify" @change="saveSettings" />
           </div>
           <div class="divider"></div>
           <div class="setting-item">
             <div class="item-info">
-              <span class="label">🧪 发送测试</span>
-              <span class="desc">模拟一次疫苗提醒</span>
-            </div>
-            <el-button type="primary" size="small" :loading="testingVaccine" @click="handleTestVaccine" plain round>测试</el-button>
-          </div>
-        </el-card>
-      </div>
-
-      <div class="setting-group">
-        <h3 class="group-title">✨ AI 每日育儿锦囊</h3>
-        <el-card class="setting-card" shadow="never">
-          <div class="setting-item">
-            <div class="item-info">
-              <span class="label">🔔 提醒开关</span>
+              <span class="label">✨ 每日育儿锦囊</span>
               <span class="desc">每天自动生成科学育儿建议</span>
             </div>
             <el-switch v-model="settings.aiTipsNotify" @change="saveSettings" />
@@ -89,52 +71,10 @@
           <div class="divider"></div>
           <div class="setting-item">
             <div class="item-info">
-              <span class="label">🧪 发送测试</span>
-              <span class="desc">模拟一次锦囊推送</span>
-            </div>
-            <el-button type="primary" size="small" :loading="testingTips" @click="handleTestTips" plain round>测试</el-button>
-          </div>
-        </el-card>
-      </div>
-
-      <div class="setting-group">
-        <h3 class="group-title">🤖 AI 健康分析</h3>
-        <el-card class="setting-card" shadow="never">
-          <div class="setting-item">
-            <div class="item-info">
-              <span class="label">🔔 分析通知</span>
-              <span class="desc">AI 分析完成后发送通知</span>
+              <span class="label">🤖 AI 健康分析</span>
+              <span class="desc">分析完成后发送通知</span>
             </div>
             <el-switch v-model="settings.aiAnalysisNotify" @change="saveSettings" />
-          </div>
-        </el-card>
-      </div>
-
-      <div class="setting-group">
-        <h3 class="group-title">📧 邮件通道测试</h3>
-        <el-card class="setting-card" shadow="never">
-          <div class="setting-item">
-            <div class="item-info">
-              <span class="label">📮 当前邮箱</span>
-              <span class="desc">{{ userStore.userInfo.email || '未配置邮箱' }}</span>
-            </div>
-          </div>
-          <div class="divider"></div>
-          <div class="setting-item">
-            <div class="item-info">
-              <span class="label">📤 发送测试</span>
-              <span class="desc">验证邮件通道是否畅通</span>
-            </div>
-            <el-button type="primary" size="small" :loading="testingEmail" @click="handleTestEmail" plain round>发送测试</el-button>
-          </div>
-          <div class="divider"></div>
-          <div class="setting-item">
-            <div class="item-info">
-              <span class="label">📊 推送状态</span>
-              <span class="desc" :class="{ 'text-success': lastEmailTime, 'text-muted': !lastEmailTime }">
-                {{ lastEmailTime ? `上次发送: ${lastEmailTime}` : '暂无发送记录' }}
-              </span>
-            </div>
           </div>
         </el-card>
       </div>
@@ -237,7 +177,7 @@
           <span class="separator">·</span>
           <span class="license-text" @click="showLicense = true">开源协议</span>
         </div>
-        <p>已通过 SSL 加密传输，确保您的数据隐私安全</p>
+        <p>已通过 SSL 加密传输,确保您的数据隐私安全</p>
       </div>
     </div>
 
@@ -269,7 +209,7 @@
           </el-form-item>
           <el-form-item label="存储路径 (可选)">
              <el-input v-model="githubForm.basePath" placeholder="留空使用默认路径 Photos/宝宝名/分类/年月日" />
-             <div class="form-tip">填写自定义前缀，如 MyAlbum，不填则默认 Photos</div>
+             <div class="form-tip">填写自定义前缀,如 MyAlbum,不填则默认 Photos</div>
           </el-form-item>
        </el-form>
        <template #footer>
@@ -305,7 +245,7 @@
              <el-input v-model="passwordForm.oldPassword" type="password" show-password placeholder="请输入当前密码" />
           </el-form-item>
           <el-form-item label="新密码">
-             <el-input v-model="passwordForm.newPassword" type="password" show-password placeholder="请输入新密码（不少于6位）" />
+             <el-input v-model="passwordForm.newPassword" type="password" show-password placeholder="请输入新密码(不少于6位)" />
           </el-form-item>
           <el-form-item label="确认新密码">
              <el-input v-model="passwordForm.confirmPassword" type="password" show-password placeholder="请再次输入新密码" />
@@ -356,7 +296,6 @@ const settings = reactive({
 
 const passwordDialogVisible = ref(false)
 const changingPassword = ref(false)
-const syncing = ref(false)
 const passwordForm = reactive({
     oldPassword: '',
     newPassword: '',
@@ -389,11 +328,6 @@ const githubForm = reactive({
 const testingConnection = ref(false)
 const savingGithub = ref(false)
 const syncingGithub = ref(false)
-const testingEmail = ref(false)
-const testingVaccine = ref(false)
-const testingTips = ref(false)
-const lastEmailTime = ref('')
-const emailTestResult = ref<'success' | 'error' | ''>('')
 const showSyncLogs = ref(false)
 const syncLogs = ref<Array<{
     id: number
@@ -408,7 +342,7 @@ onMounted(async () => {
     // Load current settings from user info
     const userSettings = userStore.userInfo.settings || {}
     Object.assign(settings, userSettings)
-    
+
     // Apply theme on mount
     if (settings.darkMode) {
         document.documentElement.classList.add('dark')
@@ -455,14 +389,14 @@ const changePassword = async () => {
     if (!passwordForm.oldPassword) return ElMessage.warning('请输入当前密码')
     if (passwordForm.newPassword.length < 6) return ElMessage.warning('新密码不能少于6位')
     if (passwordForm.newPassword !== passwordForm.confirmPassword) return ElMessage.warning('两次输入的新密码不一致')
-    
+
     changingPassword.value = true
     try {
         await client.post('/user/change-password', {
             oldPassword: passwordForm.oldPassword,
             newPassword: passwordForm.newPassword
         })
-        ElMessage.success('密码修改成功，请重新登录')
+        ElMessage.success('密码修改成功,请重新登录')
         passwordDialogVisible.value = false
         userStore.logout()
         router.push('/login')
@@ -473,65 +407,9 @@ const changePassword = async () => {
     }
 }
 
-const handleManualSync = async () => {
-    syncing.value = true
-    try {
-        await client.post('/user/trigger-notify', { type: 'all' })
-        ElMessage.success('定时任务执行完成')
-        lastEmailTime.value = new Date().toLocaleString('zh-CN')
-    } catch (e: any) {
-        ElMessage.error(e?.message || '执行失败')
-    } finally {
-        syncing.value = false
-    }
-}
-
-const handleTestEmail = async () => {
-    if (!userStore.userInfo.email) {
-        ElMessage.warning('请先在个人中心设置邮箱')
-        return
-    }
-    testingEmail.value = true
-    try {
-        await client.post('/user/test-email')
-        lastEmailTime.value = new Date().toLocaleString('zh-CN')
-        emailTestResult.value = 'success'
-        ElMessage.success('测试邮件已发送，请查收')
-    } catch (e: any) {
-        emailTestResult.value = 'error'
-        ElMessage.error(e?.message || '发送失败，请检查邮箱是否正确')
-    } finally {
-        testingEmail.value = false
-    }
-}
-
-const handleTestVaccine = async () => {
-    testingVaccine.value = true
-    try {
-        await client.post('/user/trigger-notify', { type: 'vaccine' })
-        ElMessage.success('疫苗提醒测试已发送，请检查站内信和邮箱')
-    } catch (e: any) {
-        ElMessage.error(e?.message || '发送失败')
-    } finally {
-        testingVaccine.value = false
-    }
-}
-
-const handleTestTips = async () => {
-    testingTips.value = true
-    try {
-        await client.post('/user/trigger-notify', { type: 'aiTip' })
-        ElMessage.success('锦囊测试已发送，请检查站内信和邮箱')
-    } catch (e: any) {
-        ElMessage.error(e?.message || '发送失败')
-    } finally {
-        testingTips.value = false
-    }
-}
-
 const handleDeleteAccount = () => {
     ElMessageBox.prompt(
-        '账号注销后，所有数据将永久删除。请输入您的登录密码以确认身份：',
+        '账号注销后,所有数据将永久删除。请输入您的登录密码以确认身份:',
         '极端危险操作',
         {
             confirmButtonText: '确认注销',
@@ -600,7 +478,7 @@ const testConnection = async () => {
             branch: githubForm.branch
         })
         if (res.valid) {
-            ElMessage.success('连接成功！')
+            ElMessage.success('连接成功!')
         } else {
             ElMessage.error(res.message || '连接失败')
         }
@@ -645,7 +523,7 @@ const handleSyncNow = async () => {
     try {
         const res = await syncToGitHub()
         if (res.syncedCount !== undefined) {
-            ElMessage.success(`同步完成！已同步 ${res.syncedCount} 个文件`)
+            ElMessage.success(`同步完成!已同步 ${res.syncedCount} 个文件`)
             githubSettings.lastSyncAt = new Date().toLocaleString('zh-CN')
         } else {
             ElMessage.success(res.message || '同步完成')
@@ -715,12 +593,12 @@ watch(showSyncLogs, (val) => {
     justify-content: space-between;
     align-items: center;
     padding: 20px;
-    
+
     &.clickable {
         cursor: pointer;
         &:active { background: #f9fbfc; }
     }
-    
+
     .item-info {
         display: flex;
         flex-direction: column;
@@ -728,7 +606,7 @@ watch(showSyncLogs, (val) => {
         .label { font-size: 15px; font-weight: 700; color: var(--el-text-color-primary); &.danger { color: var(--el-color-danger); } }
         .desc { font-size: 12px; color: var(--el-text-color-secondary); }
     }
-    
+
     .el-icon { color: var(--el-border-color); font-size: 16px; &.danger { color: var(--el-color-danger); opacity: 0.5; } }
 }
 
