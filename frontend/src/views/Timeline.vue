@@ -258,8 +258,10 @@ const getHealthText = (data: any) => {
     return `体温 ${data.value}°C`
   } else if (data.type === 'ILLNESS') {
     return `症状: ${data.symptoms || '未填写'}`
+  } else if (data.type === 'ACTIVITY') {
+    return data.symptoms || '活动记录'
   } else {
-    return `${data.type}: ${data.value}`
+    return data.symptoms || data.value || '健康记录'
   }
 }
 

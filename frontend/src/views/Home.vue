@@ -63,17 +63,13 @@
         </div>
         <div class="quick-action-grid mb-24" v-if="babyStore.currentBaby">
            <!-- 第一排：核心记录 -->
-           <div class="q-btn-wrap" @click="quickFeeding(120)">
+           <div class="q-btn-wrap" @click="showBottleDialog = true">
               <div class="q-btn b1"><el-icon><Mug /></el-icon></div>
-              <span>120ml奶</span>
+              <span>瓶喂</span>
            </div>
-           <div class="q-btn-wrap" @click="quickBreastfeeding('left')">
+           <div class="q-btn-wrap" @click="showBreastDialog = true">
               <div class="q-btn b1" style="background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%);"><el-icon><Pouring /></el-icon></div>
-              <span>左亲喂</span>
-           </div>
-           <div class="q-btn-wrap" @click="quickBreastfeeding('right')">
-              <div class="q-btn b1" style="background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);"><el-icon><Pouring /></el-icon></div>
-              <span>右亲喂</span>
+              <span>亲喂</span>
            </div>
            <div class="q-btn-wrap" @click="quickSleepToggle">
               <div class="q-btn b2">
@@ -81,6 +77,10 @@
                 <el-icon v-else class="is-loading"><Refresh /></el-icon>
               </div>
               <span>{{ isSleeping ? `已睡 ${sleepDuration}` : '睡了' }}</span>
+           </div>
+           <div class="q-btn-wrap" @click="showBurpDialog = true">
+              <div class="q-btn b1" style="background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);"><el-icon><Sunny /></el-icon></div>
+              <span>拍嗝</span>
            </div>
 
            <!-- 第二排：日常护理 -->
@@ -419,6 +419,83 @@
           </div>
        </template>
     </el-dialog>
+
+    <!-- 瓶喂 Dialog -->
+    <el-dialog v-model="showBottleDialog" title="瓶喂记录" width="320px" class="rounded-dialog">
+      <div class="quick-input-grid">
+        <div class="input-label">选择奶量 (ml)</div>
+        <div class="quick-select-row">
+          <el-radio-group v-model="bottleAmount" size="large">
+            <el-radio-button v-for="opt in [60,90,120,150,180,210,240]" :key="opt" :value="opt">{{ opt }}</el-radio-button>
+          </el-radio-group>
+        </div>
+        <div class="custom-input-row">
+          <el-input-number v-model="bottleAmount" :min="10" :max="500" size="large" />
+          <span class="unit">ml</span>
+        </div>
+      </div>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="showBottleDialog = false" round>取消</el-button>
+          <el-button type="primary" @click="quickFeeding" :loading="submitting" round>确认</el-button>
+        </div>
+      </template>
+    </el-dialog>
+
+    <!-- 亲喂 Dialog -->
+    <el-dialog v-model="showBreastDialog" title="亲喂记录" width="320px" class="rounded-dialog">
+      <div class="quick-input-grid">
+        <div class="input-label">选择喂奶侧</div>
+        <div class="quick-select-row">
+          <el-radio-group v-model="breastSide" size="large">
+            <el-radio-button value="left">左侧</el-radio-button>
+            <el-radio-button value="right">右侧</el-radio-button>
+            <el-radio-button value="both">双侧</el-radio-button>
+          </el-radio-group>
+        </div>
+        <div class="input-label" style="margin-top:16px">选择时长 (分钟)</div>
+        <div class="quick-select-row">
+          <el-radio-group v-model="breastDuration" size="large">
+            <el-radio-button v-for="opt in [5,10,15,20,30]" :key="opt" :value="opt">{{ opt }}min</el-radio-button>
+          </el-radio-group>
+        </div>
+      </div>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="showBreastDialog = false" round>取消</el-button>
+          <el-button type="primary" @click="quickBreastfeeding" :loading="submitting" round>确认</el-button>
+        </div>
+      </template>
+    </el-dialog>
+
+    <!-- 拍嗝 Dialog -->
+    <el-dialog v-model="showBurpDialog" title="拍嗝记录" width="320px" class="rounded-dialog">
+      <div class="quick-input-grid">
+        <div class="input-label">选择拍嗝时长</div>
+        <div class="quick-select-row">
+          <el-radio-group v-model="burpDuration" size="large">
+            <el-radio-button v-for="opt in [3,5,10,15]" :key="opt" :value="opt">{{ opt }}min</el-radio-button>
+          </el-radio-group>
+        </div>
+        <div class="input-label" style="margin-top:16px">拍嗝结果</div>
+        <div class="quick-select-row">
+          <el-radio-group v-model="burpResult" size="large">
+            <el-radio-button value="success">拍出嗝</el-radio-button>
+            <el-radio-button value="none">未出嗝</el-radio-button>
+            <el-radio-button value="cough">咳嗽/干呕</el-radio-button>
+          </el-radio-group>
+        </div>
+        <div class="input-label" style="margin-top:16px">备注</div>
+        <el-input v-model="burpRemark" placeholder="可选备注" maxlength="50" show-word-limit />
+      </div>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="showBurpDialog = false" round>取消</el-button>
+          <el-button type="primary" @click="quickBurp" :loading="submitting" round>确认</el-button>
+        </div>
+      </template>
+    </el-dialog>
+
   </div>
 
   <!-- 小溪AI助手 -->
@@ -478,31 +555,54 @@ const stopSleepTimer = () => {
     }
 }
 
-const quickFeeding = async (amount: number) => {
+const quickFeeding = async () => {
     if (!babyStore.currentBaby?.id) return
     try {
         await client.post('/record/feeding', {
             babyId: babyStore.currentBaby.id,
-            type: 'bottle',
-            amount,
+            feedingType: 'bottle',
+            amount: bottleAmount.value,
             time: getBeijingNow().toISOString()
         })
-        ElMessage.success(`闪电记录：瓶喂 ${amount}ml`)
+        ElMessage.success(`闪电记录：瓶喂 ${bottleAmount.value}ml`)
+        showBottleDialog.value = false
         fetchData()
     } catch (e) {}
 }
 
-const quickBreastfeeding = async (side: 'left' | 'right') => {
+const quickBreastfeeding = async () => {
     if (!babyStore.currentBaby?.id) return
     try {
+        const side = breastSide.value
+        const duration = breastDuration.value
         await client.post('/record/feeding', {
             babyId: babyStore.currentBaby.id,
-            type: 'breast',
-            leftBreastMinutes: side === 'left' ? 10 : 0,
-            rightBreastMinutes: side === 'right' ? 10 : 0,
+            feedingType: 'breast',
+            leftBreastMinutes: (side === 'left' || side === 'both') ? duration : 0,
+            rightBreastMinutes: (side === 'right' || side === 'both') ? duration : 0,
             time: getBeijingNow().toISOString()
         })
-        ElMessage.success(`闪电记录：亲喂 (${side === 'left' ? '左侧' : '右侧'}) 10min`)
+        const sideText = side === 'both' ? '双侧' : (side === 'left' ? '左侧' : '右侧')
+        ElMessage.success(`闪电记录：亲喂 ${sideText} ${duration}min`)
+        showBreastDialog.value = false
+        fetchData()
+    } catch (e) {}
+}
+
+const quickBurp = async () => {
+    if (!babyStore.currentBaby?.id) return
+    try {
+        await client.post('/record/health', {
+            babyId: babyStore.currentBaby.id,
+            type: 'BURP',
+            value: burpDuration.value,
+            symptoms: `${burpResult.value}${burpRemark.value ? ': ' + burpRemark.value : ''}`,
+            time: getBeijingNow().toISOString()
+        })
+        const resultText = burpResult.value === 'success' ? '拍出嗝' : (burpResult.value === 'none' ? '未出嗝' : '咳嗽/干呕')
+        ElMessage.success(`闪电记录：拍嗝 ${burpDuration.value}min - ${resultText}`)
+        showBurpDialog.value = false
+        burpRemark.value = ''
         fetchData()
     } catch (e) {}
 }
@@ -909,6 +1009,21 @@ const tipDetailVisible = ref(false)
 const tipDetail = ref<any>(null)
 const medicationDialogVisible = ref(false)
 const healthDialogVisible = ref(false)
+
+// 瓶喂 Dialog
+const showBottleDialog = ref(false)
+const bottleAmount = ref(120)
+
+// 亲喂 Dialog
+const showBreastDialog = ref(false)
+const breastSide = ref('left')
+const breastDuration = ref(10)
+
+// 拍嗝 Dialog
+const showBurpDialog = ref(false)
+const burpDuration = ref(5)
+const burpResult = ref('success')
+const burpRemark = ref('')
 
 const medForm = reactive({
     name: '',
