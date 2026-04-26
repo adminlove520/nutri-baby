@@ -848,8 +848,8 @@ const manualGenerateTip = async () => {
     tipsLoading.value = true
     try {
         const babyId = babyStore.currentBaby?.id
-        const tipsRes: any = await client.get('/tips', {
-            params: { babyId: babyId?.toString(), forceAI: 'true' },
+        const tipsRes: any = await client.get('/ai', {
+            params: { action: 'tips', babyId: babyId?.toString(), forceAI: 'true' },
             timeout: 60000
         })
         todayTips.value = Array.isArray(tipsRes) ? tipsRes : []
@@ -880,7 +880,7 @@ const fetchData = async () => {
 
         const babyIdStr = babyId?.toString()
         const results = await Promise.allSettled([
-            client.get('/tips', { params: { babyId: babyIdStr }, timeout: 30000 }),
+            client.get('/ai', { params: { action: 'tips', babyId: babyIdStr }, timeout: 30000 }),
             babyIdStr ? getStatistics(babyIdStr) : Promise.reject('No babyId'),
             babyIdStr ? getVaccines(babyIdStr) : Promise.reject('No babyId'),
             babyIdStr ? client.get('/record/sleep', { params: { babyId: babyIdStr, limit: 1 } }) : Promise.reject('No babyId'),
