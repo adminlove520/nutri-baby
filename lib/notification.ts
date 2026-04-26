@@ -96,6 +96,8 @@ function shouldSendEmail(type: NotificationType, settings: Record<string, any>):
  */
 function getDefaultEmailHtml(title: string, content: string, type: NotificationType): string {
     const subtitle = type === 'tips' ? '每日育儿锦囊' : type === 'vaccine' ? '疫苗接种提醒' : type === 'ai_analysis' ? 'AI 健康分析' : '系统通知';
+    // 转换换行符为<br/>，确保多行内容正确显示
+    const contentWithBreaks = content.replace(/\n/g, '<br/>');
 
     return `
         <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #f9fbfc;">
@@ -106,7 +108,7 @@ function getDefaultEmailHtml(title: string, content: string, type: NotificationT
                 </div>
                 <div style="border-left: 4px solid #ff8e94; padding-left: 20px; margin-bottom: 30px;">
                     <h2 style="color: #2c3e50; margin: 0 0 10px; font-size: 20px;">${title}</h2>
-                    <p style="color: #57606f; font-size: 16px; line-height: 1.6; margin: 0;">${content}</p>
+                    <p style="color: #57606f; font-size: 16px; line-height: 1.8; margin: 0;">${contentWithBreaks}</p>
                 </div>
                 <div style="text-align: center; border-top: 1px solid #f1f2f6; padding-top: 30px;">
                     <p style="font-size: 12px; color: #a4b0be; margin: 0;">此邮件由系统自动发送,请勿直接回复。</p>

@@ -141,7 +141,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                             ageStr: babyAgeMonth >= 1 ? `${babyAgeMonth}个月` : `${Math.floor((Date.now() - new Date(baby.birthDate).getTime()) / (1000 * 60 * 60 * 24))}天`
                         } : undefined,
                         recentRecords,
-                        query: baby ? `请为${babyAgeStr}提供每日育儿建议。请用以下JSON格式返回（不要加Markdown代码块）：{"title": "建议标题", "content": "建议的详细正文内容", "category": "建议类别"}` : '请为新生儿到3岁阶段的宝宝家长提供育儿建议。请用JSON格式返回：{"title": "建议标题", "content": "建议的详细正文内容", "category": "建议类别"}'
+                        query: baby ? `请为${babyAgeStr}提供每日育儿建议。请用以下JSON格式返回：{"title": "建议标题（15字内）", "content": "建议的详细正文（用数字列表组织，100-200字，纯文本格式）", "category": "建议类别"}` : '请为新生儿到3岁阶段的宝宝家长提供育儿建议。请用JSON格式返回：{"title": "建议标题（15字内）", "content": "建议的详细正文（100-200字，纯文本格式）", "category": "建议类别"}'
                     });
 
                     const content = aiResponse.insight;

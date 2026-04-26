@@ -253,7 +253,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const aiResponse = await provider.analyze({
                 babyProfile: { name: '宝宝', gender: 'unknown', birthDate: new Date(), month: 0 },
                 recentRecords: { feeding: [], sleep: [], growth: [] },
-                query: "请生成一条通用的、科学的、温馨的每日育儿锦囊。请用JSON格式返回：{ \"title\": \"建议标题\", \"content\": \"建议的详细正文内容（Markdown格式）\", \"category\": \"日常护理\" }。content只包含正文，不要包含标题。"
+                query: "请生成一条通用的、科学的、温馨的每日育儿锦囊。请用JSON格式返回：{ \"title\": \"建议标题（15字内）\", \"content\": \"建议的详细正文（用数字列表组织，100-200字）\", \"category\": \"日常护理\" }。注意：content用简洁的纯文本格式，不要Markdown符号。"
             });
 
             if (!aiResponse || !aiResponse.insight) {

@@ -1516,6 +1516,23 @@ onUnmounted(() => {
         background: var(--el-fill-color-light);
         padding: 20px;
         border-radius: 16px;
+        
+        // Markdown 样式
+        h1, h2, h3, h4 { margin: 12px 0 8px; font-weight: 600; }
+        h1 { font-size: 20px; }
+        h2 { font-size: 18px; }
+        h3 { font-size: 16px; }
+        p { margin: 8px 0; line-height: 1.7; }
+        ul, ol { margin: 8px 0; padding-left: 20px; }
+        li { margin: 4px 0; line-height: 1.6; }
+        strong { font-weight: 600; }
+        blockquote {
+            margin: 12px 0;
+            padding: 10px 16px;
+            border-left: 3px solid var(--el-color-primary);
+            background: var(--el-fill-color);
+            border-radius: 0 8px 8px 0;
+        }
     }
 }
 
