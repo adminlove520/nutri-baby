@@ -271,7 +271,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                                 category: tip.type || '每日推荐',
                                 minAgeMonth: 0,
                                 maxAgeMonth: 36,
-                                source: 'AI Daily (Manual)'
+                                source: 'AI Daily (Manual)',
+                                createdBy: userId
                             }
                         });
                         
