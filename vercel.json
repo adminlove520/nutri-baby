@@ -42,11 +42,11 @@
   "crons": [
     {
       "path": "/api/cron/reminders",
-      "schedule": "0 8 * * *"
+      "schedule": "0 0 * * *"
     },
     {
       "path": "/api/cron/reminders?triggerAiTip=true",
-      "schedule": "0 9 * * *"
+      "schedule": "0 1 * * *"
     }
   ]
 }

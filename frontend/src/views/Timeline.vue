@@ -68,6 +68,9 @@
                     <p v-else-if="entry.type === 'health'" class="content-text">
                       <span class="emoji">🏥</span> {{ getHealthText(entry.data) }}
                     </p>
+                    <p v-else class="content-text">
+                      <span class="emoji">📝</span> {{ entry.data ? JSON.stringify(entry.data).substring(0, 50) : '未知记录' }}
+                    </p>
                     <div class="remark" v-if="entry.data.remark || entry.data.note">
                       <el-icon><ChatLineSquare /></el-icon>
                       {{ entry.data.remark || entry.data.note }}
