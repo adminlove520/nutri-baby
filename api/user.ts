@@ -3,6 +3,7 @@ import prisma from '../lib/prisma';
 import { getUserFromRequest } from '../lib/auth';
 import { success, error } from '../lib/utils';
 import { sendEmail } from '../lib/mail';
+import { sendNotification } from '../lib/notification';
 import { GitHubUploader, generateAlbumPath, generateFilename } from '../lib/github';
 import * as bcrypt from 'bcryptjs';
 
@@ -112,17 +113,56 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // Trigger notify endpoint (manual trigger for cron tasks)
         if (req.method === 'POST' && action === 'trigger-notify') {
             const { type } = req.body;
+            const userData = await prisma.user.findUnique({ where: { id: uId } });
+            if (!userData) return error(res, 'User not found', 404);
             
-            // For manual trigger, we just return success - the actual cron runs on Vercel schedule
-            // This endpoint is for user to manually test the notification settings
-            if (type === 'vaccine' || type === 'all') {
-                // In production, this would trigger the vaccine reminder logic
-                return success(res, { message: '疫苗提醒任务已触发', type: 'vaccine' });
+            const settings = (userData.settings as any) || {};
+            
+            try {
+                if (type === 'vaccine' || type === 'all') {
+                    // 发送疫苗提醒测试通知
+                    await sendNotification({
+                        userId: uId,
+                        title: '💉 疫苗提醒测试',
+                        content: '这是一条测试消息。如果您收到此消息，说明疫苗提醒功能正常。',
+                        type: 'vaccine'
+                    });
+                }
+                
+                if (type === 'aiTip' || type === 'all') {
+                    // 发送锦囊测试通知
+                    await sendNotification({
+                        userId: uId,
+                        title: '✨ 育儿锦囊测试',
+                        content: '这是一条测试消息。如果您收到此消息，说明育儿锦囊功能正常。',
+                        type: 'tips'
+                    });
+                }
+                
+                if (type === 'email' || type === 'all') {
+                    // 发送邮件测试
+                    if (userData.email) {
+                        await sendEmail(
+                            userData.email,
+                            'Nutri-Baby 邮件推送测试',
+                            `<div style="font-family: sans-serif; padding: 20px; color: #333;">
+                                <h2 style="color: #ff8e94;">🎉 邮件推送测试成功！</h2>
+                                <p>如果您收到此邮件，说明 Nutri-Baby 的邮件推送功能正常工作。</p>
+                                <p>收到时间：${new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}</p>
+                            </div>`
+                        );
+                    }
+                }
+                
+                return success(res, { 
+                    message: '测试通知已发送，请检查站内信和邮箱',
+                    type: type || 'all',
+                    email: userData.email || '未配置邮箱'
+                });
+            } catch (err: any) {
+                console.error('[trigger-notify] Error:', err);
+                return error(res, `发送失败: ${err.message}`, 500);
             }
-            if (type === 'aiTip' || type === 'all') {
-                return success(res, { message: 'AI育儿锦囊任务已触发', type: 'aiTip' });
-            }
-            return success(res, { message: '定时任务已执行' });
         }
 
         // ========== Settings (from settings.ts) ==========
