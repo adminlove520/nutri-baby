@@ -92,7 +92,6 @@ function shouldSendEmail(type: NotificationType, settings: Record<string, any>):
  * 生成默认邮件HTML模板
  */
 function getDefaultEmailHtml(title: string, content: string, type: NotificationType): string {
-    const icon = type === 'tips' ? '✨' : type === 'vaccine' ? '💉' : type === 'ai_analysis' ? '🤖' : '📢';
     const subtitle = type === 'tips' ? '每日育儿锦囊' : type === 'vaccine' ? '疫苗接种提醒' : type === 'ai_analysis' ? 'AI 健康分析' : '系统通知';
 
     return `
@@ -100,7 +99,7 @@ function getDefaultEmailHtml(title: string, content: string, type: NotificationT
             <div style="background-color: #fff; padding: 40px; border-radius: 24px; box-shadow: 0 10px 30px rgba(255,142,148,0.1); border: 1px solid #ffeaec;">
                 <div style="text-align: center; margin-bottom: 30px;">
                     <h1 style="color: #ff8e94; margin: 0; font-size: 28px; font-weight: 900;">Nutri-Baby</h1>
-                    <p style="color: #a4b0be; font-size: 14px; margin-top: 5px;">${icon} ${subtitle}</p>
+                    <p style="color: #a4b0be; font-size: 14px; margin-top: 5px;">${subtitle}</p>
                 </div>
                 <div style="border-left: 4px solid #ff8e94; padding-left: 20px; margin-bottom: 30px;">
                     <h2 style="color: #2c3e50; margin: 0 0 10px; font-size: 20px;">${title}</h2>
@@ -116,18 +115,18 @@ function getDefaultEmailHtml(title: string, content: string, type: NotificationT
 }
 
 /**
- * 发送单一用户通知（站内信 + 邮件）
+ * 发送单一用户通知(站内信 + 邮件)
  */
 export async function sendNotification(options: SendNotificationOptions): Promise<{ inApp: boolean; email: boolean }> {
     const { userId, title, content, type, sendEmail: shouldEmail = true } = options;
-    
+
     const settings = options.userSettings || await getUserSettings(userId);
     let inAppSent = false;
     let emailSent = false;
-    
-    // 获取 emoji（用于 email subject）
+
+    // 获取 emoji(用于 email subject)
     const emoji = type === 'tips' ? '✨' : type === 'vaccine' ? '💉' : type === 'ai_analysis' || type === 'ai' ? '🤖' : '📢';
-    
+
     // 1. 发送站内信
     if (shouldSendInAppNotification(type, settings)) {
         try {
@@ -136,7 +135,7 @@ export async function sendNotification(options: SendNotificationOptions): Promis
                     userId,
                     title,  // title 已经包含 emoji
                     content,
-                    type  
+                    type
                 }
             });
             inAppSent = true;
@@ -144,18 +143,18 @@ export async function sendNotification(options: SendNotificationOptions): Promis
             console.error(`[Notification] Failed to create in-app notification for user ${userId}:`, err);
         }
     }
-    
+
     // 2. 发送邮件
     if (shouldEmail) {
         const user = await prisma.user.findUnique({
             where: { id: userId },
             select: { email: true }
         });
-        
+
         if (user?.email && shouldSendEmail(type, settings)) {
             try {
                 const emailHtml = options.emailHtml || getDefaultEmailHtml(title, content, type);
-                // 标题已经包含 emoji，不要重复添加
+                // 标题已经包含 emoji,不要重复添加
                 await sendEmail(user.email, title, emailHtml);
                 emailSent = true;
             } catch (err) {
@@ -163,7 +162,7 @@ export async function sendNotification(options: SendNotificationOptions): Promis
             }
         }
     }
-    
+
     return { inApp: inAppSent, email: emailSent };
 }
 
@@ -280,7 +279,7 @@ export async function sendVaccineReminderNotification(
     vaccineName: string,
     scheduledDate: string
 ): Promise<{ inApp: boolean; email: boolean }> {
-    const title = `疫苗接种提醒: ${vaccineName}`;
+    const title = `💉 疫苗接种提醒: ${vaccineName}`;
     const content = `您的宝宝 ${babyName} 预计将在 ${scheduledDate} 接种 ${vaccineName}。请提前做好准备。`;
 
     const emailHtml = `
@@ -324,11 +323,12 @@ export async function sendAIAnalysisNotification(
     content: string,
     babyName?: string
 ): Promise<{ inApp: boolean; email: boolean }> {
+    const fullTitle = babyName ? `🤖 AI 健康分析（${babyName}）` : `🤖 AI 健康分析`;
     return sendNotification({
         userId,
-        title: babyName ? `🤖 AI 健康分析(${babyName})` : `🤖 AI 健康分析`,
+        title: fullTitle,
         content,
         type: 'ai_analysis',
-        emailHtml: getDefaultEmailHtml(title, content, 'ai_analysis')
+        emailHtml: getDefaultEmailHtml(fullTitle, content, 'ai_analysis')
     });
 }
