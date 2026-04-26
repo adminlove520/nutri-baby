@@ -166,7 +166,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     syncInterval: config.syncInterval,
                     syncGrowth: config.syncGrowth,
                     syncMoment: config.syncMoment,
-                    syncVaccine: config.syncVaccine
+                    syncVaccine: config.syncVaccine,
+                    lastSyncAt: config.lastSyncAt
                 }
             });
         }
